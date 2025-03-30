@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -39,12 +39,31 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Plus, FileText, CreditCard, DollarSign, Download } from "lucide-react";
+import { 
+  CalendarIcon, 
+  Plus, 
+  FileText, 
+  CreditCard, 
+  DollarSign, 
+  Download, 
+  InfoIcon,
+  Check
+} from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import { DataTable } from "@/components/ui/data-table";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { Currency, CURRENCIES, formatCurrency, formatDate, getRandomColor } from "@/lib/utils";
-import { format } from "date-fns";
+import { 
+  Currency, 
+  CURRENCIES, 
+  convertCurrency,
+  formatCurrency, 
+  formatDate, 
+  getRandomColor, 
+  getStatusBadge,
+  calculateNextPaymentDate, 
+  generatePaymentDates 
+} from "@/lib/utils";
+import { format, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -64,6 +83,7 @@ import {
   YAxis 
 } from "recharts";
 import { AccruedExpenses } from "@/components/expenses/accrued-expenses";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Updated expense data with currency support
 const expensesData = [
@@ -297,126 +317,14 @@ const frequencies = [
   "Anual",
 ];
 
-// Updated columns
-const expenseColumns = [
-  {
-    accessorKey: "description",
-    header: "Descripción",
-  },
-  {
-    accessorKey: "date",
-    header: "Fecha",
-    cell: ({ row }: { row: any }) => formatDate(row.original.date),
-  },
-  {
-    accessorKey: "amount",
-    header: "Monto",
-    cell: ({ row }: { row: any }) => formatCurrency(row.original.amount, row.original.currency),
-  },
-  {
-    accessorKey: "currency",
-    header: "Moneda",
-  },
-  {
-    accessorKey: "category",
-    header: "Categoría",
-  },
-  {
-    accessorKey: "paymentMethod",
-    header: "Método de Pago",
-  },
-  {
-    accessorKey: "receipt",
-    header: "Comprobante",
-    cell: ({ row }: { row: any }) => (
-      <Button variant="ghost" size="sm" className="w-full justify-start">
-        <FileText className="h-4 w-4 mr-2" />
-        Ver
-      </Button>
-    ),
-  },
-  {
-    accessorKey: "actions",
-    header: "Acciones",
-    cell: () => (
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm">
-          Editar
-        </Button>
-        <Button variant="ghost" size="sm" className="text-destructive">
-          Eliminar
-        </Button>
-      </div>
-    ),
-  },
-];
-
-const recurringExpenseColumns = [
-  {
-    accessorKey: "description",
-    header: "Descripción",
-  },
-  {
-    accessorKey: "frequency",
-    header: "Frecuencia",
-  },
-  {
-    accessorKey: "amount",
-    header: "Monto",
-    cell: ({ row }: { row: any }) => formatCurrency(row.original.amount, row.original.currency),
-  },
-  {
-    accessorKey: "currency",
-    header: "Moneda",
-  },
-  {
-    accessorKey: "nextPayment",
-    header: "Próximo Pago",
-    cell: ({ row }: { row: any }) => formatDate(row.original.nextPayment),
-  },
-  {
-    accessorKey: "status",
-    header: "Estado",
-    cell: ({ row }: { row: any }) => (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-          row.original.status === "Activo"
-            ? "bg-green-100 text-green-800"
-            : "bg-yellow-100 text-yellow-800"
-        }`}
-      >
-        {row.original.status}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "category",
-    header: "Categoría",
-  },
-  {
-    accessorKey: "actions",
-    header: "Acciones",
-    cell: ({ row }: { row: any }) => (
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-        >
-          {row.original.status === "Activo" ? "Pausar" : "Activar"}
-        </Button>
-        <Button variant="ghost" size="sm">
-          Editar
-        </Button>
-      </div>
-    ),
-  },
-];
-
 const ExpensesPage = () => {
   const { toast } = useToast();
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [recurringModalOpen, setRecurringModalOpen] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | "all">("all");
+  const [viewCurrency, setViewCurrency] = useState<Currency>("COP");
+  const [previewPayments, setPreviewPayments] = useState<any[]>([]);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   
   const expenseForm = useForm<z.infer<typeof expenseFormSchema>>({
     resolver: zodResolver(expenseFormSchema),
@@ -454,7 +362,41 @@ const ExpensesPage = () => {
     ? recurringExpensesData
     : recurringExpensesData.filter(expense => expense.currency === selectedCurrency);
 
-  // Calculate totals by currency
+  // Calculate totals by currency in the selected view currency
+  const calculateTotalInViewCurrency = (expenses: any[], currencyField = "currency") => {
+    return expenses.reduce((total, expense) => {
+      if (expense[currencyField] === viewCurrency) {
+        return total + expense.amount;
+      } else {
+        // Convert to view currency
+        return total + convertCurrency(expense.amount, expense[currencyField], viewCurrency);
+      }
+    }, 0);
+  };
+
+  const variableTotalInViewCurrency = calculateTotalInViewCurrency(expensesData);
+  const recurringTotalInViewCurrency = calculateTotalInViewCurrency(
+    recurringExpensesData.filter(expense => expense.status === "Activo")
+  );
+
+  // Calculate totals by category in view currency
+  const categoryTotals = [...expensesData, ...recurringExpensesData]
+    .filter(expense => expense.status !== "Pausado" || !("status" in expense))
+    .reduce((acc, expense) => {
+      const category = expense.category;
+      if (!acc[category]) acc[category] = 0;
+      
+      // Add amount in view currency
+      if (expense.currency === viewCurrency) {
+        acc[category] += expense.amount;
+      } else {
+        acc[category] += convertCurrency(expense.amount, expense.currency, viewCurrency);
+      }
+      
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Original totals by currency
   const totalByCurrency = {
     COP: expensesData
       .filter(expense => expense.currency === "COP")
@@ -473,47 +415,65 @@ const ExpensesPage = () => {
       .reduce((sum, expense) => sum + expense.amount, 0),
   };
 
-  // Data for category chart, separated by currency
-  const categoryDataCOP = Object.entries(
-    expensesData
-      .filter(expense => expense.currency === "COP")
-      .reduce((acc, expense) => {
-        acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-        return acc;
-      }, {} as Record<string, number>)
-  ).map(([category, amount]) => ({
-    category,
-    COP: amount,
-  }));
-
-  const categoryDataUSD = Object.entries(
-    expensesData
-      .filter(expense => expense.currency === "USD")
-      .reduce((acc, expense) => {
-        acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-        return acc;
-      }, {} as Record<string, number>)
-  ).map(([category, amount]) => ({
-    category,
-    USD: amount,
-  }));
-
-  // Combine data for chart
-  const allCategories = new Set([
-    ...categoryDataCOP.map(d => d.category),
-    ...categoryDataUSD.map(d => d.category)
-  ]);
-  
-  const categoryChartData = Array.from(allCategories).map(category => {
-    const copItem = categoryDataCOP.find(d => d.category === category);
-    const usdItem = categoryDataUSD.find(d => d.category === category);
+  // Data for category chart, separated by currency but converted to view currency
+  const prepareCategoryChartData = () => {
+    const categoryData = Object.entries(
+      [...expensesData, ...recurringExpensesData]
+        .filter(expense => expense.status !== "Pausado" || !("status" in expense))
+        .reduce((acc, expense) => {
+          const category = expense.category;
+          const currency = expense.currency;
+          
+          if (!acc[category]) {
+            acc[category] = { COP: 0, USD: 0 };
+          }
+          
+          acc[category][currency] += expense.amount;
+          return acc;
+        }, {} as Record<string, Record<Currency, number>>)
+    ).map(([category, amounts]) => {
+      // If viewing in COP, convert USD to COP
+      if (viewCurrency === "COP") {
+        return {
+          category,
+          COP: amounts.COP,
+          USD_en_COP: convertCurrency(amounts.USD, "USD", "COP"),
+          original_USD: amounts.USD
+        };
+      } 
+      // If viewing in USD, convert COP to USD
+      else {
+        return {
+          category,
+          USD: amounts.USD,
+          COP_en_USD: convertCurrency(amounts.COP, "COP", "USD"),
+          original_COP: amounts.COP
+        };
+      }
+    });
     
-    return {
-      category,
-      COP: copItem?.COP || 0,
-      USD: usdItem?.USD || 0,
-    };
-  });
+    return categoryData;
+  };
+
+  const categoryChartData = prepareCategoryChartData();
+
+  // Generate preview of recurring payments
+  const handlePreviewPayments = (formValues: any) => {
+    if (formValues.startDate && formValues.frequency && formValues.amount) {
+      const dates = generatePaymentDates(formValues.startDate, formValues.frequency, 12);
+      
+      const payments = dates.map((date, index) => ({
+        id: index + 1,
+        dueDate: date,
+        amount: formValues.amount,
+        currency: formValues.currency,
+        status: isBefore(date, new Date()) ? 'vencido' : 'pendiente',
+      }));
+      
+      setPreviewPayments(payments);
+      setPreviewModalOpen(true);
+    }
+  };
 
   const onExpenseSubmit = (data: z.infer<typeof expenseFormSchema>) => {
     console.log("Nuevo gasto:", data);
@@ -534,6 +494,185 @@ const ExpensesPage = () => {
     recurringExpenseForm.reset();
     setRecurringModalOpen(false);
   };
+
+  // Enhanced columns with currency conversion
+  const expenseColumns = [
+    {
+      accessorKey: "description",
+      header: "Descripción",
+    },
+    {
+      accessorKey: "date",
+      header: "Fecha",
+      cell: ({ row }: { row: any }) => formatDate(row.original.date),
+    },
+    {
+      accessorKey: "amount",
+      header: "Monto",
+      cell: ({ row }: { row: any }) => {
+        const expense = row.original;
+        
+        // If viewing in original currency
+        if (viewCurrency === expense.currency) {
+          return formatCurrency(expense.amount, expense.currency);
+        }
+        
+        // If we need to convert
+        const convertedAmount = convertCurrency(
+          expense.amount, 
+          expense.currency, 
+          viewCurrency
+        );
+        
+        return (
+          <div className="flex items-center">
+            <span>{formatCurrency(convertedAmount, viewCurrency)}</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({expense.currency})
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Original: {formatCurrency(expense.amount, expense.currency)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "category",
+      header: "Categoría",
+    },
+    {
+      accessorKey: "paymentMethod",
+      header: "Método de Pago",
+    },
+    {
+      accessorKey: "receipt",
+      header: "Comprobante",
+      cell: ({ row }: { row: any }) => (
+        <Button variant="ghost" size="sm" className="w-full justify-start">
+          <FileText className="h-4 w-4 mr-2" />
+          Ver
+        </Button>
+      ),
+    },
+    {
+      accessorKey: "actions",
+      header: "Acciones",
+      cell: () => (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm">
+            Editar
+          </Button>
+          <Button variant="ghost" size="sm" className="text-destructive">
+            Eliminar
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const recurringExpenseColumns = [
+    {
+      accessorKey: "description",
+      header: "Descripción",
+    },
+    {
+      accessorKey: "frequency",
+      header: "Frecuencia",
+    },
+    {
+      accessorKey: "amount",
+      header: "Monto",
+      cell: ({ row }: { row: any }) => {
+        const expense = row.original;
+        
+        // If viewing in original currency
+        if (viewCurrency === expense.currency) {
+          return formatCurrency(expense.amount, expense.currency);
+        }
+        
+        // If we need to convert
+        const convertedAmount = convertCurrency(
+          expense.amount, 
+          expense.currency, 
+          viewCurrency
+        );
+        
+        return (
+          <div className="flex items-center">
+            <span>{formatCurrency(convertedAmount, viewCurrency)}</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({expense.currency})
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Original: {formatCurrency(expense.amount, expense.currency)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "nextPayment",
+      header: "Próximo Pago",
+      cell: ({ row }: { row: any }) => formatDate(row.original.nextPayment),
+    },
+    {
+      accessorKey: "status",
+      header: "Estado",
+      cell: ({ row }: { row: any }) => (
+        <span className={getStatusBadge(row.original.status)}>
+          {row.original.status}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "category",
+      header: "Categoría",
+    },
+    {
+      accessorKey: "actions",
+      header: "Acciones",
+      cell: ({ row }: { row: any }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+          >
+            {row.original.status === "Activo" ? "Pausar" : "Activar"}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => {
+              handlePreviewPayments({
+                startDate: row.original.startDate,
+                frequency: row.original.frequency.toLowerCase(),
+                amount: row.original.amount,
+                currency: row.original.currency
+              });
+            }}
+          >
+            Ver Pagos
+          </Button>
+          <Button variant="ghost" size="sm">
+            Editar
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -563,6 +702,19 @@ const ExpensesPage = () => {
                 <SelectItem value="all">Todas</SelectItem>
                 <SelectItem value="COP">COP</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select
+              value={viewCurrency}
+              onValueChange={(val) => setViewCurrency(val as Currency)}
+            >
+              <SelectTrigger className="w-[150px] bg-background">
+                <SelectValue placeholder="Ver en" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="COP">Ver en COP</SelectItem>
+                <SelectItem value="USD">Ver en USD</SelectItem>
               </SelectContent>
             </Select>
             
@@ -630,6 +782,7 @@ const ExpensesPage = () => {
                                   onSelect={field.onChange}
                                   initialFocus
                                   locale={es}
+                                  className="pointer-events-auto"
                                 />
                               </PopoverContent>
                             </Popover>
@@ -875,6 +1028,7 @@ const ExpensesPage = () => {
                                   onSelect={field.onChange}
                                   initialFocus
                                   locale={es}
+                                  className="pointer-events-auto"
                                 />
                               </PopoverContent>
                             </Popover>
@@ -995,15 +1149,30 @@ const ExpensesPage = () => {
                       )}
                     />
 
-                    <DialogFooter>
-                      <Button
+                    <DialogFooter className="gap-2 flex-col sm:flex-row">
+                      <Button 
                         type="button"
                         variant="outline"
-                        onClick={() => setRecurringModalOpen(false)}
+                        onClick={() => {
+                          // Preview payments
+                          const formValues = recurringExpenseForm.getValues();
+                          handlePreviewPayments(formValues);
+                        }}
+                        disabled={!recurringExpenseForm.watch("startDate") || !recurringExpenseForm.watch("frequency") || !recurringExpenseForm.watch("amount")}
                       >
-                        Cancelar
+                        Vista Previa de Pagos
                       </Button>
-                      <Button type="submit">Guardar</Button>
+
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setRecurringModalOpen(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button type="submit">Guardar</Button>
+                      </div>
                     </DialogFooter>
                   </form>
                 </Form>
@@ -1066,29 +1235,41 @@ const ExpensesPage = () => {
               <div className="space-y-8">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <StatsCard
-                    title="Total Gastos Variables (COP)"
-                    value={formatCurrency(totalByCurrency.COP, "COP")}
-                    description="Junio 2023"
-                    currencySymbol=""
+                    title="Total Gastos Variables"
+                    value={formatCurrency(variableTotalInViewCurrency, viewCurrency)}
+                    description="Todos los gastos únicos"
+                    displayCurrency={viewCurrency}
+                    originalCurrency={viewCurrency === "COP" ? "USD" : "COP"}
+                    originalValue={viewCurrency === "COP" ? totalByCurrency.USD : totalByCurrency.COP}
+                    showConversionInfo={false}
                   />
                   <StatsCard
-                    title="Total Gastos Variables (USD)"
-                    value={formatCurrency(totalByCurrency.USD, "USD")}
-                    description="Junio 2023"
-                    currencySymbol=""
+                    title="Total Gastos Recurrentes"
+                    value={formatCurrency(recurringTotalInViewCurrency, viewCurrency)}
+                    description="Mensual (solo activos)"
+                    displayCurrency={viewCurrency}
+                    originalCurrency={viewCurrency === "COP" ? "USD" : "COP"}
+                    originalValue={viewCurrency === "COP" ? recurringTotalByCurrency.USD : recurringTotalByCurrency.COP}
+                    showConversionInfo={false}
                   />
                   <StatsCard
-                    title="Total Gastos Recurrentes (COP)"
-                    value={formatCurrency(recurringTotalByCurrency.COP, "COP")}
-                    description="Mensual"
-                    currencySymbol=""
+                    title="Total Gastos"
+                    value={formatCurrency(variableTotalInViewCurrency + recurringTotalInViewCurrency, viewCurrency)}
+                    description="Variables + Recurrentes"
+                    displayCurrency={viewCurrency}
                   />
-                  <StatsCard
-                    title="Total Gastos Recurrentes (USD)"
-                    value={formatCurrency(recurringTotalByCurrency.USD, "USD")}
-                    description="Mensual"
-                    currencySymbol=""
-                  />
+                  {Object.entries(categoryTotals)
+                    .sort((a, b) => b[1] - a[1]) // Sort by amount in descending order
+                    .slice(0, 1) // Get top category
+                    .map(([category, amount]) => (
+                      <StatsCard
+                        key={category}
+                        title={`Mayor Categoría: ${category}`}
+                        value={formatCurrency(amount, viewCurrency)}
+                        description="Categoría con más gastos"
+                        displayCurrency={viewCurrency}
+                      />
+                    ))}
                 </div>
 
                 <div className="h-[400px]">
@@ -1110,41 +1291,81 @@ const ExpensesPage = () => {
                         textAnchor="end"
                         height={70}
                       />
-                      <YAxis 
-                        yAxisId="left"
-                        orientation="left"
-                        tickFormatter={(value) => `$${value / 1000000}M`} 
-                        label={{ value: 'COP (Millones)', angle: -90, position: 'insideLeft' }}
-                      />
-                      <YAxis 
-                        yAxisId="right"
-                        orientation="right"
-                        tickFormatter={(value) => `$${value / 1000}K`}
-                        label={{ value: 'USD (Miles)', angle: 90, position: 'insideRight' }}
-                      />
-                      <Legend />
-                      <RechartsTooltip
-                        formatter={(value, name) => [
-                          name === "COP" 
-                            ? formatCurrency(Number(value), "COP") 
-                            : formatCurrency(Number(value), "USD"),
-                          name
-                        ]}
-                      />
-                      <Bar 
-                        dataKey="COP" 
-                        name="COP" 
-                        fill="#4b4ce6" 
-                        radius={[4, 4, 0, 0]} 
-                        yAxisId="left"
-                      />
-                      <Bar 
-                        dataKey="USD" 
-                        name="USD" 
-                        fill="#e6664b" 
-                        radius={[4, 4, 0, 0]} 
-                        yAxisId="right"
-                      />
+                      {viewCurrency === "COP" ? (
+                        <>
+                          <YAxis 
+                            yAxisId="left"
+                            orientation="left"
+                            tickFormatter={(value) => `$${value / 1000000}M`} 
+                            label={{ value: 'Millones de COP', angle: -90, position: 'insideLeft' }}
+                          />
+                          <YAxis 
+                            yAxisId="right"
+                            orientation="right"
+                            hide
+                          />
+                          <Legend formatter={(value) => value === "COP" ? "COP (Original)" : "USD (Convertido a COP)"} />
+                          <RechartsTooltip
+                            formatter={(value, name) => [
+                              name === "COP" 
+                                ? formatCurrency(Number(value), "COP") 
+                                : `${formatCurrency(Number(value), "COP")} (Original: ${formatCurrency(categoryChartData.find(item => item.category === name)?.original_USD || 0, "USD")})`,
+                              name === "COP" ? "COP (Original)" : "USD (Convertido a COP)"
+                            ]}
+                          />
+                          <Bar 
+                            dataKey="COP" 
+                            name="COP" 
+                            fill="#4b4ce6" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
+                          <Bar 
+                            dataKey="USD_en_COP" 
+                            name="USD" 
+                            fill="#e6664b" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <YAxis 
+                            yAxisId="left"
+                            orientation="left"
+                            tickFormatter={(value) => `$${value / 1000}K`} 
+                            label={{ value: 'Miles de USD', angle: -90, position: 'insideLeft' }}
+                          />
+                          <YAxis 
+                            yAxisId="right"
+                            orientation="right"
+                            hide
+                          />
+                          <Legend formatter={(value) => value === "USD" ? "USD (Original)" : "COP (Convertido a USD)"} />
+                          <RechartsTooltip
+                            formatter={(value, name) => [
+                              name === "USD" 
+                                ? formatCurrency(Number(value), "USD") 
+                                : `${formatCurrency(Number(value), "USD")} (Original: ${formatCurrency(categoryChartData.find(item => item.category === name)?.original_COP || 0, "COP")})`,
+                              name === "USD" ? "USD (Original)" : "COP (Convertido a USD)"
+                            ]}
+                          />
+                          <Bar 
+                            dataKey="USD" 
+                            name="USD" 
+                            fill="#e6664b" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
+                          <Bar 
+                            dataKey="COP_en_USD" 
+                            name="COP" 
+                            fill="#4b4ce6" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
+                        </>
+                      )}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1156,19 +1377,42 @@ const ExpensesPage = () => {
                       .filter(expense => expense.status === "Activo")
                       .sort((a, b) => a.nextPayment.getTime() - b.nextPayment.getTime())
                       .slice(0, 3)
-                      .map((expense, index) => (
-                        <div key={index} className="p-4 border rounded-md space-y-2">
-                          <div className="text-lg font-medium">{expense.description}</div>
-                          <div className="text-sm text-muted-foreground">Vence: {formatDate(expense.nextPayment)}</div>
-                          <div className="text-xl font-bold">
-                            {formatCurrency(expense.amount, expense.currency)}
+                      .map((expense, index) => {
+                        // Convert amount if needed
+                        const displayAmount = expense.currency === viewCurrency 
+                          ? expense.amount 
+                          : convertCurrency(expense.amount, expense.currency, viewCurrency);
+                          
+                        return (
+                          <div key={index} className="p-4 border rounded-md space-y-2">
+                            <div className="text-lg font-medium">{expense.description}</div>
+                            <div className="text-sm text-muted-foreground">Vence: {formatDate(expense.nextPayment)}</div>
+                            <div className="text-xl font-bold flex items-center">
+                              {formatCurrency(displayAmount, viewCurrency)}
+                              
+                              {expense.currency !== viewCurrency && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="ml-2 cursor-help">
+                                        <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Original: {formatCurrency(expense.amount, expense.currency)}</p>
+                                      <p>Valor convertido usando tasa aproximada</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              {expense.paymentMethod}
+                            </div>
                           </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            {expense.paymentMethod}
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     }
                   </div>
                 </div>
@@ -1178,7 +1422,7 @@ const ExpensesPage = () => {
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total gastos variables + recurrentes</p>
                 <div className="text-xl font-bold">
-                  {formatCurrency(totalByCurrency.COP + recurringTotalByCurrency.COP, "COP")} | {formatCurrency(totalByCurrency.USD + recurringTotalByCurrency.USD, "USD")}
+                  {formatCurrency(variableTotalInViewCurrency + recurringTotalInViewCurrency, viewCurrency)}
                 </div>
               </div>
               <Button variant="outline" className="flex items-center gap-2">
@@ -1188,6 +1432,51 @@ const ExpensesPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Preview Payments Dialog */}
+      <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Vista Previa de Pagos Generados</DialogTitle>
+            <DialogDescription>
+              Estos son los pagos que serán generados automáticamente para este gasto recurrente
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[400px] overflow-y-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-muted/20">
+                  <th className="p-2 text-left">Cuota</th>
+                  <th className="p-2 text-left">Fecha</th>
+                  <th className="p-2 text-left">Valor</th>
+                  <th className="p-2 text-left">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewPayments.map((payment, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="p-2">{index + 1}</td>
+                    <td className="p-2">{formatDate(payment.dueDate)}</td>
+                    <td className="p-2">{formatCurrency(payment.amount, payment.currency)}</td>
+                    <td className="p-2">
+                      <span className={getStatusBadge(payment.status)}>
+                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewModalOpen(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

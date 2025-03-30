@@ -30,6 +30,12 @@ export const CURRENCIES: Record<Currency, CurrencyConfig> = {
   }
 };
 
+// Conversion rates (placeholder - in real app would come from API)
+export const CONVERSION_RATES = {
+  USD_TO_COP: 4000, // 1 USD = 4000 COP
+  COP_TO_USD: 1 / 4000, // 1 COP = 0.00025 USD
+};
+
 export function formatCurrency(value: number, currency: Currency = "COP"): string {
   const config = CURRENCIES[currency];
   
@@ -39,6 +45,16 @@ export function formatCurrency(value: number, currency: Currency = "COP"): strin
     minimumFractionDigits: config.decimalPlaces,
     maximumFractionDigits: config.decimalPlaces,
   }).format(value);
+}
+
+export function convertCurrency(value: number, fromCurrency: Currency, toCurrency: Currency): number {
+  if (fromCurrency === toCurrency) return value;
+  
+  if (fromCurrency === "USD" && toCurrency === "COP") {
+    return value * CONVERSION_RATES.USD_TO_COP;
+  } else {
+    return value * CONVERSION_RATES.COP_TO_USD;
+  }
 }
 
 export function getCurrencySymbol(currency: Currency = "COP"): string {
@@ -91,6 +107,102 @@ export function getStatusColor(status: string): string {
   }
 }
 
+export function getStatusBadge(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'pagado':
+      return 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800';
+    case 'pendiente':
+      return 'inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800';
+    case 'vencido':
+      return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800';
+    case 'activo':
+      return 'inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800';
+    case 'pausado':
+      return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+    default:
+      return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+  }
+}
+
 export function isPastDue(date: Date): boolean {
   return date < new Date();
+}
+
+export function calculateNextPaymentDate(startDate: Date, frequency: string): Date {
+  const today = new Date();
+  let nextDate = new Date(startDate);
+
+  while (nextDate <= today) {
+    switch (frequency.toLowerCase()) {
+      case 'semanal':
+        nextDate.setDate(nextDate.getDate() + 7);
+        break;
+      case 'quincenal':
+        nextDate.setDate(nextDate.getDate() + 15);
+        break;
+      case 'mensual':
+        nextDate.setMonth(nextDate.getMonth() + 1);
+        break;
+      case 'bimestral':
+        nextDate.setMonth(nextDate.getMonth() + 2);
+        break;
+      case 'trimestral':
+        nextDate.setMonth(nextDate.getMonth() + 3);
+        break;
+      case 'semestral':
+        nextDate.setMonth(nextDate.getMonth() + 6);
+        break;
+      case 'anual':
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+        break;
+      default:
+        nextDate.setMonth(nextDate.getMonth() + 1);
+    }
+  }
+  
+  return nextDate;
+}
+
+export function generatePaymentDates(startDate: Date, frequency: string, count: number = 12): Date[] {
+  const dates: Date[] = [new Date(startDate)];
+  let currentDate = new Date(startDate);
+  
+  for (let i = 1; i < count; i++) {
+    switch (frequency.toLowerCase()) {
+      case 'semanal':
+        currentDate = new Date(currentDate);
+        currentDate.setDate(currentDate.getDate() + 7);
+        break;
+      case 'quincenal':
+        currentDate = new Date(currentDate);
+        currentDate.setDate(currentDate.getDate() + 15);
+        break;
+      case 'mensual':
+        currentDate = new Date(currentDate);
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        break;
+      case 'bimestral':
+        currentDate = new Date(currentDate);
+        currentDate.setMonth(currentDate.getMonth() + 2);
+        break;
+      case 'trimestral':
+        currentDate = new Date(currentDate);
+        currentDate.setMonth(currentDate.getMonth() + 3);
+        break;
+      case 'semestral':
+        currentDate = new Date(currentDate);
+        currentDate.setMonth(currentDate.getMonth() + 6);
+        break;
+      case 'anual':
+        currentDate = new Date(currentDate);
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+        break;
+      default:
+        currentDate = new Date(currentDate);
+        currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    dates.push(new Date(currentDate));
+  }
+  
+  return dates;
 }

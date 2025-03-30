@@ -3,210 +3,242 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Check, Calendar, Download } from "lucide-react";
-import { FileUpload } from "@/components/ui/file-upload";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Currency, formatCurrency, formatDate, getStatusColor } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DateRange } from "react-day-picker";
+import { FileText, Download, Check, Calendar, CreditCard } from "lucide-react";
+import { format, isBefore, isAfter, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { es } from "date-fns/locale";
+import { formatCurrency, convertCurrency, Currency, formatDate, getStatusBadge } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { useToast } from "@/hooks/use-toast";
+import { StatsCard } from "@/components/ui/stats-card";
 
+// Types for our accrued expenses
 interface AccruedExpense {
   id: number;
   description: string;
   dueDate: Date;
   amount: number;
   currency: Currency;
-  status: 'Pagado' | 'Pendiente' | 'Vencido';
   category: string;
+  paymentMethod: string;
+  status: 'pagado' | 'pendiente' | 'vencido';
   receipt?: string;
-  paymentDate?: Date;
+  isRecurring: boolean;
+  recurringId?: number;
   notes?: string;
-  sourceId: number; // ID of the recurring expense that generated this
 }
 
-const mockAccruedExpenses: AccruedExpense[] = [
+// Mock accrued expenses data
+const accruedExpensesData: AccruedExpense[] = [
   {
     id: 1,
-    description: "Nómina - Junio 2023",
-    dueDate: new Date("2023-06-15"),
-    amount: 7500000,
+    description: "Arriendo Oficina",
+    dueDate: new Date(2023, 8, 5), // September 5, 2023
+    amount: 3200000,
     currency: "COP",
-    status: "Pagado",
-    category: "Personal",
-    receipt: "nomina-jun-2023.pdf",
-    paymentDate: new Date("2023-06-15"),
-    sourceId: 1
+    category: "Arriendo",
+    paymentMethod: "Transferencia",
+    status: "pagado",
+    receipt: "recibo-arriendo-sept.pdf",
+    isRecurring: true,
+    recurringId: 2
   },
   {
     id: 2,
-    description: "Arriendo Oficina - Junio 2023",
-    dueDate: new Date("2023-06-05"),
+    description: "Arriendo Oficina",
+    dueDate: new Date(2023, 9, 5), // October 5, 2023
     amount: 3200000,
     currency: "COP",
-    status: "Pagado",
     category: "Arriendo",
-    receipt: "arriendo-jun-2023.pdf",
-    paymentDate: new Date("2023-06-05"),
-    sourceId: 2
+    paymentMethod: "Transferencia",
+    status: "pagado",
+    receipt: "recibo-arriendo-oct.pdf",
+    isRecurring: true,
+    recurringId: 2
   },
   {
     id: 3,
-    description: "Servicios Cloud - Junio 2023",
-    dueDate: new Date("2023-06-10"),
-    amount: 950000,
+    description: "Arriendo Oficina",
+    dueDate: new Date(2023, 10, 5), // November 5, 2023
+    amount: 3200000,
     currency: "COP",
-    status: "Pagado",
-    category: "Tecnología",
-    receipt: "cloud-jun-2023.pdf",
-    paymentDate: new Date("2023-06-10"),
-    sourceId: 3
+    category: "Arriendo",
+    paymentMethod: "Transferencia",
+    status: "pendiente",
+    isRecurring: true,
+    recurringId: 2
   },
   {
     id: 4,
-    description: "Nómina - Julio 2023",
-    dueDate: new Date("2023-07-15"),
-    amount: 7500000,
+    description: "Servicios Cloud",
+    dueDate: new Date(2023, 10, 10), // November 10, 2023
+    amount: 950000,
     currency: "COP",
-    status: "Pendiente",
-    category: "Personal",
-    sourceId: 1
+    category: "Tecnología",
+    paymentMethod: "Tarjeta de Crédito",
+    status: "pendiente",
+    isRecurring: true,
+    recurringId: 3
   },
   {
     id: 5,
-    description: "Arriendo Oficina - Julio 2023",
-    dueDate: new Date("2023-07-05"),
-    amount: 3200000,
-    currency: "COP",
-    status: "Pendiente",
-    category: "Arriendo",
-    sourceId: 2
+    description: "Suscripción Herramientas de Diseño",
+    dueDate: new Date(2023, 10, 15), // November 15, 2023
+    amount: 50,
+    currency: "USD",
+    category: "Tecnología",
+    paymentMethod: "Tarjeta de Crédito",
+    status: "pendiente",
+    isRecurring: true,
+    recurringId: 5
   },
   {
     id: 6,
-    description: "Servicios Cloud - Julio 2023",
-    dueDate: new Date("2023-07-10"),
-    amount: 950000,
-    currency: "COP",
-    status: "Pendiente",
+    description: "Licencia Software Anual",
+    dueDate: new Date(2023, 5, 20), // June 20, 2023
+    amount: 1200,
+    currency: "USD",
     category: "Tecnología",
-    sourceId: 3
+    paymentMethod: "Tarjeta de Crédito",
+    status: "pagado",
+    receipt: "licencia-adobe.pdf",
+    isRecurring: false
   },
   {
     id: 7,
-    description: "Licencia Software Anual",
-    dueDate: new Date("2023-05-20"),
-    amount: 2400,
+    description: "Servicio AWS",
+    dueDate: new Date(2023, 5, 25), // June 25, 2023
+    amount: 350,
     currency: "USD",
-    status: "Pagado",
     category: "Tecnología",
-    receipt: "licencia-anual.pdf",
-    paymentDate: new Date("2023-05-19"),
-    sourceId: 4
+    paymentMethod: "Tarjeta de Crédito",
+    status: "pagado",
+    receipt: "aws-junio.pdf",
+    isRecurring: false
   },
   {
     id: 8,
-    description: "Servicio Consultoría",
-    dueDate: new Date("2023-06-25"),
-    amount: 1200,
-    currency: "USD",
-    status: "Vencido",
+    description: "Nómina",
+    dueDate: new Date(2023, 10, 15), // November 15, 2023
+    amount: 7500000,
+    currency: "COP",
+    category: "Personal",
+    paymentMethod: "Transferencia",
+    status: "pendiente",
+    isRecurring: true,
+    recurringId: 1
+  },
+  {
+    id: 9,
+    description: "Servicios Contables",
+    dueDate: new Date(2023, 10, 20), // November 20, 2023
+    amount: 1800000,
+    currency: "COP",
     category: "Servicios Profesionales",
-    sourceId: 5
+    paymentMethod: "Transferencia",
+    status: "vencido",
+    isRecurring: true,
+    recurringId: 4
   }
 ];
 
-export const AccruedExpenses = () => {
-  const [data, setData] = useState<AccruedExpense[]>(mockAccruedExpenses);
-  const [selectedExpense, setSelectedExpense] = useState<AccruedExpense | null>(null);
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("month");
+export function AccruedExpenses() {
+  const { toast } = useToast();
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | "all">("all");
-  
-  // Calculate category totals for each currency
-  const categoryTotals = data.reduce((acc, expense) => {
-    if (selectedCurrency !== "all" && expense.currency !== selectedCurrency) {
-      return acc;
-    }
-    
-    const key = `${expense.category}_${expense.currency}`;
-    if (!acc[key]) {
-      acc[key] = {
-        category: expense.category,
-        currency: expense.currency,
-        amount: 0,
-      };
-    }
-    acc[key].amount += expense.amount;
-    return acc;
-  }, {} as Record<string, { category: string; currency: Currency; amount: number }>);
+  const [viewCurrency, setViewCurrency] = useState<Currency>("COP");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
+  const [periodFilter, setPeriodFilter] = useState<string>("month");
+  const [selectedExpense, setSelectedExpense] = useState<AccruedExpense | null>(null);
+  const [markAsPaidOpen, setMarkAsPaidOpen] = useState(false);
 
-  // Filter functions based on selected period
-  const filterByPeriod = (expense: AccruedExpense) => {
+  // Set date range based on period selection
+  const handlePeriodChange = (period: string) => {
     const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startOfQuarter = new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1);
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    
-    switch (selectedPeriod) {
+    let start: Date;
+    let end: Date;
+
+    setPeriodFilter(period);
+
+    switch (period) {
       case "month":
-        return expense.dueDate >= startOfMonth;
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+        break;
       case "quarter":
-        return expense.dueDate >= startOfQuarter;
+        start = startOfMonth(subMonths(today, 2));
+        end = endOfMonth(today);
+        break;
       case "year":
-        return expense.dueDate >= startOfYear;
+        start = startOfMonth(subMonths(today, 11));
+        end = endOfMonth(today);
+        break;
       default:
-        return true;
+        return; // For custom, keep current range
     }
+
+    setDateRange({ from: start, to: end });
   };
-  
-  // Filter by currency
-  const filterByCurrency = (expense: AccruedExpense) => {
-    return selectedCurrency === "all" || expense.currency === selectedCurrency;
-  };
-  
-  // Combined filters
-  const filteredData = data.filter(expense => 
-    filterByPeriod(expense) && filterByCurrency(expense)
+
+  // Filter expenses based on date range and currency
+  const filteredExpenses = accruedExpensesData.filter(expense => {
+    const inDateRange = dateRange?.from && dateRange?.to 
+      ? !isBefore(expense.dueDate, dateRange.from) && !isAfter(expense.dueDate, dateRange.to)
+      : true;
+    
+    const matchesCurrency = selectedCurrency === "all" || expense.currency === selectedCurrency;
+    
+    return inDateRange && matchesCurrency;
+  });
+
+  // Calculate totals
+  const totalByCategoryAndCurrency = filteredExpenses.reduce((acc, expense) => {
+    const category = expense.category;
+    const currency = expense.currency;
+    
+    if (!acc[category]) {
+      acc[category] = { COP: 0, USD: 0 };
+    }
+    
+    acc[category][currency] += expense.amount;
+    
+    return acc;
+  }, {} as Record<string, Record<Currency, number>>);
+
+  const totalInViewCurrency = Object.entries(totalByCategoryAndCurrency).reduce(
+    (acc, [_, amounts]) => {
+      let totalInView = 0;
+      
+      // Convert and sum both currencies to view currency
+      if (viewCurrency === "COP") {
+        totalInView += amounts.COP + convertCurrency(amounts.USD, "USD", "COP");
+      } else {
+        totalInView += amounts.USD + convertCurrency(amounts.COP, "COP", "USD");
+      }
+      
+      return acc + totalInView;
+    }, 
+    0
   );
 
-  // Mark an expense as paid
-  const markAsPaid = (expenseId: number) => {
-    setData(prevData => 
-      prevData.map(expense => 
-        expense.id === expenseId 
-          ? {
-              ...expense,
-              status: 'Pagado',
-              paymentDate: new Date()
-            }
-          : expense
-      )
-    );
-  };
-
-  // Handle file upload
-  const handleFileUpload = (file: File | null) => {
-    if (file && selectedExpense) {
-      setData(prevData => 
-        prevData.map(expense => 
-          expense.id === selectedExpense.id 
-            ? {
-                ...expense,
-                receipt: file.name,
-                status: 'Pagado',
-                paymentDate: new Date()
-              }
-            : expense
-        )
-      );
-      setUploadModalOpen(false);
+  // Handle marking expense as paid
+  const handleMarkAsPaid = () => {
+    if (selectedExpense) {
+      toast({
+        title: "Gasto marcado como pagado",
+        description: `El gasto "${selectedExpense.description}" ha sido marcado como pagado.`
+      });
+      setMarkAsPaidOpen(false);
       setSelectedExpense(null);
     }
   };
 
+  // Columns for data table
   const columns = [
     {
       accessorKey: "description",
@@ -214,30 +246,66 @@ export const AccruedExpenses = () => {
     },
     {
       accessorKey: "dueDate",
-      header: "Fecha Vencimiento",
+      header: "Fecha de Vencimiento",
       cell: ({ row }: { row: any }) => formatDate(row.original.dueDate),
     },
     {
       accessorKey: "amount",
       header: "Monto",
-      cell: ({ row }: { row: any }) => formatCurrency(row.original.amount, row.original.currency),
-    },
-    {
-      accessorKey: "currency",
-      header: "Moneda",
+      cell: ({ row }: { row: any }) => {
+        const expense = row.original;
+        
+        // If viewing in original currency
+        if (viewCurrency === expense.currency) {
+          return formatCurrency(expense.amount, expense.currency);
+        }
+        
+        // If we need to convert
+        const convertedAmount = convertCurrency(
+          expense.amount, 
+          expense.currency, 
+          viewCurrency
+        );
+        
+        return (
+          <div className="flex items-center">
+            <span>{formatCurrency(convertedAmount, viewCurrency)}</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({expense.currency})
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Original: {formatCurrency(expense.amount, expense.currency)}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        );
+      }
     },
     {
       accessorKey: "category",
       header: "Categoría",
     },
     {
+      accessorKey: "paymentMethod",
+      header: "Método de Pago",
+      cell: ({ row }: { row: any }) => (
+        <div className="flex items-center">
+          <CreditCard className="h-4 w-4 mr-2 text-muted-foreground" />
+          {row.original.paymentMethod}
+        </div>
+      )
+    },
+    {
       accessorKey: "status",
       header: "Estado",
       cell: ({ row }: { row: any }) => (
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(row.original.status)}`}
-        >
-          {row.original.status}
+        <span className={getStatusBadge(row.original.status)}>
+          {row.original.status.charAt(0).toUpperCase() + row.original.status.slice(1)}
         </span>
       ),
     },
@@ -251,15 +319,8 @@ export const AccruedExpenses = () => {
             Ver
           </Button>
         ) : (
-          <Button 
-            variant="outline" 
-            size="sm"
-            disabled={row.original.status === "Pagado"}
-            onClick={() => {
-              setSelectedExpense(row.original);
-              setUploadModalOpen(true);
-            }}
-          >
+          <Button variant="ghost" size="sm" className="w-full justify-start" disabled={row.original.status === "pagado"}>
+            <FileText className="h-4 w-4 mr-2" />
             Subir
           </Button>
         )
@@ -270,149 +331,212 @@ export const AccruedExpenses = () => {
       header: "Acciones",
       cell: ({ row }: { row: any }) => (
         <div className="flex items-center gap-2">
-          {row.original.status !== "Pagado" && (
-            <Button
-              variant="ghost"
+          {row.original.status !== "pagado" && (
+            <Button 
+              variant="outline" 
               size="sm"
-              onClick={() => markAsPaid(row.original.id)}
+              onClick={() => {
+                setSelectedExpense(row.original);
+                setMarkAsPaidOpen(true);
+              }}
             >
-              <Check className="h-4 w-4 mr-1" />
+              <Check className="h-4 w-4 mr-2" />
               Marcar Pagado
             </Button>
           )}
+          <Button variant="ghost" size="sm">
+            Editar
+          </Button>
         </div>
       ),
     },
   ];
 
   return (
-    <div className="space-y-4">
+    <>
       <Card>
-        <CardHeader className="pb-3">
+        <CardHeader className="bg-muted/20">
           <CardTitle>Gastos Causados</CardTitle>
           <CardDescription>
-            Gastos generados automáticamente a partir de sus gastos recurrentes
+            Visualización de todos los gastos causados en el periodo seleccionado
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div>
-              <label htmlFor="period-filter" className="text-sm font-medium block mb-2">
-                Periodo
-              </label>
-              <Select
-                value={selectedPeriod}
-                onValueChange={setSelectedPeriod}
+        <CardContent className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center pt-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <Select 
+                value={periodFilter} 
+                onValueChange={handlePeriodChange}
               >
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar periodo" />
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Periodo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="month">Mes Actual</SelectItem>
-                  <SelectItem value="quarter">Trimestre Actual</SelectItem>
-                  <SelectItem value="year">Año Actual</SelectItem>
-                  <SelectItem value="all">Todo</SelectItem>
+                  <SelectItem value="month">Este Mes</SelectItem>
+                  <SelectItem value="quarter">Este Trimestre</SelectItem>
+                  <SelectItem value="year">Este Año</SelectItem>
+                  <SelectItem value="custom">Periodo Personalizado</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <label htmlFor="currency-filter" className="text-sm font-medium block mb-2">
-                Moneda
-              </label>
-              <Select
-                value={selectedCurrency}
-                onValueChange={(value: string) => setSelectedCurrency(value as Currency | "all")}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Seleccionar moneda" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="COP">COP</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="ml-auto">
-              <label className="text-sm font-medium block mb-2">&nbsp;</label>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" /> Exportar Excel
-              </Button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {Object.values(categoryTotals).map((total, index) => (
-              <div 
-                key={index}
-                className="bg-muted p-4 rounded-lg"
-              >
-                <div className="font-medium text-sm text-muted-foreground mb-1">
-                  {total.category}
-                </div>
-                <div className="text-xl font-bold">
-                  {formatCurrency(total.amount, total.currency)}
-                </div>
+              
+              {periodFilter === "custom" && (
+                <DatePickerWithRange
+                  value={dateRange}
+                  onChange={setDateRange}
+                />
+              )}
+              
+              <div className="flex gap-2">
+                <Select
+                  value={selectedCurrency}
+                  onValueChange={(val) => setSelectedCurrency(val as Currency | "all")}
+                >
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Moneda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="COP">COP</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select
+                  value={viewCurrency}
+                  onValueChange={(val) => setViewCurrency(val as Currency)}
+                >
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Ver en" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COP">Ver en COP</SelectItem>
+                    <SelectItem value="USD">Ver en USD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
+            </div>
+            
+            <Button className="w-full md:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Excel
+            </Button>
           </div>
           
-          <DataTable
-            columns={columns}
-            data={filteredData}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <StatsCard
+              title="Total Gastos Causados"
+              value={formatCurrency(totalInViewCurrency, viewCurrency)}
+              description={dateRange?.from && dateRange?.to 
+                ? `${format(dateRange.from, "dd/MM/yyyy", { locale: es })} - ${format(dateRange.to, "dd/MM/yyyy", { locale: es })}`
+                : "Periodo actual"
+              }
+              icon={<CreditCard className="h-4 w-4" />}
+            />
+            
+            {Object.entries(totalByCategoryAndCurrency).map(([category, currencies], index) => {
+              const totalInCategory = viewCurrency === "COP" 
+                ? currencies.COP + convertCurrency(currencies.USD, "USD", "COP")
+                : currencies.USD + convertCurrency(currencies.COP, "COP", "USD");
+              
+              if (index < 3) { // Only show top 3 categories
+                return (
+                  <StatsCard
+                    key={category}
+                    title={`Total ${category}`}
+                    value={formatCurrency(totalInCategory, viewCurrency)}
+                    description="Incluye gastos recurrentes y variables"
+                  />
+                );
+              }
+              return null;
+            })}
+          </div>
+          
+          <DataTable 
+            columns={columns} 
+            data={filteredExpenses}
             searchColumn="description"
             searchPlaceholder="Buscar gastos causados..."
           />
         </CardContent>
       </Card>
       
-      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+      {/* Dialog for marking expenses as paid */}
+      <Dialog open={markAsPaidOpen} onOpenChange={setMarkAsPaidOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cargar Comprobante de Pago</DialogTitle>
+            <DialogTitle>Marcar Gasto Como Pagado</DialogTitle>
+            <DialogDescription>
+              Complete los detalles del pago para el gasto "{selectedExpense?.description}".
+            </DialogDescription>
           </DialogHeader>
           
-          {selectedExpense && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium">Descripción:</div>
-                  <div>{selectedExpense.description}</div>
-                </div>
-                <div>
-                  <div className="font-medium">Valor:</div>
-                  <div>{formatCurrency(selectedExpense.amount, selectedExpense.currency)}</div>
-                </div>
-                <div>
-                  <div className="font-medium">Fecha de vencimiento:</div>
-                  <div>{formatDate(selectedExpense.dueDate)}</div>
-                </div>
-                <div>
-                  <div className="font-medium">Categoría:</div>
-                  <div>{selectedExpense.category}</div>
-                </div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fecha de Pago</label>
+              <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2">
+                {format(new Date(), "PPP", { locale: es })}
               </div>
-              
-              <FileUpload
-                onFileSelect={handleFileUpload}
-                acceptedFileTypes=".pdf,.jpg,.jpeg,.png"
-                maxFileSizeMB={5}
-                buttonText="Seleccionar Comprobante"
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Monto a Pagar</label>
+              <CurrencyInput
+                value={selectedExpense?.amount}
+                currency={selectedExpense?.currency || "COP"}
+                readOnly
               />
             </div>
-          )}
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Método de Pago</label>
+              <Select defaultValue={selectedExpense?.paymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar método" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Efectivo">Efectivo</SelectItem>
+                  <SelectItem value="Transferencia">Transferencia</SelectItem>
+                  <SelectItem value="Tarjeta de Crédito">Tarjeta de Crédito</SelectItem>
+                  <SelectItem value="Tarjeta de Débito">Tarjeta de Débito</SelectItem>
+                  <SelectItem value="PayPal">PayPal</SelectItem>
+                  <SelectItem value="Nequi">Nequi</SelectItem>
+                  <SelectItem value="Daviplata">Daviplata</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Comprobante (Opcional)</label>
+              <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center text-center">
+                <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Arrastra y suelta un archivo o haz clic para seleccionar
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Formatos aceptados: PDF, JPG, PNG. Máx 5MB
+                </p>
+                <Button variant="outline" size="sm" className="mt-4">
+                  Seleccionar Archivo
+                </Button>
+              </div>
+            </div>
+          </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setUploadModalOpen(false)}>
+            <Button variant="outline" onClick={() => setMarkAsPaidOpen(false)}>
               Cancelar
+            </Button>
+            <Button onClick={handleMarkAsPaid}>
+              Confirmar Pago
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
-};
+}
 
-export default AccruedExpenses;
+// Helper components that will be used in the AccruedExpenses component
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
