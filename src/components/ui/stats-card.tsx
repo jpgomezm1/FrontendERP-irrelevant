@@ -7,9 +7,10 @@ interface StatsCardProps {
   value: string | number;
   description?: string;
   icon?: React.ReactNode;
-  trend?: "up" | "down";
+  trend?: "up" | "down" | "neutral";
   trendValue?: string;
   className?: string;
+  currencySymbol?: string;
 }
 
 export function StatsCard({
@@ -20,6 +21,7 @@ export function StatsCard({
   trend,
   trendValue,
   className,
+  currencySymbol,
 }: StatsCardProps) {
   return (
     <Card className={className}>
@@ -28,17 +30,28 @@ export function StatsCard({
         {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold">
+          {currencySymbol && <span className="mr-1">{currencySymbol}</span>}
+          {value}
+        </div>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
         )}
         {trend && (
           <div
             className={`flex items-center text-xs ${
-              trend === "up" ? "text-green-500" : "text-red-500"
+              trend === "up" 
+                ? "text-green-500" 
+                : trend === "down" 
+                  ? "text-red-500" 
+                  : "text-gray-500"
             }`}
           >
-            {trend === "up" ? "↑" : "↓"} {trendValue}
+            {trend === "up" 
+              ? "↑" 
+              : trend === "down" 
+                ? "↓" 
+                : "→"} {trendValue}
           </div>
         )}
       </CardContent>

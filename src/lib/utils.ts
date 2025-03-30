@@ -6,13 +6,43 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('es-CO', {
+export type Currency = "COP" | "USD";
+
+export interface CurrencyConfig {
+  symbol: string;
+  code: Currency;
+  locale: string;
+  decimalPlaces: number;
+}
+
+export const CURRENCIES: Record<Currency, CurrencyConfig> = {
+  COP: {
+    symbol: "$",
+    code: "COP",
+    locale: "es-CO",
+    decimalPlaces: 0,
+  },
+  USD: {
+    symbol: "US$",
+    code: "USD",
+    locale: "en-US",
+    decimalPlaces: 2,
+  }
+};
+
+export function formatCurrency(value: number, currency: Currency = "COP"): string {
+  const config = CURRENCIES[currency];
+  
+  return new Intl.NumberFormat(config.locale, {
     style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    currency: config.code,
+    minimumFractionDigits: config.decimalPlaces,
+    maximumFractionDigits: config.decimalPlaces,
   }).format(value);
+}
+
+export function getCurrencySymbol(currency: Currency = "COP"): string {
+  return CURRENCIES[currency].symbol;
 }
 
 export function formatDate(date: Date): string {
@@ -46,4 +76,21 @@ export function getRandomColor(index: number): string {
   ];
   
   return colors[index % colors.length];
+}
+
+export function getStatusColor(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'pagado':
+      return 'bg-green-100 text-green-800';
+    case 'pendiente':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'vencido':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+}
+
+export function isPastDue(date: Date): boolean {
+  return date < new Date();
 }
