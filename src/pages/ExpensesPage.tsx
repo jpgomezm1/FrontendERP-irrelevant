@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
@@ -85,7 +84,6 @@ import {
 import { AccruedExpenses } from "@/components/expenses/accrued-expenses";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Updated expense data with currency support
 const expensesData = [
   {
     id: 1,
@@ -241,7 +239,6 @@ const recurringExpensesData = [
   },
 ];
 
-// Updated form schemas with currency support
 const expenseFormSchema = z.object({
   description: z.string().min(3, "La descripción debe tener al menos 3 caracteres"),
   date: z.date({
@@ -353,7 +350,6 @@ const ExpensesPage = () => {
     },
   });
 
-  // Filtered data based on selected currency
   const filteredExpenses = selectedCurrency === "all" 
     ? expensesData 
     : expensesData.filter(expense => expense.currency === selectedCurrency);
@@ -362,13 +358,11 @@ const ExpensesPage = () => {
     ? recurringExpensesData
     : recurringExpensesData.filter(expense => expense.currency === selectedCurrency);
 
-  // Calculate totals by currency in the selected view currency
   const calculateTotalInViewCurrency = (expenses: any[], currencyField = "currency") => {
     return expenses.reduce((total, expense) => {
       if (expense[currencyField] === viewCurrency) {
         return total + expense.amount;
       } else {
-        // Convert to view currency
         return total + convertCurrency(expense.amount, expense[currencyField], viewCurrency);
       }
     }, 0);
@@ -379,14 +373,14 @@ const ExpensesPage = () => {
     recurringExpensesData.filter(expense => expense.status === "Activo")
   );
 
-  // Calculate totals by category in view currency
   const categoryTotals = [...expensesData, ...recurringExpensesData]
-    .filter(expense => expense.status !== "Pausado" || !("status" in expense))
+    .filter(expense => {
+      return 'status' in expense ? expense.status !== "Pausado" : true;
+    })
     .reduce((acc, expense) => {
       const category = expense.category;
       if (!acc[category]) acc[category] = 0;
       
-      // Add amount in view currency
       if (expense.currency === viewCurrency) {
         acc[category] += expense.amount;
       } else {
@@ -396,7 +390,6 @@ const ExpensesPage = () => {
       return acc;
     }, {} as Record<string, number>);
 
-  // Original totals by currency
   const totalByCurrency = {
     COP: expensesData
       .filter(expense => expense.currency === "COP")
@@ -415,11 +408,12 @@ const ExpensesPage = () => {
       .reduce((sum, expense) => sum + expense.amount, 0),
   };
 
-  // Data for category chart, separated by currency but converted to view currency
   const prepareCategoryChartData = () => {
     const categoryData = Object.entries(
       [...expensesData, ...recurringExpensesData]
-        .filter(expense => expense.status !== "Pausado" || !("status" in expense))
+        .filter(expense => {
+          return 'status' in expense ? expense.status !== "Pausado" : true;
+        })
         .reduce((acc, expense) => {
           const category = expense.category;
           const currency = expense.currency;
@@ -432,7 +426,6 @@ const ExpensesPage = () => {
           return acc;
         }, {} as Record<string, Record<Currency, number>>)
     ).map(([category, amounts]) => {
-      // If viewing in COP, convert USD to COP
       if (viewCurrency === "COP") {
         return {
           category,
@@ -441,7 +434,6 @@ const ExpensesPage = () => {
           original_USD: amounts.USD
         };
       } 
-      // If viewing in USD, convert COP to USD
       else {
         return {
           category,
@@ -457,7 +449,6 @@ const ExpensesPage = () => {
 
   const categoryChartData = prepareCategoryChartData();
 
-  // Generate preview of recurring payments
   const handlePreviewPayments = (formValues: any) => {
     if (formValues.startDate && formValues.frequency && formValues.amount) {
       const dates = generatePaymentDates(formValues.startDate, formValues.frequency, 12);
@@ -495,7 +486,6 @@ const ExpensesPage = () => {
     setRecurringModalOpen(false);
   };
 
-  // Enhanced columns with currency conversion
   const expenseColumns = [
     {
       accessorKey: "description",
@@ -512,12 +502,10 @@ const ExpensesPage = () => {
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
         
-        // If viewing in original currency
         if (viewCurrency === expense.currency) {
           return formatCurrency(expense.amount, expense.currency);
         }
         
-        // If we need to convert
         const convertedAmount = convertCurrency(
           expense.amount, 
           expense.currency, 
@@ -592,12 +580,10 @@ const ExpensesPage = () => {
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
         
-        // If viewing in original currency
         if (viewCurrency === expense.currency) {
           return formatCurrency(expense.amount, expense.currency);
         }
         
-        // If we need to convert
         const convertedAmount = convertCurrency(
           expense.amount, 
           expense.currency, 
@@ -1154,7 +1140,6 @@ const ExpensesPage = () => {
                         type="button"
                         variant="outline"
                         onClick={() => {
-                          // Preview payments
                           const formValues = recurringExpenseForm.getValues();
                           handlePreviewPayments(formValues);
                         }}
@@ -1378,7 +1363,6 @@ const ExpensesPage = () => {
                       .sort((a, b) => a.nextPayment.getTime() - b.nextPayment.getTime())
                       .slice(0, 3)
                       .map((expense, index) => {
-                        // Convert amount if needed
                         const displayAmount = expense.currency === viewCurrency 
                           ? expense.amount 
                           : convertCurrency(expense.amount, expense.currency, viewCurrency);
@@ -1433,7 +1417,6 @@ const ExpensesPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Preview Payments Dialog */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
