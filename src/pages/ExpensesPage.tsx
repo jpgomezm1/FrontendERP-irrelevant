@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
@@ -52,8 +51,17 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { StatsCard } from "@/components/ui/stats-card";
+import { 
+  Bar, 
+  BarChart, 
+  CartesianGrid, 
+  ResponsiveContainer, 
+  Tooltip as RechartsTooltip, 
+  XAxis, 
+  YAxis 
+} from "recharts";
 
-// Datos simulados para gastos
 const expensesData = [
   {
     id: 1,
@@ -154,7 +162,6 @@ const recurringExpensesData = [
   },
 ];
 
-// Esquemas de validación con Zod
 const expenseFormSchema = z.object({
   description: z.string().min(3, "La descripción debe tener al menos 3 caracteres"),
   date: z.date({
@@ -189,7 +196,6 @@ const recurringExpenseFormSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Arrays de opciones
 const expenseCategories = [
   "Transporte",
   "Alimentación",
@@ -225,7 +231,6 @@ const frequencies = [
   "Anual",
 ];
 
-// Definiciones de columnas para DataTable
 const expenseColumns = [
   {
     accessorKey: "description",
@@ -338,7 +343,6 @@ const ExpensesPage = () => {
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [recurringModalOpen, setRecurringModalOpen] = useState(false);
   
-  // Form para gastos variables
   const expenseForm = useForm<z.infer<typeof expenseFormSchema>>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
@@ -350,8 +354,7 @@ const ExpensesPage = () => {
       notes: "",
     },
   });
-  
-  // Form para gastos recurrentes
+
   const recurringExpenseForm = useForm<z.infer<typeof recurringExpenseFormSchema>>({
     resolver: zodResolver(recurringExpenseFormSchema),
     defaultValues: {
@@ -401,7 +404,6 @@ const ExpensesPage = () => {
           </TabsList>
           
           <div>
-            {/* Modal para añadir gasto variable */}
             <Dialog open={expenseModalOpen} onOpenChange={setExpenseModalOpen}>
               <DialogTrigger asChild>
                 <Button className="mr-2">
@@ -597,7 +599,6 @@ const ExpensesPage = () => {
               </DialogContent>
             </Dialog>
 
-            {/* Modal para añadir gasto recurrente */}
             <Dialog open={recurringModalOpen} onOpenChange={setRecurringModalOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -799,7 +800,6 @@ const ExpensesPage = () => {
           </div>
         </div>
         
-        {/* Contenido de la tab de gastos variables */}
         <TabsContent value="variables">
           <Card>
             <CardHeader>
@@ -819,7 +819,6 @@ const ExpensesPage = () => {
           </Card>
         </TabsContent>
         
-        {/* Contenido de la tab de gastos recurrentes */}
         <TabsContent value="recurrentes">
           <Card>
             <CardHeader>
@@ -839,7 +838,6 @@ const ExpensesPage = () => {
           </Card>
         </TabsContent>
         
-        {/* Contenido de la tab de resumen */}
         <TabsContent value="resumen">
           <Card>
             <CardHeader>
@@ -897,7 +895,7 @@ const ExpensesPage = () => {
                         height={70}
                       />
                       <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
-                      <Tooltip
+                      <RechartsTooltip
                         formatter={(value) => [
                           formatCurrency(Number(value)),
                           "Valor",

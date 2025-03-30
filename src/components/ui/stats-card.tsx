@@ -1,14 +1,13 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./card";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface StatsCardProps {
   title: string;
-  value: string;
+  value: string | number;
   description?: string;
   icon?: React.ReactNode;
-  trend?: "up" | "down" | "neutral";
+  trend?: "up" | "down";
   trendValue?: string;
   className?: string;
 }
@@ -23,33 +22,28 @@ export function StatsCard({
   className,
 }: StatsCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
+        {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
         )}
-        {trend && trendValue && (
-          <div className="flex items-center mt-1">
-            <div
-              className={cn(
-                "text-xs font-medium mr-1",
-                trend === "up" && "text-emerald-500",
-                trend === "down" && "text-red-500"
-              )}
-            >
-              {trend === "up" && "↑"}
-              {trend === "down" && "↓"}
-              {trend === "neutral" && "→"} {trendValue}
-            </div>
-            <div className="text-xs text-muted-foreground">vs. mes anterior</div>
+        {trend && (
+          <div
+            className={`flex items-center text-xs ${
+              trend === "up" ? "text-green-500" : "text-red-500"
+            }`}
+          >
+            {trend === "up" ? "↑" : "↓"} {trendValue}
           </div>
         )}
       </CardContent>
     </Card>
   );
 }
+
+export default StatsCard;
