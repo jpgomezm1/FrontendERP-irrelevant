@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,10 +11,13 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
 import { incomesData } from "./income-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function IncomeList() {
+  const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
+
   const incomeColumns = [
     {
       accessorKey: "description",
@@ -22,16 +26,34 @@ export function IncomeList() {
     {
       accessorKey: "date",
       header: "Fecha",
-      cell: ({ row }) => formatDate(row.original.date),
+      cell: ({ row }) => {
+        const date = new Date(row.original.date);
+        return new Intl.DateTimeFormat('es-CO').format(date);
+      },
     },
     {
       accessorKey: "amount",
       header: "Monto",
-      cell: ({ row }) => (
-        <span className="text-green-600 font-medium">
-          {formatCurrency(row.original.amount)}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const originalAmount = row.original.amount;
+        const originalCurrency = row.original.currency;
+        const amount = displayCurrency === originalCurrency 
+          ? originalAmount 
+          : convertCurrency(originalAmount, originalCurrency, displayCurrency);
+
+        return (
+          <div className="flex items-center space-x-2">
+            <span className="text-green-600 font-medium">
+              {formatCurrency(amount, displayCurrency)}
+            </span>
+            {displayCurrency !== originalCurrency && (
+              <span className="text-xs text-gray-500">
+                (Original: {formatCurrency(originalAmount, originalCurrency)})
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "type",
@@ -69,11 +91,22 @@ export function IncomeList() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Ingresos Registrados</CardTitle>
-        <CardDescription>
-          Control y seguimiento de todos los ingresos
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div>
+          <CardTitle>Ingresos Registrados</CardTitle>
+          <CardDescription>
+            Control y seguimiento de todos los ingresos
+          </CardDescription>
+        </div>
+        <Select value={displayCurrency} onValueChange={(value: Currency) => setDisplayCurrency(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Moneda de visualización" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="COP">Pesos Colombianos (COP)</SelectItem>
+            <SelectItem value="USD">Dólares (USD)</SelectItem>
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         <DataTable

@@ -1,17 +1,62 @@
 
+import { useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { monthlyData } from "./income-data";
+import { monthlyData, incomesData } from "./income-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function IncomeAnalysis() {
+  const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
+
+  // Convert values based on selected currency
+  const totalMonth = incomesData
+    .filter(income => {
+      const incomeDate = new Date(income.date);
+      const now = new Date();
+      return incomeDate.getMonth() === now.getMonth() && 
+             incomeDate.getFullYear() === now.getFullYear();
+    })
+    .reduce((acc, income) => {
+      const amount = displayCurrency === income.currency 
+        ? income.amount 
+        : convertCurrency(income.amount, income.currency, displayCurrency);
+      return acc + amount;
+    }, 0);
+
+  const avgMonth = monthlyData.reduce((acc, month) => acc + month.ingresos, 0) / monthlyData.length;
+  const avgMonthConverted = displayCurrency === "COP" 
+    ? avgMonth 
+    : convertCurrency(avgMonth, "COP", "USD");
+
+  const clientIncome = incomesData
+    .filter(income => income.type === "Cliente")
+    .reduce((acc, income) => {
+      const amount = displayCurrency === income.currency 
+        ? income.amount 
+        : convertCurrency(income.amount, income.currency, displayCurrency);
+      return acc + amount;
+    }, 0);
+
   return (
     <div className="grid gap-4">
+      <div className="flex justify-end">
+        <Select value={displayCurrency} onValueChange={(value: Currency) => setDisplayCurrency(value)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Moneda de visualización" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="COP">Pesos Colombianos (COP)</SelectItem>
+            <SelectItem value="USD">Dólares (USD)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50">
           <CardHeader className="pb-2">
@@ -58,7 +103,12 @@ export function IncomeAnalysis() {
           <div className="h-[400px] mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={monthlyData}
+                data={monthlyData.map(month => ({
+                  ...month,
+                  ingresos: displayCurrency === "COP" 
+                    ? month.ingresos 
+                    : convertCurrency(month.ingresos, "COP", "USD")
+                }))}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />

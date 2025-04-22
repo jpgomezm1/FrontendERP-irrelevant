@@ -48,6 +48,9 @@ const incomeFormSchema = z.object({
     required_error: "La fecha es requerida",
   }),
   amount: z.number().min(1, "El monto debe ser mayor a 0"),
+  currency: z.enum(["COP", "USD"] as const, {
+    required_error: "Seleccione una moneda",
+  }),
   client: z.string().optional(),
   paymentMethod: z.string({
     required_error: "Seleccione un método de pago",
@@ -65,6 +68,7 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
       description: "",
       date: new Date(),
       amount: 0,
+      currency: "COP",
       client: "",
       paymentMethod: "",
       notes: "",
@@ -204,22 +208,48 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="form-required">Monto</FormLabel>
-                    <FormControl>
-                      <CurrencyInput
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="form-required">Monto</FormLabel>
+                      <FormControl>
+                        <CurrencyInput
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          showCurrencySelector={false}
+                          currency={form.watch("currency")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="form-required">Moneda</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Moneda" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="COP">COP</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <FormField
