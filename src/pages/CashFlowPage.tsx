@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
-import { Download } from "lucide-react";
+import { Download, ArrowDown, ArrowUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { FinancialMetrics } from "@/components/cash-flow/financial-metrics";
@@ -138,12 +139,12 @@ const cashFlowChartData = [
 
 // Datos mensuales para análisis
 const monthlyBalanceData = [
-  { month: "Ene", ingresos: 24500000, gastos: 18700000, balance: 5800000 },
-  { month: "Feb", ingresos: 26700000, gastos: 19200000, balance: 7500000 },
-  { month: "Mar", ingresos: 23900000, gastos: 17800000, balance: 6100000 },
-  { month: "Abr", ingresos: 28400000, gastos: 20100000, balance: 8300000 },
-  { month: "May", ingresos: 27800000, gastos: 21300000, balance: 6500000 },
-  { month: "Jun", ingresos: 25600000, gastos: 22400000, balance: 3200000 },
+  { name: "Ene", ingresos: 24500000, gastos: 18700000, balance: 5800000 },
+  { name: "Feb", ingresos: 26700000, gastos: 19200000, balance: 7500000 },
+  { name: "Mar", ingresos: 23900000, gastos: 17800000, balance: 6100000 },
+  { name: "Abr", ingresos: 28400000, gastos: 20100000, balance: 8300000 },
+  { name: "May", ingresos: 27800000, gastos: 21300000, balance: 6500000 },
+  { name: "Jun", ingresos: 25600000, gastos: 22400000, balance: 3200000 },
 ];
 
 // Datos de gastos por categoría
