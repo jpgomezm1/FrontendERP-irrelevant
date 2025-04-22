@@ -502,6 +502,8 @@ const CashFlowPage = () => {
             growingClients={clientAnalyticsData.growingClients}
             decliningClients={clientAnalyticsData.decliningClients}
             mrrChanges={clientAnalyticsData.mrrChanges}
+            timeFrame={analysisTimeFrame}
+            onTimeFrameChange={setAnalysisTimeFrame}
           />
         </TabsContent>
       </Tabs>
