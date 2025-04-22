@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
-import { Download, ArrowDown, ArrowUp } from "lucide-react";
+import { Download, ArrowDown, ArrowUp, FileDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { FinancialMetrics } from "@/components/cash-flow/financial-metrics";
 import { AnalysisCharts } from "@/components/cash-flow/analysis-charts";
+import { FinancialDashboard } from "@/components/financial/financial-dashboard";
+import { FinancialProjections } from "@/components/financial/financial-projections";
+import { ClientAnalytics } from "@/components/financial/client-analytics";
 
 // Datos simulados para movimientos de caja
 const cashFlowData = [
@@ -244,10 +246,70 @@ const cashFlowColumns = [
   },
 ];
 
+// Datos para análisis financiero avanzado
+const financialMetricsData = {
+  burnRate: 20100000, // Gasto promedio mensual
+  mrr: 18500000, // Monthly Recurring Revenue
+  mrrProjected: 22000000, // MRR proyectado
+  topClientPercentage: 32, // % del ingreso que representa el cliente principal
+  monthlyVariation: {
+    income: { value: 2800000, percentage: 12.3 },
+    expense: { value: -1200000, percentage: -5.6 }
+  },
+  structuralExpenses: 15600000,
+  avoidableExpenses: 4500000,
+  ytdProfit: 43800000, // Utilidad acumulada año a la fecha
+};
+
+// Datos para proyecciones
+const projectionData = Array(6).fill(0).map((_, i) => {
+  const month = new Date();
+  month.setMonth(month.getMonth() + i);
+  return {
+    month: month.toLocaleString('default', { month: 'short' }),
+    year: month.getFullYear(),
+    projectedIncome: 25600000 + (i * 800000),
+    projectedExpense: 22400000 + (i * 300000),
+    projectedBalance: (25600000 + (i * 800000)) - (22400000 + (i * 300000))
+  };
+});
+
+// Datos para análisis de clientes
+const clientAnalyticsData = {
+  growingClients: [
+    { name: "Cliente B", previousValue: 3200000, currentValue: 3800000, growth: 18.8 },
+    { name: "Cliente D", previousValue: 1500000, currentValue: 1800000, growth: 20.0 }
+  ],
+  decliningClients: [
+    { name: "Cliente A", previousValue: 8200000, currentValue: 7500000, decline: -8.5 }
+  ],
+  mrrChanges: {
+    newMrr: 1200000,
+    churn: 800000,
+    netMrr: 400000
+  },
+  clientsProfitability: [
+    { name: "Cliente B", revenue: 3800000, cost: 1200000, profit: 2600000, margin: 68.4 },
+    { name: "Cliente A", revenue: 7500000, cost: 5200000, profit: 2300000, margin: 30.7 },
+    { name: "Cliente D", revenue: 1800000, cost: 500000, profit: 1300000, margin: 72.2 },
+    { name: "Cliente C", revenue: 2500000, cost: 1600000, profit: 900000, margin: 36.0 }
+  ]
+};
+
+// Datos para el mapa de calor de gastos
+const expenseHeatMapData = Array.from({ length: 31 }, (_, i) => ({
+  day: i + 1,
+  value: Math.random() * 1000000
+}));
+
 const CashFlowPage = () => {
   const [dateFilter, setDateFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [categoryFilter, setcategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [analysisTimeFrame, setAnalysisTimeFrame] = useState("month");
+  const [clientFilter, setClientFilter] = useState("all");
+  const [incomeTypeFilter, setIncomeTypeFilter] = useState("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
   
   // Calcular métricas financieras
   const totalIncome = cashFlowData
@@ -268,9 +330,9 @@ const CashFlowPage = () => {
   const runway = currentBalance / averageMonthlyExpenses;
   const breakEvenDate = new Date();
   breakEvenDate.setMonth(breakEvenDate.getMonth() + Math.floor(runway));
-  
-  // Calcular saldo acumulado para cada movimiento
-  const movimientosConSaldo = cashFlowData.map((item, index) => {
+
+  // Aplicar filtros a los datos
+  const filteredCashFlowData = cashFlowData.map((item, index) => {
     let balanceAcumulado = cashFlowData
       .slice(0, index + 1)
       .reduce((sum, mov) => sum + (mov.type === "Ingreso" ? mov.amount : -mov.amount), 0);
@@ -279,10 +341,7 @@ const CashFlowPage = () => {
       ...item,
       balance: balanceAcumulado,
     };
-  });
-
-  // Aplicar filtros a los datos
-  const filteredCashFlowData = movimientosConSaldo.filter((item) => {
+  }).filter((item) => {
     return (
       (typeFilter === "all" || item.type === typeFilter) &&
       (categoryFilter === "all" || item.category === categoryFilter) &&
@@ -295,11 +354,16 @@ const CashFlowPage = () => {
     );
   });
 
+  const handleExportAnalysis = () => {
+    console.log("Exporting financial analysis...");
+    // Implementación para generar PDF o Excel
+  };
+
   return (
     <div>
       <PageHeader
         title="Flujo de Caja"
-        description="Control y seguimiento de todos los movimientos financieros"
+        description="Control, seguimiento y análisis financiero para decisiones estratégicas"
       />
 
       <FinancialMetrics
@@ -312,11 +376,33 @@ const CashFlowPage = () => {
         breakEvenDate={breakEvenDate}
       />
 
-      <Tabs defaultValue="movimientos" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
-          <TabsTrigger value="analisis">Análisis</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="dashboard" className="mt-6">
+        <div className="flex justify-between items-center mb-2">
+          <TabsList>
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
+            <TabsTrigger value="analisis">Análisis</TabsTrigger>
+            <TabsTrigger value="proyecciones">Proyecciones</TabsTrigger>
+            <TabsTrigger value="clientes">Análisis de Clientes</TabsTrigger>
+          </TabsList>
+          
+          <Button onClick={handleExportAnalysis} variant="outline">
+            <FileDown className="h-4 w-4 mr-2" />
+            Exportar Análisis
+          </Button>
+        </div>
+
+        <TabsContent value="dashboard">
+          <FinancialDashboard 
+            metrics={financialMetricsData}
+            monthlyData={monthlyBalanceData}
+            clientData={clientIncomeData}
+            expenseData={categoryExpensesData}
+            expenseHeatMap={expenseHeatMapData}
+            onTimeFrameChange={setAnalysisTimeFrame}
+            timeFrame={analysisTimeFrame}
+          />
+        </TabsContent>
 
         <TabsContent value="movimientos">
           <Card>
@@ -361,7 +447,7 @@ const CashFlowPage = () => {
                 <div className="flex-1">
                   <Select
                     value={categoryFilter}
-                    onValueChange={setcategoryFilter}
+                    onValueChange={setCategoryFilter}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por categoría" />
@@ -399,6 +485,23 @@ const CashFlowPage = () => {
             monthlyData={monthlyBalanceData}
             categoryExpenses={categoryExpensesData}
             clientIncome={clientIncomeData}
+          />
+        </TabsContent>
+
+        <TabsContent value="proyecciones">
+          <FinancialProjections
+            currentData={monthlyBalanceData[monthlyBalanceData.length - 1]}
+            projectionData={projectionData}
+            metrics={financialMetricsData}
+          />
+        </TabsContent>
+
+        <TabsContent value="clientes">
+          <ClientAnalytics
+            clientProfitability={clientAnalyticsData.clientsProfitability}
+            growingClients={clientAnalyticsData.growingClients}
+            decliningClients={clientAnalyticsData.decliningClients}
+            mrrChanges={clientAnalyticsData.mrrChanges}
           />
         </TabsContent>
       </Tabs>
