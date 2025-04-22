@@ -13,7 +13,8 @@ import {
   Legend,
   ResponsiveContainer,
   LineChart,
-  Line
+  Line,
+  Cell
 } from "recharts";
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown } from "lucide-react";
 
@@ -214,9 +215,13 @@ export function ClientAnalytics({
                     <Bar 
                       dataKey="value" 
                       name="Valor"
-                      fill={(data) => data.value >= 0 ? '#4ade80' : '#f87171'} 
+                      fill="#4ade80" 
                       radius={[4, 4, 0, 0]}
-                    />
+                    >
+                      {mrrChangesData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.value >= 0 ? "#4ade80" : "#f87171"} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
