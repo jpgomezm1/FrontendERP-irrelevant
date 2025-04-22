@@ -1,24 +1,15 @@
-
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatsCard } from "@/components/ui/stats-card";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
-import { Download, ArrowDown, ArrowUp, Wallet } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
+import { Download } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { FinancialMetrics } from "@/components/cash-flow/financial-metrics";
+import { AnalysisCharts } from "@/components/cash-flow/analysis-charts";
 
 // Datos simulados para movimientos de caja
 const cashFlowData = [
@@ -155,7 +146,23 @@ const monthlyBalanceData = [
   { month: "Jun", ingresos: 25600000, gastos: 22400000, balance: 3200000 },
 ];
 
-// Definiciones de columnas para DataTable
+// Datos de gastos por categoría
+const categoryExpensesData = [
+  { name: "Personal", value: 7500000 },
+  { name: "Tecnología", value: 950000 },
+  { name: "Arriendo", value: 3200000 },
+  { name: "Marketing", value: 450000 },
+];
+
+// Datos de ingresos por cliente
+const clientIncomeData = [
+  { name: "Cliente A", value: 7500000 },
+  { name: "Cliente B", value: 3800000 },
+  { name: "Cliente C", value: 2500000 },
+  { name: "Cliente D", value: 1800000 },
+];
+
+// Columnas actualizadas para DataTable
 const cashFlowColumns = [
   {
     accessorKey: "date",
@@ -189,12 +196,31 @@ const cashFlowColumns = [
     ),
   },
   {
+    accessorKey: "client",
+    header: "Cliente/Proyecto",
+    cell: ({ row }) => row.original.client || "N/A",
+  },
+  {
     accessorKey: "category",
     header: "Categoría",
   },
   {
     accessorKey: "paymentMethod",
     header: "Método de Pago",
+  },
+  {
+    accessorKey: "isRecurring",
+    header: "Tipo",
+    cell: ({ row }) => (
+      <div className="flex space-x-2">
+        {row.original.isRecurring && (
+          <Badge variant="secondary">Recurrente</Badge>
+        )}
+        {row.original.isScheduled && (
+          <Badge variant="warning">Programado</Badge>
+        )}
+      </div>
+    ),
   },
   {
     accessorKey: "amount",
@@ -210,13 +236,19 @@ const cashFlowColumns = [
       </span>
     ),
   },
+  {
+    accessorKey: "balance",
+    header: "Saldo",
+    cell: ({ row }) => formatCurrency(row.original.balance),
+  },
 ];
 
 const CashFlowPage = () => {
   const [dateFilter, setDateFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [categoryFilter, setcategoryFilter] = useState("all");
   
-  // Calcular totales
+  // Calcular métricas financieras
   const totalIncome = cashFlowData
     .filter((item) => item.type === "Ingreso")
     .reduce((sum, item) => sum + item.amount, 0);
@@ -227,10 +259,32 @@ const CashFlowPage = () => {
   
   const currentBalance = totalIncome - totalExpenses;
   
+  // Calcular promedios mensuales (últimos 6 meses)
+  const averageMonthlyIncome = totalIncome / 6;
+  const averageMonthlyExpenses = totalExpenses / 6;
+  
+  // Calcular runway y fecha de quiebre
+  const runway = currentBalance / averageMonthlyExpenses;
+  const breakEvenDate = new Date();
+  breakEvenDate.setMonth(breakEvenDate.getMonth() + Math.floor(runway));
+  
+  // Calcular saldo acumulado para cada movimiento
+  const movimientosConSaldo = cashFlowData.map((item, index) => {
+    let balanceAcumulado = cashFlowData
+      .slice(0, index + 1)
+      .reduce((sum, mov) => sum + (mov.type === "Ingreso" ? mov.amount : -mov.amount), 0);
+    
+    return {
+      ...item,
+      balance: balanceAcumulado,
+    };
+  });
+
   // Aplicar filtros a los datos
-  const filteredCashFlowData = cashFlowData.filter((item) => {
+  const filteredCashFlowData = movimientosConSaldo.filter((item) => {
     return (
       (typeFilter === "all" || item.type === typeFilter) &&
+      (categoryFilter === "all" || item.category === categoryFilter) &&
       (dateFilter === "all" ||
         (dateFilter === "thisWeek" &&
           item.date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) ||
@@ -247,26 +301,15 @@ const CashFlowPage = () => {
         description="Control y seguimiento de todos los movimientos financieros"
       />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatsCard
-          title="Ingresos Totales"
-          value={formatCurrency(totalIncome)}
-          icon={<ArrowDown className="h-4 w-4 text-green-500" />}
-          className="bg-green-50"
-        />
-        <StatsCard
-          title="Gastos Totales"
-          value={formatCurrency(totalExpenses)}
-          icon={<ArrowUp className="h-4 w-4 text-red-500" />}
-          className="bg-red-50"
-        />
-        <StatsCard
-          title="Saldo Actual"
-          value={formatCurrency(currentBalance)}
-          icon={<Wallet className="h-4 w-4" />}
-          className={currentBalance >= 0 ? "bg-blue-50" : "bg-amber-50"}
-        />
-      </div>
+      <FinancialMetrics
+        totalIncome={totalIncome}
+        totalExpenses={totalExpenses}
+        currentBalance={currentBalance}
+        averageMonthlyIncome={averageMonthlyIncome}
+        averageMonthlyExpenses={averageMonthlyExpenses}
+        runway={runway}
+        breakEvenDate={breakEvenDate}
+      />
 
       <Tabs defaultValue="movimientos" className="mt-6">
         <TabsList>
@@ -274,7 +317,6 @@ const CashFlowPage = () => {
           <TabsTrigger value="analisis">Análisis</TabsTrigger>
         </TabsList>
 
-        {/* Tab de Movimientos */}
         <TabsContent value="movimientos">
           <Card>
             <CardHeader>
@@ -290,7 +332,7 @@ const CashFlowPage = () => {
                     value={dateFilter}
                     onValueChange={setDateFilter}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger>
                       <SelectValue placeholder="Filtrar por fecha" />
                     </SelectTrigger>
                     <SelectContent>
@@ -305,13 +347,31 @@ const CashFlowPage = () => {
                     value={typeFilter}
                     onValueChange={setTypeFilter}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger>
                       <SelectValue placeholder="Filtrar por tipo" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos los movimientos</SelectItem>
                       <SelectItem value="Ingreso">Solo ingresos</SelectItem>
                       <SelectItem value="Gasto">Solo gastos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <Select
+                    value={categoryFilter}
+                    onValueChange={setcategoryFilter}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las categorías</SelectItem>
+                      <SelectItem value="Personal">Personal</SelectItem>
+                      <SelectItem value="Tecnología">Tecnología</SelectItem>
+                      <SelectItem value="Arriendo">Arriendo</SelectItem>
+                      <SelectItem value="Marketing">Marketing</SelectItem>
+                      <SelectItem value="Cliente">Cliente</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -333,137 +393,12 @@ const CashFlowPage = () => {
           </Card>
         </TabsContent>
 
-        {/* Tab de Análisis */}
         <TabsContent value="analisis">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análisis de Flujo de Caja</CardTitle>
-              <CardDescription>
-                Visualización gráfica de los movimientos financieros
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Flujo de Caja (Junio 2023)</h3>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={cashFlowChartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
-                        <Tooltip formatter={(value) => [formatCurrency(Number(value)), ""]} />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="ingresos"
-                          name="Ingresos"
-                          stroke="#4ade80"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="gastos"
-                          name="Gastos"
-                          stroke="#f87171"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="balance"
-                          name="Balance"
-                          stroke="#4b4ce6"
-                          strokeWidth={3}
-                          dot={{ r: 5 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Balance Mensual (2023)</h3>
-                  <div className="h-[350px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyBalanceData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
-                        <Tooltip formatter={(value) => [formatCurrency(Number(value)), ""]} />
-                        <Legend />
-                        <Bar
-                          dataKey="ingresos"
-                          name="Ingresos"
-                          fill="#4ade80"
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="gastos"
-                          name="Gastos"
-                          fill="#f87171"
-                          radius={[4, 4, 0, 0]}
-                        />
-                        <Bar
-                          dataKey="balance"
-                          name="Balance"
-                          fill="#4b4ce6"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Tendencia Ingresos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex items-center">
-                        <span className="text-2xl font-bold">+6.8%</span>
-                        <ChevronUp className="h-5 w-5 text-green-500 ml-2" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">vs. mes anterior</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Tendencia Gastos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex items-center">
-                        <span className="text-2xl font-bold">+5.1%</span>
-                        <ChevronUp className="h-5 w-5 text-red-500 ml-2" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">vs. mes anterior</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Tendencia Balance</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="flex items-center">
-                        <span className="text-2xl font-bold">-50.7%</span>
-                        <ChevronDown className="h-5 w-5 text-red-500 ml-2" />
-                      </div>
-                      <p className="text-xs text-muted-foreground">vs. mes anterior</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Reporte
-              </Button>
-            </CardFooter>
-          </Card>
+          <AnalysisCharts
+            monthlyData={monthlyBalanceData}
+            categoryExpenses={categoryExpensesData}
+            clientIncome={clientIncomeData}
+          />
         </TabsContent>
       </Tabs>
     </div>
