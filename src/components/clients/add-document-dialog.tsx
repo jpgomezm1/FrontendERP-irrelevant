@@ -162,8 +162,8 @@ export function AddDocumentDialog({
                   <FormLabel>Archivo</FormLabel>
                   <FormControl>
                     <FileUpload
-                      onFileChange={(file) => onChange(file)}
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                      onFileSelect={(file) => onChange(file)}
+                      acceptedFileTypes=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                       {...rest}
                     />
                   </FormControl>
