@@ -126,17 +126,19 @@ export function ClientAnalytics({
         </Tabs>
         
         {onTimeFrameChange && (
-          <Select value={timeFrame} onValueChange={onTimeFrameChange} className="w-[180px]">
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="month">Este Mes</SelectItem>
-              <SelectItem value="quarter">Este Trimestre</SelectItem>
-              <SelectItem value="ytd">Año a la Fecha (YTD)</SelectItem>
-              <SelectItem value="year">Este Año</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="w-[180px]">
+            <Select value={timeFrame} onValueChange={onTimeFrameChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Este Mes</SelectItem>
+                <SelectItem value="quarter">Este Trimestre</SelectItem>
+                <SelectItem value="ytd">Año a la Fecha (YTD)</SelectItem>
+                <SelectItem value="year">Este Año</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
 
