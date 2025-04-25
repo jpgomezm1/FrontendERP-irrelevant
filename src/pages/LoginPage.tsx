@@ -23,6 +23,7 @@ const LoginPage = () => {
     }
     
     try {
+      console.log("Iniciando sesión desde LoginPage");
       await signIn(username, password);
     } catch (err) {
       console.error("Error en login component:", err);

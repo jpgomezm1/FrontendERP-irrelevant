@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -22,7 +22,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check for active session on initial load
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state change:", event);
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -31,16 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error getting session:", error);
       setLoading(false);
     });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("Auth state change:", event);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -53,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Añadir dominio al nombre de usuario para crear un formato de email
       const email = `${username}@example.com`;
       
-      console.log("URL de Supabase:", import.meta.env.VITE_SUPABASE_URL);
+      console.log("Usando URL de Supabase:", SUPABASE_URL);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
