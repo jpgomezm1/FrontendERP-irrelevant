@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Client, Document } from '@/types/clients';
+import { Client, Document, ClientStatus, DocumentType } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
 
 type DbClient = Database['public']['Tables']['clients']['Row'];
@@ -16,10 +16,18 @@ export async function getClients(): Promise<Client[]> {
     throw error;
   }
 
-  // Convert string dates to Date objects
+  // Convert string dates to Date objects and map database fields to Client type
   return (data || []).map(client => ({
-    ...client,
+    id: client.id,
+    name: client.name,
+    contactName: client.contactname || undefined,
+    email: client.email,
+    phone: client.phone,
+    address: client.address || undefined,
+    taxId: client.taxid || undefined,
     startDate: new Date(client.startdate),
+    status: client.status as ClientStatus,
+    notes: client.notes || undefined,
     documents: [],
   }));
 }
@@ -38,14 +46,28 @@ export async function getClientById(id: number): Promise<Client | null> {
 
   if (!data) return null;
 
-  // Convert string dates to Date objects
+  // Convert string dates to Date objects and map to Document type
+  const documents = (data.documents || []).map((doc: DbDocument) => ({
+    id: doc.id,
+    name: doc.name,
+    type: doc.type as DocumentType,
+    url: doc.url,
+    uploadDate: new Date(doc.uploaddate)
+  }));
+
+  // Map database fields to Client type
   return {
-    ...data,
+    id: data.id,
+    name: data.name,
+    contactName: data.contactname || undefined,
+    email: data.email,
+    phone: data.phone,
+    address: data.address || undefined,
+    taxId: data.taxid || undefined,
     startDate: new Date(data.startdate),
-    documents: (data.documents || []).map((doc: DbDocument) => ({
-      ...doc,
-      uploadDate: new Date(doc.uploaddate)
-    })),
+    status: data.status as ClientStatus,
+    notes: data.notes || undefined,
+    documents
   };
 }
 
@@ -73,12 +95,19 @@ export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promi
     throw error;
   }
 
+  // Map database response to Client type
   return {
-    ...data,
+    id: data.id,
+    name: data.name,
+    contactName: data.contactname || undefined,
+    email: data.email,
+    phone: data.phone,
+    address: data.address || undefined,
+    taxId: data.taxid || undefined,
     startDate: new Date(data.startdate),
+    status: data.status as ClientStatus,
+    notes: data.notes || undefined,
     documents: [],
-    contactName: data.contactname,
-    taxId: data.taxid
   };
 }
 
@@ -129,10 +158,13 @@ export async function addDocument(clientId: number, document: Omit<Document, 'id
     throw error;
   }
 
+  // Map database response to Document type
   return {
-    ...data,
-    uploadDate: new Date(data.uploaddate),
-    clientId: data.clientid
+    id: data.id,
+    name: data.name,
+    type: data.type as DocumentType,
+    url: data.url,
+    uploadDate: new Date(data.uploaddate)
   };
 }
 

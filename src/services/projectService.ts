@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Document } from '@/types/clients';
+import { Project, Document, ProjectStatus, DocumentType } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
 
 type DbProject = Database['public']['Tables']['projects']['Row'];
@@ -18,12 +19,22 @@ export async function getProjects(): Promise<Project[]> {
   }
 
   return (data || []).map(project => ({
-    ...project,
+    id: project.id,
     clientId: project.clientid,
+    name: project.name,
+    description: project.description,
     startDate: new Date(project.startdate),
     endDate: project.enddate ? new Date(project.enddate) : undefined,
+    status: project.status as ProjectStatus,
+    notes: project.notes || undefined,
     clientName: project.clients?.name || "Cliente Desconocido",
-    documents: []
+    documents: [],
+    payments: [],
+    paymentPlan: {
+      id: 0, // Default placeholder
+      projectId: project.id,
+      type: "Fee único" // Default placeholder
+    }
   }));
 }
 
@@ -44,15 +55,30 @@ export async function getProjectById(id: number): Promise<Project | null> {
 
   if (!data) return null;
 
+  const documents = (data.documents || []).map((doc: any) => ({
+    id: doc.id,
+    name: doc.name,
+    type: doc.type as DocumentType,
+    url: doc.url,
+    uploadDate: new Date(doc.uploaddate)
+  }));
+
   return {
-    ...data,
+    id: data.id,
     clientId: data.clientid,
+    name: data.name,
+    description: data.description,
     startDate: new Date(data.startdate),
     endDate: data.enddate ? new Date(data.enddate) : undefined,
-    documents: (data.documents || []).map((doc: any) => ({
-      ...doc,
-      uploadDate: new Date(doc.uploaddate)
-    })),
+    status: data.status as ProjectStatus,
+    notes: data.notes || undefined,
+    documents,
+    payments: [],
+    paymentPlan: {
+      id: 0, // Default placeholder
+      projectId: data.id,
+      type: "Fee único" // Default placeholder
+    }
   };
 }
 
@@ -68,14 +94,25 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
   }
 
   return (data || []).map(project => ({
-    ...project,
+    id: project.id,
     clientId: project.clientid,
+    name: project.name,
+    description: project.description,
     startDate: new Date(project.startdate),
     endDate: project.enddate ? new Date(project.enddate) : undefined,
+    status: project.status as ProjectStatus,
+    notes: project.notes || undefined,
+    documents: [],
+    payments: [],
+    paymentPlan: {
+      id: 0, // Default placeholder
+      projectId: project.id,
+      type: "Fee único" // Default placeholder
+    }
   }));
 }
 
-export async function addProject(project: Omit<Project, 'id' | 'documents'>): Promise<Project> {
+export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments' | 'paymentPlan'>): Promise<Project> {
   const payload = {
     clientid: project.clientId,
     name: project.name,
@@ -98,11 +135,21 @@ export async function addProject(project: Omit<Project, 'id' | 'documents'>): Pr
   }
 
   return {
-    ...data,
+    id: data.id,
     clientId: data.clientid,
+    name: data.name,
+    description: data.description,
     startDate: new Date(data.startdate),
     endDate: data.enddate ? new Date(data.enddate) : undefined,
+    status: data.status as ProjectStatus,
+    notes: data.notes || undefined,
     documents: [],
+    payments: [],
+    paymentPlan: {
+      id: 0, // Default placeholder
+      projectId: data.id,
+      type: "Fee único" // Default placeholder
+    }
   };
 }
 
@@ -158,9 +205,11 @@ export async function addProjectDocument(
   }
 
   return {
-    ...data,
-    uploadDate: new Date(data.uploaddate),
-    projectId: data.projectid
+    id: data.id,
+    name: data.name,
+    type: data.type as DocumentType,
+    url: data.url,
+    uploadDate: new Date(data.uploaddate)
   };
 }
 

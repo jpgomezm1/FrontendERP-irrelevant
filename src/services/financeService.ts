@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
@@ -56,10 +57,18 @@ export async function getIncomes(): Promise<Income[]> {
     throw error;
   }
 
-  // Convert date strings to Date objects
+  // Convert date strings to Date objects and map db fields
   return data.map(income => ({
-    ...income,
-    date: new Date(income.date)
+    id: income.id,
+    description: income.description,
+    date: new Date(income.date),
+    amount: income.amount,
+    type: income.type,
+    client: income.client || undefined,
+    paymentMethod: income.paymentmethod, // Map from DB field
+    receipt: income.receipt || undefined,
+    notes: income.notes || undefined,
+    currency: income.currency as Currency
   })) || [];
 }
 
@@ -72,7 +81,7 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
       amount: income.amount,
       type: income.type,
       client: income.client,
-      paymentmethod: income.paymentMethod,
+      paymentmethod: income.paymentMethod, // Map to DB field
       receipt: income.receipt,
       notes: income.notes,
       currency: income.currency
@@ -86,9 +95,16 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   }
 
   return {
-    ...data,
+    id: data.id,
+    description: data.description,
     date: new Date(data.date),
-    paymentMethod: data.paymentmethod
+    amount: data.amount,
+    type: data.type,
+    client: data.client || undefined,
+    paymentMethod: data.paymentmethod,
+    receipt: data.receipt || undefined,
+    notes: data.notes || undefined,
+    currency: data.currency as Currency
   };
 }
 
@@ -104,10 +120,17 @@ export async function getExpenses(): Promise<Expense[]> {
     throw error;
   }
 
-  // Convert date strings to Date objects
+  // Convert date strings to Date objects and map db fields
   return data.map(expense => ({
-    ...expense,
-    date: new Date(expense.date)
+    id: expense.id,
+    description: expense.description,
+    date: new Date(expense.date),
+    amount: expense.amount,
+    category: expense.category,
+    paymentMethod: expense.paymentmethod, // Map from DB field
+    receipt: expense.receipt || undefined,
+    notes: expense.notes || undefined,
+    currency: expense.currency as Currency
   })) || [];
 }
 
@@ -116,8 +139,14 @@ export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense>
     .from('expenses')
     .insert([
       {
-        ...expense,
-        date: expense.date.toISOString().split('T')[0]
+        description: expense.description,
+        date: expense.date.toISOString().split('T')[0],
+        amount: expense.amount,
+        category: expense.category,
+        paymentmethod: expense.paymentMethod, // Map to DB field
+        receipt: expense.receipt,
+        notes: expense.notes,
+        currency: expense.currency
       }
     ])
     .select()
@@ -129,8 +158,15 @@ export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense>
   }
 
   return {
-    ...data,
-    date: new Date(data.date)
+    id: data.id,
+    description: data.description,
+    date: new Date(data.date),
+    amount: data.amount,
+    category: data.category,
+    paymentMethod: data.paymentmethod,
+    receipt: data.receipt || undefined,
+    notes: data.notes || undefined,
+    currency: data.currency as Currency
   };
 }
 
@@ -167,8 +203,8 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     category: income.type,
     paymentMethod: income.paymentmethod,
     amount: income.amount,
-    client: income.client,
-    currency: income.currency,
+    client: income.client || undefined,
+    currency: income.currency as Currency,
   }));
 
   // Convert expenses to cash flow items
@@ -180,7 +216,7 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     category: expense.category,
     paymentMethod: expense.paymentmethod,
     amount: expense.amount,
-    currency: expense.currency,
+    currency: expense.currency as Currency,
   }));
 
   // Combine and sort by date (newest first)
