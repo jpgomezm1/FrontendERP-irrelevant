@@ -94,7 +94,7 @@ export async function addDocument(clientId: number, document: Omit<Document, 'id
       { 
         ...document,
         clientId,
-        uploadDate: document.uploadDate?.toISOString().split('T')[0] 
+        uploadDate: new Date(document.uploadDate || new Date()).toISOString().split('T')[0]
       }
     ])
     .select()

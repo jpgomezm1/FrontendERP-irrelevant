@@ -1,6 +1,6 @@
 
 import { Payment } from '@/types/clients';
-import { getPayments, getPaymentsByClientId, getPaymentsByProjectId, addPayment, updatePaymentStatus } from '@/services/paymentService';
+import { getAllPayments, getPaymentsByClientId, getPaymentsByProjectId, addPayment, updatePaymentStatus } from '@/services/paymentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -10,7 +10,7 @@ export function usePaymentsData() {
   // Fetch all payments
   const { data: payments = [], isLoading, error } = useQuery({
     queryKey: ['payments'],
-    queryFn: getPayments,
+    queryFn: getAllPayments,
   });
   
   // Get payments by client ID

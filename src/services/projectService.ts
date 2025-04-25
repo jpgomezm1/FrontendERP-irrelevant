@@ -15,14 +15,13 @@ export async function getProjects(): Promise<Project[]> {
     throw error;
   }
 
-  // Transform data to match our client structure and convert dates
+  // Transform data to include client names
   return (data || []).map(project => ({
     ...project,
+    clientName: project.clients?.name || "Cliente Desconocido",
     startDate: new Date(project.startDate),
     endDate: project.endDate ? new Date(project.endDate) : undefined,
-    clientName: project.clients?.name || "Cliente Desconocido",
     documents: project.documents || [],
-    payments: project.payments || []
   }));
 }
 
@@ -31,9 +30,7 @@ export async function getProjectById(id: number): Promise<Project | null> {
     .from('projects')
     .select(`
       *,
-      clients (name),
-      documents (*),
-      payments (*)
+      documents(*)
     `)
     .eq('id', id)
     .single();
@@ -43,35 +40,24 @@ export async function getProjectById(id: number): Promise<Project | null> {
     throw error;
   }
 
-  // Transform data to match our expected structure
-  if (data) {
-    return {
-      ...data,
-      startDate: new Date(data.startDate),
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
-      clientName: data.clients?.name || "Cliente Desconocido",
-      documents: (data.documents || []).map((doc: any) => ({
-        ...doc,
-        uploadDate: new Date(doc.uploadDate)
-      })),
-      payments: (data.payments || []).map((payment: any) => ({
-        ...payment,
-        date: new Date(payment.date),
-        paidDate: payment.paidDate ? new Date(payment.paidDate) : undefined
-      }))
-    };
-  }
+  if (!data) return null;
 
-  return null;
+  // Transform and convert dates
+  return {
+    ...data,
+    startDate: new Date(data.startDate),
+    endDate: data.endDate ? new Date(data.endDate) : undefined,
+    documents: (data.documents || []).map((doc: any) => ({
+      ...doc,
+      uploadDate: new Date(doc.uploadDate)
+    })),
+  };
 }
 
 export async function getProjectsByClientId(clientId: number): Promise<Project[]> {
   const { data, error } = await supabase
     .from('projects')
-    .select(`
-      *,
-      clients (name)
-    `)
+    .select('*')
     .eq('clientId', clientId);
 
   if (error) {
@@ -79,23 +65,19 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
     throw error;
   }
 
-  // Transform data to match our expected structure
   return (data || []).map(project => ({
     ...project,
     startDate: new Date(project.startDate),
     endDate: project.endDate ? new Date(project.endDate) : undefined,
-    clientName: project.clients?.name || "Cliente Desconocido",
-    documents: project.documents || [],
-    payments: project.payments || []
   }));
 }
 
-export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments'>): Promise<Project> {
+export async function addProject(project: Omit<Project, 'id' | 'documents'>): Promise<Project> {
   // Handle date conversion for DB
-  const payload = {
+  const payload = { 
     ...project,
     startDate: project.startDate?.toISOString().split('T')[0],
-    endDate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+    endDate: project.endDate?.toISOString().split('T')[0] || null,
   };
   
   const { data, error } = await supabase
@@ -114,19 +96,19 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
     startDate: new Date(data.startDate),
     endDate: data.endDate ? new Date(data.endDate) : undefined,
     documents: [],
-    payments: [],
-    clientName: "", // Will be populated when fetched
   };
 }
 
 export async function updateProject(id: number, updatedData: Partial<Project>): Promise<void> {
   // Handle date conversion for DB
   const payload = { ...updatedData };
+  
   if (payload.startDate && payload.startDate instanceof Date) {
-    payload.startDate = payload.startDate.toISOString().split('T')[0];
+    payload.startDate = new Date(payload.startDate).toISOString().split('T')[0];
   }
+  
   if (payload.endDate && payload.endDate instanceof Date) {
-    payload.endDate = payload.endDate.toISOString().split('T')[0];
+    payload.endDate = new Date(payload.endDate).toISOString().split('T')[0];
   }
   
   const { error } = await supabase
@@ -140,14 +122,17 @@ export async function updateProject(id: number, updatedData: Partial<Project>): 
   }
 }
 
-export async function addProjectDocument(projectId: number, document: Omit<Document, 'id'>): Promise<Document> {
+export async function addProjectDocument(
+  projectId: number, 
+  document: Omit<Document, 'id'>
+): Promise<Document> {
   const { data, error } = await supabase
-    .from('project_documents')
+    .from('documents')
     .insert([
       { 
         ...document,
         projectId,
-        uploadDate: document.uploadDate?.toISOString().split('T')[0] 
+        uploadDate: new Date(document.uploadDate || new Date()).toISOString().split('T')[0]
       }
     ])
     .select()
@@ -166,7 +151,7 @@ export async function addProjectDocument(projectId: number, document: Omit<Docum
 
 export async function removeProjectDocument(documentId: number): Promise<void> {
   const { error } = await supabase
-    .from('project_documents')
+    .from('documents')
     .delete()
     .eq('id', documentId);
 

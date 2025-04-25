@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import {
   Card,
@@ -24,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Payment } from "@/types/clients";
 
 interface FinancialOverviewProps {
   clientId?: number | null;
@@ -34,7 +36,7 @@ export function FinancialOverview({
   clientId, 
   projectId 
 }: FinancialOverviewProps) {
-  const { payments, isLoading: isLoadingPayments } = usePaymentsData();
+  const { payments = [], isLoading: isLoadingPayments } = usePaymentsData();
   const { getClientByIdQuery } = useClientsData();
   const { data: client } = clientId ? getClientByIdQuery(clientId) : { data: null };
   const { getProjectByIdQuery } = useProjectsData();
@@ -48,7 +50,7 @@ export function FinancialOverview({
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   
   // Filtrar pagos según los parámetros
-  let filteredPayments = payments;
+  let filteredPayments: Payment[] = [...payments];
   
   if (projectId) {
     filteredPayments = filteredPayments.filter(p => p.projectId === projectId);
