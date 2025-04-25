@@ -1,6 +1,9 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
+import { Database } from '@/integrations/supabase/types';
+
+type DbIncome = Database['public']['Tables']['incomes']['Row'];
+type DbExpense = Database['public']['Tables']['expenses']['Row'];
 
 export interface Income {
   id: number;
@@ -42,7 +45,6 @@ export interface CashFlowItem {
   currency: Currency;
 }
 
-// Income functions
 export async function getIncomes(): Promise<Income[]> {
   const { data, error } = await supabase
     .from('incomes')
@@ -64,12 +66,17 @@ export async function getIncomes(): Promise<Income[]> {
 export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   const { data, error } = await supabase
     .from('incomes')
-    .insert([
-      {
-        ...income,
-        date: income.date.toISOString().split('T')[0]
-      }
-    ])
+    .insert([{
+      description: income.description,
+      date: income.date.toISOString().split('T')[0],
+      amount: income.amount,
+      type: income.type,
+      client: income.client,
+      paymentmethod: income.paymentMethod,
+      receipt: income.receipt,
+      notes: income.notes,
+      currency: income.currency
+    }])
     .select()
     .single();
 
@@ -80,7 +87,8 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
 
   return {
     ...data,
-    date: new Date(data.date)
+    date: new Date(data.date),
+    paymentMethod: data.paymentmethod
   };
 }
 
@@ -157,7 +165,7 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     description: income.description,
     type: 'Ingreso',
     category: income.type,
-    paymentMethod: income.paymentMethod,
+    paymentMethod: income.paymentmethod,
     amount: income.amount,
     client: income.client,
     currency: income.currency,
@@ -170,7 +178,7 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     description: expense.description,
     type: 'Gasto',
     category: expense.category,
-    paymentMethod: expense.paymentMethod,
+    paymentMethod: expense.paymentmethod,
     amount: expense.amount,
     currency: expense.currency,
   }));

@@ -1,6 +1,10 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Client, Document } from '@/types/clients';
+import { Database } from '@/integrations/supabase/types';
+
+type DbClient = Database['public']['Tables']['clients']['Row'];
+type DbDocument = Database['public']['Tables']['documents']['Row'];
 
 export async function getClients(): Promise<Client[]> {
   const { data, error } = await supabase
@@ -15,8 +19,8 @@ export async function getClients(): Promise<Client[]> {
   // Convert string dates to Date objects
   return (data || []).map(client => ({
     ...client,
-    startDate: new Date(client.startDate),
-    documents: client.documents || [],
+    startDate: new Date(client.startdate),
+    documents: [],
   }));
 }
 
@@ -37,21 +41,25 @@ export async function getClientById(id: number): Promise<Client | null> {
   // Convert string dates to Date objects
   return {
     ...data,
-    startDate: new Date(data.startDate),
-    documents: (data.documents || []).map((doc: any) => ({
+    startDate: new Date(data.startdate),
+    documents: (data.documents || []).map((doc: DbDocument) => ({
       ...doc,
-      uploadDate: new Date(doc.uploadDate)
+      uploadDate: new Date(doc.uploaddate)
     })),
   };
 }
 
 export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promise<Client> {
-  // Ensure we send a string date to the database
   const clientToInsert = {
-    ...client,
-    startDate: client.startDate instanceof Date ? 
-      client.startDate.toISOString().split('T')[0] : 
-      new Date(client.startDate).toISOString().split('T')[0]
+    name: client.name,
+    contactname: client.contactName,
+    email: client.email,
+    phone: client.phone,
+    address: client.address,
+    taxid: client.taxId,
+    startdate: client.startDate.toISOString().split('T')[0],
+    status: client.status,
+    notes: client.notes
   };
 
   const { data, error } = await supabase
@@ -65,27 +73,29 @@ export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promi
     throw error;
   }
 
-  // Return with proper Date object
   return {
     ...data,
-    startDate: new Date(data.startDate),
+    startDate: new Date(data.startdate),
     documents: [],
+    contactName: data.contactname,
+    taxId: data.taxid
   };
 }
 
 export async function updateClient(id: number, updatedData: Partial<Client>): Promise<void> {
-  // Create a new object to avoid modifying the original
-  const payload: any = { ...updatedData };
+  const payload: Partial<DbClient> = {
+    name: updatedData.name,
+    contactname: updatedData.contactName,
+    email: updatedData.email,
+    phone: updatedData.phone,
+    address: updatedData.address,
+    taxid: updatedData.taxId,
+    status: updatedData.status,
+    notes: updatedData.notes
+  };
   
-  // Convert Date objects to string format for the database
-  if (payload.startDate) {
-    if (payload.startDate instanceof Date) {
-      payload.startDate = payload.startDate.toISOString().split('T')[0];
-    } else if (typeof payload.startDate === 'string') {
-      // If it's already a string, make sure it's in the right format
-      const date = new Date(payload.startDate);
-      payload.startDate = date.toISOString().split('T')[0];
-    }
+  if (updatedData.startDate) {
+    payload.startdate = updatedData.startDate.toISOString().split('T')[0];
   }
   
   const { error } = await supabase
@@ -100,15 +110,12 @@ export async function updateClient(id: number, updatedData: Partial<Client>): Pr
 }
 
 export async function addDocument(clientId: number, document: Omit<Document, 'id'>): Promise<Document> {
-  // Create the document object with properly formatted date
   const documentToInsert = {
-    ...document,
-    clientId,
-    uploadDate: document.uploadDate instanceof Date ? 
-      document.uploadDate.toISOString().split('T')[0] : 
-      (document.uploadDate ? 
-        new Date(document.uploadDate).toISOString().split('T')[0] : 
-        new Date().toISOString().split('T')[0])
+    name: document.name,
+    type: document.type,
+    url: document.url,
+    uploaddate: document.uploadDate.toISOString().split('T')[0],
+    clientid: clientId
   };
 
   const { data, error } = await supabase
@@ -122,10 +129,10 @@ export async function addDocument(clientId: number, document: Omit<Document, 'id
     throw error;
   }
 
-  // Return with proper Date object
   return {
     ...data,
-    uploadDate: new Date(data.uploadDate)
+    uploadDate: new Date(data.uploaddate),
+    clientId: data.clientid
   };
 }
 

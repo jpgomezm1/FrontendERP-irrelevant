@@ -1,6 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Project, Document } from '@/types/clients';
+import { Database } from '@/integrations/supabase/types';
+
+type DbProject = Database['public']['Tables']['projects']['Row'];
 
 export async function getProjects(): Promise<Project[]> {
   const { data, error } = await supabase
@@ -15,13 +17,13 @@ export async function getProjects(): Promise<Project[]> {
     throw error;
   }
 
-  // Transform data to include client names
   return (data || []).map(project => ({
     ...project,
+    clientId: project.clientid,
+    startDate: new Date(project.startdate),
+    endDate: project.enddate ? new Date(project.enddate) : undefined,
     clientName: project.clients?.name || "Cliente Desconocido",
-    startDate: new Date(project.startDate),
-    endDate: project.endDate ? new Date(project.endDate) : undefined,
-    documents: project.documents || [],
+    documents: []
   }));
 }
 
@@ -42,14 +44,14 @@ export async function getProjectById(id: number): Promise<Project | null> {
 
   if (!data) return null;
 
-  // Transform and convert dates
   return {
     ...data,
-    startDate: new Date(data.startDate),
-    endDate: data.endDate ? new Date(data.endDate) : undefined,
+    clientId: data.clientid,
+    startDate: new Date(data.startdate),
+    endDate: data.enddate ? new Date(data.enddate) : undefined,
     documents: (data.documents || []).map((doc: any) => ({
       ...doc,
-      uploadDate: new Date(doc.uploadDate)
+      uploadDate: new Date(doc.uploaddate)
     })),
   };
 }
@@ -58,7 +60,7 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
   const { data, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('clientId', clientId);
+    .eq('clientid', clientId);
 
   if (error) {
     console.error('Error fetching projects by client ID:', error);
@@ -67,23 +69,21 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
 
   return (data || []).map(project => ({
     ...project,
-    startDate: new Date(project.startDate),
-    endDate: project.endDate ? new Date(project.endDate) : undefined,
+    clientId: project.clientid,
+    startDate: new Date(project.startdate),
+    endDate: project.enddate ? new Date(project.enddate) : undefined,
   }));
 }
 
 export async function addProject(project: Omit<Project, 'id' | 'documents'>): Promise<Project> {
-  // Handle date conversion for DB - ensure we're sending strings
   const payload = {
-    ...project,
-    startDate: project.startDate instanceof Date ? 
-      project.startDate.toISOString().split('T')[0] : 
-      new Date(project.startDate).toISOString().split('T')[0],
-    endDate: project.endDate ? (
-      project.endDate instanceof Date ? 
-        project.endDate.toISOString().split('T')[0] : 
-        new Date(project.endDate).toISOString().split('T')[0]
-    ) : null,
+    clientid: project.clientId,
+    name: project.name,
+    description: project.description,
+    startdate: project.startDate.toISOString().split('T')[0],
+    enddate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+    status: project.status,
+    notes: project.notes
   };
   
   const { data, error } = await supabase
@@ -97,36 +97,30 @@ export async function addProject(project: Omit<Project, 'id' | 'documents'>): Pr
     throw error;
   }
 
-  // Return with proper Date objects
   return {
     ...data,
-    startDate: new Date(data.startDate),
-    endDate: data.endDate ? new Date(data.endDate) : undefined,
+    clientId: data.clientid,
+    startDate: new Date(data.startdate),
+    endDate: data.enddate ? new Date(data.enddate) : undefined,
     documents: [],
   };
 }
 
 export async function updateProject(id: number, updatedData: Partial<Project>): Promise<void> {
-  // Create a new object to avoid modifying the original
-  const payload: any = { ...updatedData };
+  const payload: Partial<DbProject> = {
+    clientid: updatedData.clientId,
+    name: updatedData.name,
+    description: updatedData.description,
+    status: updatedData.status,
+    notes: updatedData.notes
+  };
   
-  // Properly convert dates to strings for the database
-  if (payload.startDate) {
-    if (payload.startDate instanceof Date) {
-      payload.startDate = payload.startDate.toISOString().split('T')[0];
-    } else if (typeof payload.startDate === 'string') {
-      const date = new Date(payload.startDate);
-      payload.startDate = date.toISOString().split('T')[0];
-    }
+  if (updatedData.startDate) {
+    payload.startdate = updatedData.startDate.toISOString().split('T')[0];
   }
   
-  if (payload.endDate) {
-    if (payload.endDate instanceof Date) {
-      payload.endDate = payload.endDate.toISOString().split('T')[0];
-    } else if (typeof payload.endDate === 'string') {
-      const date = new Date(payload.endDate);
-      payload.endDate = date.toISOString().split('T')[0];
-    }
+  if (updatedData.endDate) {
+    payload.enddate = updatedData.endDate.toISOString().split('T')[0];
   }
   
   const { error } = await supabase
@@ -144,15 +138,12 @@ export async function addProjectDocument(
   projectId: number, 
   document: Omit<Document, 'id'>
 ): Promise<Document> {
-  // Ensure proper date handling - convert to string for DB
   const documentToInsert = {
-    ...document,
-    projectId,
-    uploadDate: document.uploadDate instanceof Date ? 
-      document.uploadDate.toISOString().split('T')[0] : 
-      (document.uploadDate ? 
-        new Date(document.uploadDate).toISOString().split('T')[0] : 
-        new Date().toISOString().split('T')[0])
+    name: document.name,
+    type: document.type,
+    url: document.url,
+    uploaddate: document.uploadDate.toISOString().split('T')[0],
+    projectid: projectId
   };
 
   const { data, error } = await supabase
@@ -166,10 +157,10 @@ export async function addProjectDocument(
     throw error;
   }
 
-  // Return with proper Date object
   return {
     ...data,
-    uploadDate: new Date(data.uploadDate)
+    uploadDate: new Date(data.uploaddate),
+    projectId: data.projectid
   };
 }
 
