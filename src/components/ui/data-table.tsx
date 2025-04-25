@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -41,6 +41,18 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: rowsPerPage,
+  });
+
+  // Update pagination state when rowsPerPage changes
+  useEffect(() => {
+    setPagination(prev => ({
+      pageIndex: 0, // Reset to first page when changing items per page
+      pageSize: rowsPerPage
+    }));
+  }, [rowsPerPage]);
 
   const table = useReactTable({
     data,
@@ -51,13 +63,11 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
-      pagination: {
-        pageSize: rowsPerPage,
-        pageIndex: 0,
-      },
+      pagination,
     },
   });
 
@@ -147,11 +157,11 @@ export function DataTable<TData, TValue>({
             Filas por página:
           </p>
           <Select
-            value={String(rowsPerPage)}
+            value={String(pagination.pageSize)}
             onValueChange={(value) => setRowsPerPage(Number(value))}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue>{rowsPerPage}</SelectValue>
+              <SelectValue>{pagination.pageSize}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="5">5</SelectItem>
@@ -173,6 +183,10 @@ export function DataTable<TData, TValue>({
           >
             Anterior
           </Button>
+          <span className="text-sm text-muted-foreground">
+            Página {table.getState().pagination.pageIndex + 1} de{" "}
+            {table.getPageCount()}
+          </span>
           <Button
             variant="outline"
             size="sm"

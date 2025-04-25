@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -8,53 +7,33 @@ export function cn(...inputs: ClassValue[]) {
 
 export type Currency = "COP" | "USD";
 
-export interface CurrencyConfig {
-  symbol: string;
-  code: Currency;
-  locale: string;
-  decimalPlaces: number;
-}
-
-export const CURRENCIES: Record<Currency, CurrencyConfig> = {
-  COP: {
-    symbol: "$",
-    code: "COP",
-    locale: "es-CO",
-    decimalPlaces: 0,
-  },
-  USD: {
-    symbol: "US$",
-    code: "USD",
-    locale: "en-US",
-    decimalPlaces: 2,
-  }
+export const CURRENCIES: Record<
+  Currency,
+  { symbol: string; locale: string; decimalPlaces: number }
+> = {
+  COP: { symbol: "$", locale: "es-CO", decimalPlaces: 0 },
+  USD: { symbol: "$", locale: "en-US", decimalPlaces: 2 },
 };
 
-// Conversion rates (placeholder - in real app would come from API)
-export const CONVERSION_RATES = {
-  USD_TO_COP: 4000, // 1 USD = 4000 COP
-  COP_TO_USD: 1 / 4000, // 1 COP = 0.00025 USD
-};
-
-export function formatCurrency(value: number, currency: Currency = "COP"): string {
-  const config = CURRENCIES[currency];
-  
-  return new Intl.NumberFormat(config.locale, {
-    style: 'currency',
-    currency: config.code,
-    minimumFractionDigits: config.decimalPlaces,
-    maximumFractionDigits: config.decimalPlaces,
-  }).format(value);
+export function formatCurrency(amount: number, currency: Currency = "COP"): string {
+  return new Intl.NumberFormat(CURRENCIES[currency].locale, {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: CURRENCIES[currency].decimalPlaces,
+    maximumFractionDigits: CURRENCIES[currency].decimalPlaces,
+  }).format(amount);
 }
 
-export function convertCurrency(value: number, fromCurrency: Currency, toCurrency: Currency): number {
-  if (fromCurrency === toCurrency) return value;
+export function convertCurrency(
+  amount: number, 
+  fromCurrency: Currency, 
+  toCurrency: Currency
+): number {
+  if (fromCurrency === toCurrency) return amount;
   
-  if (fromCurrency === "USD" && toCurrency === "COP") {
-    return value * CONVERSION_RATES.USD_TO_COP;
-  } else {
-    return value * CONVERSION_RATES.COP_TO_USD;
-  }
+  let amountInUSD = fromCurrency === "USD" ? amount : amount / 4000;
+  
+  return toCurrency === "USD" ? amountInUSD : amountInUSD * 4000;
 }
 
 export function getCurrencySymbol(currency: Currency = "COP"): string {

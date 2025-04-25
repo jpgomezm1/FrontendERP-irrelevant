@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 
@@ -159,6 +160,41 @@ export async function addVariableExpense(expense: Omit<VariableExpense, 'id'>): 
   };
 }
 
+export async function updateVariableExpense(expense: VariableExpense): Promise<VariableExpense> {
+  const { data, error } = await supabase
+    .from('gastos_variables')
+    .update({
+      description: expense.description,
+      date: expense.date.toISOString().split('T')[0],
+      amount: expense.amount,
+      category: expense.category,
+      paymentmethod: expense.paymentMethod,
+      receipt: expense.receipt,
+      notes: expense.notes,
+      currency: expense.currency
+    })
+    .eq('id', expense.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating variable expense:', error);
+    throw error;
+  }
+
+  return {
+    id: data.id,
+    description: data.description,
+    date: new Date(data.date),
+    amount: data.amount,
+    category: data.category,
+    paymentMethod: data.paymentmethod,
+    receipt: data.receipt || undefined,
+    notes: data.notes || undefined,
+    currency: data.currency as Currency
+  };
+}
+
 export async function addRecurringExpense(expense: Omit<RecurringExpense, 'id' | 'isActive'>): Promise<RecurringExpense> {
   const { data, error } = await supabase
     .from('gastos_recurrentes')
@@ -181,6 +217,49 @@ export async function addRecurringExpense(expense: Omit<RecurringExpense, 'id' |
 
   if (error) {
     console.error('Error adding recurring expense:', error);
+    throw error;
+  }
+
+  return {
+    id: data.id,
+    description: data.description,
+    startDate: new Date(data.start_date),
+    endDate: data.end_date ? new Date(data.end_date) : undefined,
+    amount: data.amount,
+    category: data.category,
+    paymentMethod: data.paymentmethod,
+    frequency: data.frequency,
+    receipt: data.receipt || undefined,
+    notes: data.notes || undefined,
+    currency: data.currency as Currency,
+    isActive: data.is_active,
+    isAutoDebit: data.is_auto_debit
+  };
+}
+
+export async function updateRecurringExpense(expense: RecurringExpense): Promise<RecurringExpense> {
+  const { data, error } = await supabase
+    .from('gastos_recurrentes')
+    .update({
+      description: expense.description,
+      start_date: expense.startDate.toISOString().split('T')[0],
+      end_date: expense.endDate ? expense.endDate.toISOString().split('T')[0] : null,
+      amount: expense.amount,
+      category: expense.category,
+      paymentmethod: expense.paymentMethod,
+      frequency: expense.frequency,
+      receipt: expense.receipt,
+      notes: expense.notes,
+      currency: expense.currency,
+      is_active: expense.isActive,
+      is_auto_debit: expense.isAutoDebit
+    })
+    .eq('id', expense.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating recurring expense:', error);
     throw error;
   }
 

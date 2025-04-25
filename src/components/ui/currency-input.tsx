@@ -53,8 +53,8 @@ export const CurrencyInput = React.forwardRef<
     }
   };
 
-  // Format for display based on selected currency
-  const displayValue = value 
+  // Format for display based on selected currency, without any upper limit restrictions
+  const displayValue = value !== undefined && value !== null
     ? new Intl.NumberFormat(CURRENCIES[currency].locale, {
         minimumFractionDigits: CURRENCIES[currency].decimalPlaces,
         maximumFractionDigits: CURRENCIES[currency].decimalPlaces

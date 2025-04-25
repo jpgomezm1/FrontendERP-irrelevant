@@ -5,16 +5,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccruedExpenses } from "@/components/expenses/accrued-expenses";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useExpensesData } from "@/hooks/use-expenses-data";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
+import { EditExpenseDialog } from "@/components/expenses/edit-expense-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VariableExpense, RecurringExpense } from "@/services/expenseService";
+import { Button } from "@/components/ui/button";
 
 const ExpensesPage = () => {
   const [timeFrame, setTimeFrame] = useState<"month" | "quarter" | "year">("month");
+  const [viewCurrency, setViewCurrency] = useState<Currency>("COP");
   const { variableExpenses, recurringExpenses, expenseSummary, isLoading } = useExpensesData(timeFrame);
+  const [selectedVariableExpense, setSelectedVariableExpense] = useState<VariableExpense | null>(null);
+  const [selectedRecurringExpense, setSelectedRecurringExpense] = useState<RecurringExpense | null>(null);
+  const [isEditVariableOpen, setIsEditVariableOpen] = useState(false);
+  const [isEditRecurringOpen, setIsEditRecurringOpen] = useState(false);
+
+  const handleEditVariableExpense = (expense: VariableExpense) => {
+    setSelectedVariableExpense(expense);
+    setIsEditVariableOpen(true);
+  };
+
+  const handleEditRecurringExpense = (expense: RecurringExpense) => {
+    setSelectedRecurringExpense(expense);
+    setIsEditRecurringOpen(true);
+  };
+
+  const formatAmountInViewCurrency = (amount: number, originalCurrency: Currency) => {
+    if (originalCurrency === viewCurrency) {
+      return formatCurrency(amount, viewCurrency);
+    }
+    
+    const convertedAmount = convertCurrency(amount, originalCurrency, viewCurrency);
+    return formatCurrency(convertedAmount, viewCurrency);
+  };
 
   const variableColumns: ColumnDef<VariableExpense>[] = [
     {
@@ -33,12 +59,29 @@ const ExpensesPage = () => {
     {
       accessorKey: "amount",
       header: "Monto",
-      cell: ({ row }) => formatCurrency(row.getValue("amount")),
+      cell: ({ row }) => formatAmountInViewCurrency(row.getValue("amount"), row.original.currency),
+    },
+    {
+      accessorKey: "currency",
+      header: "Moneda Original",
     },
     {
       accessorKey: "paymentMethod",
       header: "Método de pago",
     },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleEditVariableExpense(row.original)}
+        >
+          Editar
+        </Button>
+      ),
+    }
   ];
 
   const recurringColumns: ColumnDef<RecurringExpense>[] = [
@@ -58,7 +101,11 @@ const ExpensesPage = () => {
     {
       accessorKey: "amount",
       header: "Monto",
-      cell: ({ row }) => formatCurrency(row.getValue("amount")),
+      cell: ({ row }) => formatAmountInViewCurrency(row.getValue("amount"), row.original.currency),
+    },
+    {
+      accessorKey: "currency",
+      header: "Moneda Original",
     },
     {
       accessorKey: "frequency",
@@ -81,6 +128,31 @@ const ExpensesPage = () => {
       accessorKey: "paymentMethod",
       header: "Método de pago",
     },
+    {
+      accessorKey: "endDate",
+      header: "Fecha de fin",
+      cell: ({ row }) => row.original.endDate 
+        ? new Date(row.original.endDate).toLocaleDateString() 
+        : "Sin fecha de fin",
+    },
+    {
+      accessorKey: "isAutoDebit",
+      header: "Débito automático",
+      cell: ({ row }) => row.original.isAutoDebit ? "Sí" : "No",
+    },
+    {
+      id: "actions",
+      header: "Acciones",
+      cell: ({ row }) => (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => handleEditRecurringExpense(row.original)}
+        >
+          Editar
+        </Button>
+      ),
+    }
   ];
 
   return (
@@ -91,19 +163,34 @@ const ExpensesPage = () => {
       />
 
       <div className="flex items-center justify-between mb-6">
-        <Select
-          value={timeFrame}
-          onValueChange={(value) => setTimeFrame(value as "month" | "quarter" | "year")}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Seleccionar período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="month">Este Mes</SelectItem>
-            <SelectItem value="quarter">Este Trimestre</SelectItem>
-            <SelectItem value="year">Este Año</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 items-center">
+          <Select
+            value={timeFrame}
+            onValueChange={(value) => setTimeFrame(value as "month" | "quarter" | "year")}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Seleccionar período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Este Mes</SelectItem>
+              <SelectItem value="quarter">Este Trimestre</SelectItem>
+              <SelectItem value="year">Este Año</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={viewCurrency}
+            onValueChange={(value) => setViewCurrency(value as Currency)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Ver en moneda" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="COP">Ver en COP</SelectItem>
+              <SelectItem value="USD">Ver en USD</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="resumen" className="space-y-4">
@@ -123,7 +210,7 @@ const ExpensesPage = () => {
                   <CardDescription>Período actual</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.total_expenses)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.total_expenses, viewCurrency)}</p>
                 </CardContent>
               </Card>
 
@@ -133,7 +220,7 @@ const ExpensesPage = () => {
                   <CardDescription>Del total de gastos</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.recurring_expenses)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.recurring_expenses, viewCurrency)}</p>
                   <p className="text-sm text-muted-foreground">
                     {expenseSummary.total_expenses > 0 
                       ? ((expenseSummary.recurring_expenses / expenseSummary.total_expenses) * 100).toFixed(1) 
@@ -148,7 +235,7 @@ const ExpensesPage = () => {
                   <CardDescription>Del total de gastos</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.variable_expenses)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.variable_expenses, viewCurrency)}</p>
                   <p className="text-sm text-muted-foreground">
                     {expenseSummary.total_expenses > 0 
                       ? ((expenseSummary.variable_expenses / expenseSummary.total_expenses) * 100).toFixed(1) 
@@ -165,7 +252,7 @@ const ExpensesPage = () => {
                 <CardContent>
                   <p className="text-2xl font-bold">{expenseSummary.top_category || "N/A"}</p>
                   <p className="text-sm text-muted-foreground">
-                    {formatCurrency(expenseSummary.top_category_amount)}
+                    {formatCurrency(expenseSummary.top_category_amount, viewCurrency)}
                   </p>
                 </CardContent>
               </Card>
@@ -176,7 +263,7 @@ const ExpensesPage = () => {
                   <CardDescription>Período actual</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.avg_monthly_expense)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(expenseSummary.avg_monthly_expense, viewCurrency)}</p>
                   <p className="text-sm text-muted-foreground">
                     Tendencia: {expenseSummary.expense_trend > 0 ? "+" : ""}{expenseSummary.expense_trend.toFixed(1)}%
                   </p>
@@ -232,6 +319,25 @@ const ExpensesPage = () => {
           <AccruedExpenses />
         </TabsContent>
       </Tabs>
+
+      {/* Edit expense dialogs */}
+      {selectedVariableExpense && (
+        <EditExpenseDialog 
+          isRecurring={false} 
+          expense={selectedVariableExpense} 
+          open={isEditVariableOpen}
+          onOpenChange={setIsEditVariableOpen}
+        />
+      )}
+      
+      {selectedRecurringExpense && (
+        <EditExpenseDialog 
+          isRecurring={true} 
+          expense={selectedRecurringExpense} 
+          open={isEditRecurringOpen}
+          onOpenChange={setIsEditRecurringOpen}
+        />
+      )}
     </div>
   );
 };
