@@ -41,9 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (username: string, password: string) => {
     try {
       setLoading(true);
+      
+      // Añadir dominio al nombre de usuario para crear un formato de email
+      const email = `${username}@example.com`;
+      
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {

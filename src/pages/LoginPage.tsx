@@ -8,13 +8,13 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("jpgomezm");
+  const [username, setUsername] = useState("jpgomezm");
   const [password, setPassword] = useState("");
   const { signIn, loading } = useAuth();
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(email, password);
+    await signIn(username, password);
   };
 
   return (
@@ -29,12 +29,12 @@ const LoginPage = () => {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Usuario</Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
-                id="email"
+                id="username"
                 placeholder="Usuario"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
