@@ -1,9 +1,10 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
+import { getCausedExpenses, CausedExpense } from '@/services/expenseService';
 
 type DbIncome = Database['public']['Tables']['incomes']['Row'];
-type DbExpense = Database['public']['Tables']['expenses']['Row'];
 
 export interface Income {
   id: number;
@@ -16,21 +17,6 @@ export interface Income {
   receipt?: string;
   notes?: string;
   currency: Currency;
-}
-
-export interface Expense {
-  id: number;
-  description: string;
-  date: Date;
-  amount: number;
-  category: string;
-  paymentMethod: string;
-  receipt?: string;
-  notes?: string;
-  currency: Currency;
-  frequency?: string;
-  isRecurring?: boolean;
-  nextDueDate?: Date;
 }
 
 export interface CashFlowItem {
@@ -109,77 +95,6 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   };
 }
 
-export async function getExpenses(): Promise<Expense[]> {
-  const { data, error } = await supabase
-    .from('expenses')
-    .select('*')
-    .order('date', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching expenses:', error);
-    throw error;
-  }
-
-  return data.map(expense => ({
-    id: expense.id,
-    description: expense.description,
-    date: new Date(expense.date),
-    amount: expense.amount,
-    category: expense.category,
-    paymentMethod: expense.paymentmethod,
-    receipt: expense.receipt || undefined,
-    notes: expense.notes || undefined,
-    currency: expense.currency as Currency,
-    frequency: expense.frequency || undefined,
-    isRecurring: expense.is_recurring || false,
-    nextDueDate: expense.next_due_date ? new Date(expense.next_due_date) : undefined,
-  })) || [];
-}
-
-export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
-  const adjustedDate = new Date(expense.date);
-  adjustedDate.setUTCHours(12, 0, 0, 0);
-  
-  const { data, error } = await supabase
-    .from('expenses')
-    .insert([
-      {
-        description: expense.description,
-        date: adjustedDate.toISOString().split('T')[0],
-        amount: expense.amount,
-        category: expense.category,
-        paymentmethod: expense.paymentMethod,
-        receipt: expense.receipt,
-        notes: expense.notes,
-        currency: expense.currency,
-        frequency: expense.frequency,
-        is_recurring: expense.isRecurring,
-      }
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error adding expense:', error);
-    throw error;
-  }
-
-  return {
-    id: data.id,
-    description: data.description,
-    date: new Date(data.date),
-    amount: data.amount,
-    category: data.category,
-    paymentMethod: data.paymentmethod,
-    receipt: data.receipt || undefined,
-    notes: data.notes || undefined,
-    currency: data.currency as Currency,
-    frequency: data.frequency || undefined,
-    isRecurring: data.is_recurring || false,
-    nextDueDate: data.next_due_date ? new Date(data.next_due_date) : undefined,
-  };
-}
-
 export async function getCashFlow(): Promise<CashFlowItem[]> {
   const { data: incomesData, error: incomesError } = await supabase
     .from('incomes')
@@ -191,15 +106,8 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     throw incomesError;
   }
 
-  const { data: expensesData, error: expensesError } = await supabase
-    .from('expenses')
-    .select('*')
-    .order('date', { ascending: false });
-
-  if (expensesError) {
-    console.error('Error fetching expenses for cash flow:', expensesError);
-    throw expensesError;
-  }
+  // Get expenses from our new service
+  const causedExpensesData = await getCausedExpenses();
 
   const incomeItems: CashFlowItem[] = (incomesData || []).map(income => ({
     id: income.id,
@@ -213,21 +121,25 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     currency: income.currency as Currency,
   }));
 
-  const expenseItems: CashFlowItem[] = (expensesData || []).map(expense => ({
+  // Convert caused expenses to cash flow items
+  const expenseItems: CashFlowItem[] = causedExpensesData.map(expense => ({
     id: expense.id,
-    date: new Date(expense.date),
+    date: expense.date,
     description: expense.description,
     type: 'Gasto',
     category: expense.category,
-    paymentMethod: expense.paymentmethod,
+    paymentMethod: expense.paymentMethod,
     amount: expense.amount,
-    currency: expense.currency as Currency,
+    isRecurring: expense.sourceType === 'recurrente',
+    currency: expense.currency,
   }));
 
+  // Combine and sort
   const combined = [...incomeItems, ...expenseItems].sort((a, b) => 
     b.date.getTime() - a.date.getTime()
   );
 
+  // Calculate running balance
   let balance = 0;
   return combined.map(item => {
     balance += item.type === 'Ingreso' ? item.amount : -item.amount;
@@ -271,117 +183,7 @@ export async function getClientIncomes() {
   return data || [];
 }
 
-export async function getAccruedExpenses(): Promise<Expense[]> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  // Get all expenses from the database
-  const { data, error } = await supabase
-    .from('expenses')
-    .select('*')
-    .order('date', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching accrued expenses:', error);
-    throw error;
-  }
-
-  const accruedExpenses: Expense[] = [];
-  
-  // Process each expense
-  data.forEach(expense => {
-    // For non-recurring expenses, just add them as is
-    if (!expense.is_recurring) {
-      accruedExpenses.push({
-        id: expense.id,
-        description: expense.description,
-        date: new Date(expense.date),
-        amount: expense.amount,
-        category: expense.category,
-        paymentMethod: expense.paymentmethod,
-        receipt: expense.receipt || undefined,
-        notes: expense.notes || undefined,
-        currency: expense.currency as Currency,
-        frequency: expense.frequency || undefined,
-        isRecurring: false,
-      });
-      return;
-    }
-    
-    // For recurring expenses, we need to generate instances for each period
-    const startDate = new Date(expense.date);
-    startDate.setHours(0, 0, 0, 0);
-    let currentDate = new Date(startDate);
-    
-    // Add the first occurrence
-    accruedExpenses.push({
-      id: expense.id,
-      description: expense.description,
-      date: new Date(startDate),
-      amount: expense.amount,
-      category: expense.category,
-      paymentMethod: expense.paymentmethod,
-      receipt: expense.receipt || undefined,
-      notes: expense.notes || undefined,
-      currency: expense.currency as Currency,
-      frequency: expense.frequency || undefined,
-      isRecurring: true,
-    });
-    
-    if (!expense.frequency) return;
-    
-    // Calculate and add all recurring instances until today
-    while (true) {
-      let nextDate = new Date(currentDate);
-      
-      switch (expense.frequency.toLowerCase()) {
-        case 'weekly':
-          nextDate.setDate(nextDate.getDate() + 7);
-          break;
-        case 'biweekly':
-          nextDate.setDate(nextDate.getDate() + 14);
-          break;
-        case 'monthly':
-          nextDate.setMonth(nextDate.getMonth() + 1);
-          break;
-        case 'bimonthly':
-          nextDate.setMonth(nextDate.getMonth() + 2);
-          break;
-        case 'quarterly':
-          nextDate.setMonth(nextDate.getMonth() + 3);
-          break;
-        case 'semiannual':
-          nextDate.setMonth(nextDate.getMonth() + 6);
-          break;
-        case 'annual':
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
-          break;
-        default:
-          return;
-      }
-      
-      // Stop adding instances once we reach a date beyond today
-      if (nextDate > today) break;
-      
-      // Add this instance to accrued expenses
-      accruedExpenses.push({
-        id: expense.id,
-        description: expense.description,
-        date: new Date(nextDate),
-        amount: expense.amount,
-        category: expense.category,
-        paymentMethod: expense.paymentmethod,
-        receipt: expense.receipt || undefined,
-        notes: expense.notes || undefined,
-        currency: expense.currency as Currency,
-        frequency: expense.frequency || undefined,
-        isRecurring: true,
-      });
-      
-      currentDate = nextDate;
-    }
-  });
-  
-  // Sort all accrued expenses by date, newest first
-  return accruedExpenses.sort((a, b) => b.date.getTime() - a.date.getTime());
+// This function is no longer needed as we use getCausedExpenses from expenseService
+export async function getAccruedExpenses(): Promise<CausedExpense[]> {
+  return getCausedExpenses();
 }

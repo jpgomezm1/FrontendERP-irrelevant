@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -14,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Plus } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import { addExpense } from "@/services/financeService";
+import { addVariableExpense, addRecurringExpense } from "@/services/expenseService";
 import { useQueryClient } from "@tanstack/react-query";
 
 const expenseSchema = z.object({
@@ -49,6 +50,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
     receipt: "",
     currency: "COP",
     isRecurring: isRecurring,
+    frequency: isRecurring ? "monthly" : undefined,
   };
 
   const form = useForm<ExpenseFormValues>({
@@ -58,27 +60,42 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
 
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
-      await addExpense({
-        description: data.description,
-        amount: data.amount,
-        date: data.date,
-        category: data.category,
-        paymentMethod: data.paymentMethod,
-        notes: data.notes,
-        receipt: data.receipt,
-        currency: data.currency,
-        // isRecurring is handled on the backend
-      });
+      if (data.isRecurring) {
+        // For recurring expenses, use the addRecurringExpense function
+        await addRecurringExpense({
+          description: data.description,
+          startDate: data.date,
+          amount: data.amount,
+          category: data.category,
+          paymentMethod: data.paymentMethod,
+          notes: data.notes,
+          receipt: data.receipt,
+          currency: data.currency,
+          frequency: data.frequency || "monthly",
+        });
+      } else {
+        // For variable expenses, use the addVariableExpense function
+        await addVariableExpense({
+          description: data.description,
+          date: data.date,
+          amount: data.amount,
+          category: data.category,
+          paymentMethod: data.paymentMethod,
+          notes: data.notes,
+          receipt: data.receipt,
+          currency: data.currency,
+        });
+      }
       
       toast({
         title: "Gasto agregado",
-        description: "El gasto ha sido agregado exitosamente",
+        description: `El gasto ha sido ${data.isRecurring ? 'programado' : 'agregado'} exitosamente`,
       });
       
       // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['variable-expenses'] });
       queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['expense-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['caused-expenses'] });
       
       // Close dialog and reset form
       setOpen(false);
@@ -209,7 +226,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Fecha</FormLabel>
+                    <FormLabel>{isRecurring ? "Fecha de inicio" : "Fecha"}</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>

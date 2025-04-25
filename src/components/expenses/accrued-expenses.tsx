@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
@@ -14,18 +13,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useToast } from "@/hooks/use-toast";
 import { StatsCard } from "@/components/ui/stats-card";
-import { useQuery } from "@tanstack/react-query";
-import { Expense, getAccruedExpenses } from "@/services/financeService";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getCausedExpenses, updateCausedExpenseStatus, CausedExpense } from "@/services/expenseService";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 
-// Define the AccruedExpense interface that extends the Expense interface
-interface AccruedExpense extends Expense {
-  status: 'pagado' | 'pendiente' | 'vencido';
-}
-
 export function AccruedExpenses() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | "all">("all");
   const [viewCurrency, setViewCurrency] = useState<Currency>("COP");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -33,32 +28,13 @@ export function AccruedExpenses() {
     to: endOfMonth(new Date())
   });
   const [periodFilter, setPeriodFilter] = useState<string>("month");
-  const [selectedExpense, setSelectedExpense] = useState<AccruedExpense | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<CausedExpense | null>(null);
   const [markAsPaidOpen, setMarkAsPaidOpen] = useState(false);
 
-  // Fetch accrued expenses using the getAccruedExpenses function
-  const { data: fetchedExpenses = [], isLoading } = useQuery({
-    queryKey: ['accrued-expenses'],
-    queryFn: getAccruedExpenses
-  });
-
-  // Process fetched expenses to add status
-  const accruedExpenses: AccruedExpense[] = fetchedExpenses.map(expense => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Determine status based on date
-    let status: 'pagado' | 'pendiente' | 'vencido';
-    if (expense.date < today) {
-      status = 'vencido'; // Past expenses are considered overdue
-    } else {
-      status = 'pendiente';
-    }
-    
-    return {
-      ...expense,
-      status
-    };
+  // Fetch caused expenses using the getCausedExpenses function
+  const { data: causedExpenses = [], isLoading } = useQuery({
+    queryKey: ['caused-expenses'],
+    queryFn: getCausedExpenses
   });
 
   // Set date range based on period selection
@@ -90,7 +66,7 @@ export function AccruedExpenses() {
   };
 
   // Filter expenses based on date range and currency
-  const filteredExpenses = accruedExpenses.filter(expense => {
+  const filteredExpenses = causedExpenses.filter(expense => {
     const inDateRange = dateRange?.from && dateRange?.to 
       ? !isBefore(expense.date, dateRange.from) && !isAfter(expense.date, dateRange.to)
       : true;
@@ -131,27 +107,45 @@ export function AccruedExpenses() {
   );
 
   // Handle marking expense as paid
-  const handleMarkAsPaid = () => {
+  const handleMarkAsPaid = async () => {
     if (selectedExpense) {
-      toast({
-        title: "Gasto marcado como pagado",
-        description: `El gasto "${selectedExpense.description}" ha sido marcado como pagado.`
-      });
-      setMarkAsPaidOpen(false);
-      setSelectedExpense(null);
+      try {
+        await updateCausedExpenseStatus(selectedExpense.id, 'pagado', new Date());
+        
+        queryClient.invalidateQueries({ queryKey: ['caused-expenses'] });
+        
+        toast({
+          title: "Gasto marcado como pagado",
+          description: `El gasto "${selectedExpense.description}" ha sido marcado como pagado.`
+        });
+        
+        setMarkAsPaidOpen(false);
+        setSelectedExpense(null);
+      } catch (error) {
+        console.error("Error marking expense as paid:", error);
+        toast({
+          title: "Error",
+          description: "No se pudo marcar el gasto como pagado.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  // Count recurring expense occurrences
-  const recurringExpenseCounts = fetchedExpenses.reduce((acc, expense) => {
-    if (expense.isRecurring) {
-      if (!acc[expense.id]) {
-        acc[expense.id] = {
+  // Group recurring expenses by sourceId to count occurrences
+  const recurringExpenseCounts = causedExpenses.reduce((acc, expense) => {
+    if (expense.sourceType === 'recurrente') {
+      if (!acc[expense.sourceId]) {
+        acc[expense.sourceId] = {
           count: 1,
-          originalDate: expense.date
+          originalDate: expense.date // This may not be the actual start date
         };
       } else {
-        acc[expense.id].count += 1;
+        acc[expense.sourceId].count += 1;
+        // Keep track of the earliest date as potential original date
+        if (expense.date < acc[expense.sourceId].originalDate) {
+          acc[expense.sourceId].originalDate = expense.date;
+        }
       }
     }
     return acc;
@@ -164,8 +158,8 @@ export function AccruedExpenses() {
       header: "Descripción",
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
-        const isRecurring = expense.isRecurring;
-        const count = isRecurring ? recurringExpenseCounts[expense.id]?.count : 0;
+        const isRecurring = expense.sourceType === 'recurrente';
+        const count = isRecurring ? recurringExpenseCounts[expense.sourceId]?.count : 0;
         
         return (
           <div className="flex flex-col">
@@ -190,7 +184,7 @@ export function AccruedExpenses() {
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
         const formattedDate = formatDate(expense.date);
-        const isRecurring = expense.isRecurring;
+        const isRecurring = expense.sourceType === 'recurrente';
         
         return (
           <div className="flex items-center">
@@ -203,8 +197,10 @@ export function AccruedExpenses() {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Gasto recurrente</p>
-                    <p className="text-xs">Inicio: {formatDate(recurringExpenseCounts[expense.id]?.originalDate || expense.date)}</p>
-                    <p className="text-xs">Frecuencia: {expense.frequency}</p>
+                    <p className="text-xs">Fecha: {formatDate(expense.date)}</p>
+                    {recurringExpenseCounts[expense.sourceId]?.count > 1 && (
+                      <p className="text-xs">Ocurrencias: {recurringExpenseCounts[expense.sourceId]?.count}</p>
+                    )}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -265,9 +261,16 @@ export function AccruedExpenses() {
       )
     },
     {
-      accessorKey: "frequency",
-      header: "Frecuencia",
-      cell: ({ row }: { row: any }) => row.original.frequency || "Único",
+      accessorKey: "sourceType",
+      header: "Tipo",
+      cell: ({ row }: { row: any }) => {
+        const sourceType = row.original.sourceType;
+        return (
+          <Badge variant={sourceType === 'recurrente' ? "outline" : "secondary"} className="font-normal">
+            {sourceType === 'recurrente' ? 'Recurrente' : 'Variable'}
+          </Badge>
+        );
+      }
     },
     {
       accessorKey: "status",
@@ -322,7 +325,7 @@ export function AccruedExpenses() {
   ];
 
   // Check if we have recurring expenses
-  const hasRecurringExpenses = filteredExpenses.some(expense => expense.isRecurring);
+  const hasRecurringExpenses = filteredExpenses.some(expense => expense.sourceType === 'recurrente');
 
   return (
     <>
@@ -406,26 +409,23 @@ export function AccruedExpenses() {
               icon={<CreditCard className="h-4 w-4" />}
             />
             
-            {Object.entries(totalByCategoryAndCurrency).map(([category, currencies], index) => {
+            {Object.entries(totalByCategoryAndCurrency).slice(0, 3).map(([category, currencies]) => {
               const totalInCategory = viewCurrency === "COP" 
                 ? currencies.COP + convertCurrency(currencies.USD, "USD", "COP")
                 : currencies.USD + convertCurrency(currencies.COP, "COP", "USD");
               
-              if (index < 3) { // Only show top 3 categories
-                return (
-                  <StatsCard
-                    key={category}
-                    title={`Total ${category}`}
-                    value={formatCurrency(totalInCategory, viewCurrency)}
-                    description="Incluye gastos recurrentes y variables"
-                  />
-                );
-              }
-              return null;
+              return (
+                <StatsCard
+                  key={category}
+                  title={`Total ${category}`}
+                  value={formatCurrency(totalInCategory, viewCurrency)}
+                  description="Incluye gastos recurrentes y variables"
+                />
+              );
             })}
           </div>
           
-          {accruedExpenses.length === 0 && !isLoading ? (
+          {filteredExpenses.length === 0 && !isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No hay gastos causados</h3>
@@ -451,7 +451,7 @@ export function AccruedExpenses() {
               </div>
               <p className="text-sm text-blue-700 mt-1">
                 Los gastos recurrentes se muestran como entradas individuales para cada período. 
-                Un gasto con frecuencia mensual registrado desde enero aparecerá como una entrada por cada mes hasta la fecha actual.
+                La cantidad de ocurrencias se calcula automáticamente basada en la fecha de inicio y la frecuencia configurada.
               </p>
             </div>
           )}

@@ -8,15 +8,15 @@ import { useExpensesData } from "@/hooks/use-expenses-data";
 import { formatCurrency } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
-import { Expense } from "@/hooks/use-expenses-data";
 import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VariableExpense, RecurringExpense } from "@/services/expenseService";
 
 const ExpensesPage = () => {
   const [timeFrame, setTimeFrame] = useState<"month" | "quarter" | "year">("month");
   const { variableExpenses, recurringExpenses, expenseSummary, isLoading } = useExpensesData(timeFrame);
 
-  const columns: ColumnDef<Expense>[] = [
+  const variableColumns: ColumnDef<VariableExpense>[] = [
     {
       accessorKey: "date",
       header: "Fecha",
@@ -36,7 +36,49 @@ const ExpensesPage = () => {
       cell: ({ row }) => formatCurrency(row.getValue("amount")),
     },
     {
-      accessorKey: "paymentmethod",
+      accessorKey: "paymentMethod",
+      header: "Método de pago",
+    },
+  ];
+
+  const recurringColumns: ColumnDef<RecurringExpense>[] = [
+    {
+      accessorKey: "startDate",
+      header: "Fecha de inicio",
+      cell: ({ row }) => new Date(row.getValue("startDate")).toLocaleDateString(),
+    },
+    {
+      accessorKey: "description",
+      header: "Descripción",
+    },
+    {
+      accessorKey: "category",
+      header: "Categoría",
+    },
+    {
+      accessorKey: "amount",
+      header: "Monto",
+      cell: ({ row }) => formatCurrency(row.getValue("amount")),
+    },
+    {
+      accessorKey: "frequency",
+      header: "Frecuencia",
+      cell: ({ row }) => {
+        const freq = row.getValue("frequency") as string;
+        const labels = {
+          "weekly": "Semanal",
+          "biweekly": "Quincenal",
+          "monthly": "Mensual",
+          "bimonthly": "Bimensual",
+          "quarterly": "Trimestral",
+          "semiannual": "Semestral",
+          "annual": "Anual"
+        };
+        return labels[freq as keyof typeof labels] || freq;
+      }
+    },
+    {
+      accessorKey: "paymentMethod",
       header: "Método de pago",
     },
   ];
@@ -93,7 +135,9 @@ const ExpensesPage = () => {
                 <CardContent>
                   <p className="text-2xl font-bold">{formatCurrency(expenseSummary.recurring_expenses)}</p>
                   <p className="text-sm text-muted-foreground">
-                    {((expenseSummary.recurring_expenses / expenseSummary.total_expenses) * 100).toFixed(1)}% del total
+                    {expenseSummary.total_expenses > 0 
+                      ? ((expenseSummary.recurring_expenses / expenseSummary.total_expenses) * 100).toFixed(1) 
+                      : "0"}% del total
                   </p>
                 </CardContent>
               </Card>
@@ -106,7 +150,9 @@ const ExpensesPage = () => {
                 <CardContent>
                   <p className="text-2xl font-bold">{formatCurrency(expenseSummary.variable_expenses)}</p>
                   <p className="text-sm text-muted-foreground">
-                    {((expenseSummary.variable_expenses / expenseSummary.total_expenses) * 100).toFixed(1)}% del total
+                    {expenseSummary.total_expenses > 0 
+                      ? ((expenseSummary.variable_expenses / expenseSummary.total_expenses) * 100).toFixed(1) 
+                      : "0"}% del total
                   </p>
                 </CardContent>
               </Card>
@@ -117,7 +163,7 @@ const ExpensesPage = () => {
                   <CardDescription>Mayor gasto</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{expenseSummary.top_category}</p>
+                  <p className="text-2xl font-bold">{expenseSummary.top_category || "N/A"}</p>
                   <p className="text-sm text-muted-foreground">
                     {formatCurrency(expenseSummary.top_category_amount)}
                   </p>
@@ -127,7 +173,7 @@ const ExpensesPage = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Promedio Mensual</CardTitle>
-                  <CardDescription>Últimos 3 meses</CardDescription>
+                  <CardDescription>Período actual</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{formatCurrency(expenseSummary.avg_monthly_expense)}</p>
@@ -151,7 +197,7 @@ const ExpensesPage = () => {
             </CardHeader>
             <CardContent>
               <DataTable 
-                columns={columns} 
+                columns={variableColumns} 
                 data={variableExpenses} 
                 isLoading={isLoading}
                 searchColumn="description"
@@ -172,7 +218,7 @@ const ExpensesPage = () => {
             </CardHeader>
             <CardContent>
               <DataTable 
-                columns={columns} 
+                columns={recurringColumns} 
                 data={recurringExpenses} 
                 isLoading={isLoading}
                 searchColumn="description"

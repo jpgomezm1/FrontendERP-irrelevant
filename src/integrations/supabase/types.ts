@@ -138,6 +138,132 @@ export type Database = {
         }
         Relationships: []
       }
+      gastos_causados: {
+        Row: {
+          amount: number
+          category: string
+          currency: string
+          date: string
+          description: string
+          id: number
+          notes: string | null
+          paid_date: string | null
+          paymentmethod: string
+          receipt: string | null
+          source_id: number
+          source_type: string
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          currency: string
+          date: string
+          description: string
+          id?: number
+          notes?: string | null
+          paid_date?: string | null
+          paymentmethod: string
+          receipt?: string | null
+          source_id: number
+          source_type: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          currency?: string
+          date?: string
+          description?: string
+          id?: number
+          notes?: string | null
+          paid_date?: string | null
+          paymentmethod?: string
+          receipt?: string | null
+          source_id?: number
+          source_type?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      gastos_recurrentes: {
+        Row: {
+          amount: number
+          category: string
+          currency: string
+          description: string
+          frequency: string
+          id: number
+          is_active: boolean
+          notes: string | null
+          paymentmethod: string
+          receipt: string | null
+          start_date: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          currency: string
+          description: string
+          frequency: string
+          id?: number
+          is_active?: boolean
+          notes?: string | null
+          paymentmethod: string
+          receipt?: string | null
+          start_date: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          currency?: string
+          description?: string
+          frequency?: string
+          id?: number
+          is_active?: boolean
+          notes?: string | null
+          paymentmethod?: string
+          receipt?: string | null
+          start_date?: string
+        }
+        Relationships: []
+      }
+      gastos_variables: {
+        Row: {
+          amount: number
+          category: string
+          currency: string
+          date: string
+          description: string
+          id: number
+          notes: string | null
+          paymentmethod: string
+          receipt: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          currency: string
+          date: string
+          description: string
+          id?: number
+          notes?: string | null
+          paymentmethod: string
+          receipt?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          currency?: string
+          date?: string
+          description?: string
+          id?: number
+          notes?: string | null
+          paymentmethod?: string
+          receipt?: string | null
+        }
+        Relationships: []
+      }
       incomes: {
         Row: {
           amount: number

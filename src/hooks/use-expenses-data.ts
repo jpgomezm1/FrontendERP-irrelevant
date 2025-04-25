@@ -1,19 +1,10 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getVariableExpenses, getRecurringExpenses, getCausedExpenses, VariableExpense, RecurringExpense, CausedExpense } from "@/services/expenseService";
 import { addMonths, startOfMonth, endOfMonth } from "date-fns";
+import React from "react"; 
 
-export interface Expense {
-  id: number;
-  description: string;
-  date: string;
-  amount: number;
-  category: string;
-  paymentmethod: string;
-  receipt?: string;
-  notes?: string;
-  currency: string;
-}
+export type { VariableExpense, RecurringExpense, CausedExpense };
 
 export interface ExpenseSummary {
   total_expenses: number;
@@ -38,46 +29,74 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
 
   const { data: variableExpenses = [], isLoading: isLoadingVariable } = useQuery({
     queryKey: ['variable-expenses'],
-    queryFn: async () => {
-      // Using fetch directly to work around type limitations
-      const { data, error } = await supabase.functions.invoke('variable-expenses');
-      
-      if (error) throw error;
-      return data as Expense[];
-    }
+    queryFn: getVariableExpenses
   });
 
   const { data: recurringExpenses = [], isLoading: isLoadingRecurring } = useQuery({
     queryKey: ['recurring-expenses'],
-    queryFn: async () => {
-      // Using fetch directly to work around type limitations
-      const { data, error } = await supabase.functions.invoke('recurring-expenses');
-      
-      if (error) throw error;
-      return data as Expense[];
-    }
+    queryFn: getRecurringExpenses
   });
 
-  const { data: expenseSummary, isLoading: isLoadingSummary } = useQuery({
-    queryKey: ['expense-summary', startDate, endDate],
-    queryFn: async () => {
-      // Using fetch directly to work around type limitations
-      const { data, error } = await supabase.functions.invoke('expense-summary', {
-        body: {
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString()
-        }
-      });
-      
-      if (error) throw error;
-      return data as ExpenseSummary;
-    }
+  const { data: causedExpenses = [], isLoading: isLoadingCaused } = useQuery({
+    queryKey: ['caused-expenses'],
+    queryFn: getCausedExpenses
   });
+
+  // Process summary data manually until we update the backend function
+  const expenseSummary = React.useMemo(() => {
+    if (isLoadingVariable || isLoadingRecurring || isLoadingCaused) {
+      return null;
+    }
+
+    const filteredCausedExpenses = causedExpenses.filter(expense => 
+      expense.date >= startDate && expense.date <= endDate
+    );
+
+    const total_expenses = filteredCausedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const recurring_expenses = filteredCausedExpenses
+      .filter(expense => expense.sourceType === 'recurrente')
+      .reduce((sum, expense) => sum + expense.amount, 0);
+    const variable_expenses = filteredCausedExpenses
+      .filter(expense => expense.sourceType === 'variable')
+      .reduce((sum, expense) => sum + expense.amount, 0);
+
+    // Calculate top category
+    const categoryAmounts = filteredCausedExpenses.reduce((acc, expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    let top_category = '';
+    let top_category_amount = 0;
+
+    Object.entries(categoryAmounts).forEach(([category, amount]) => {
+      if (amount > top_category_amount) {
+        top_category = category;
+        top_category_amount = amount;
+      }
+    });
+
+    // For now, we'll use simple placeholders for average and trend
+    const avg_monthly_expense = total_expenses / 
+      (timeFrame === "month" ? 1 : timeFrame === "quarter" ? 3 : 12);
+    const expense_trend = 0; // We'd need historical data for a real calculation
+
+    return {
+      total_expenses,
+      recurring_expenses,
+      variable_expenses,
+      top_category,
+      top_category_amount,
+      avg_monthly_expense,
+      expense_trend
+    } as ExpenseSummary;
+  }, [causedExpenses, startDate, endDate, timeFrame, isLoadingVariable, isLoadingRecurring, isLoadingCaused]);
 
   return {
     variableExpenses,
     recurringExpenses,
+    causedExpenses,
     expenseSummary,
-    isLoading: isLoadingVariable || isLoadingRecurring || isLoadingSummary
+    isLoading: isLoadingVariable || isLoadingRecurring || isLoadingCaused
   };
 };
