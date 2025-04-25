@@ -23,8 +23,8 @@ const LoginPage = () => {
     }
     
     try {
-      // Construct email by appending domain to username
-      const email = `${username}@stayirrelevant.com`;
+      // Use the full email directly rather than appending @stayirrelevant.com again
+      const email = username.includes("@") ? username : `${username}@stayirrelevant.com`;
       console.log("Attempting login with:", email);
       
       await signIn(email, password);
@@ -52,7 +52,7 @@ const LoginPage = () => {
               <Label htmlFor="username">Usuario</Label>
               <Input
                 id="username"
-                placeholder="Usuario"
+                placeholder="Usuario o Email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required

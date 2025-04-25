@@ -44,35 +44,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (username: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      console.log("Intentando iniciar sesión para:", username);
+      console.log("Attempting login for:", email);
       
-      // Añadir dominio al nombre de usuario para crear un formato de email
-      const email = `${username}@example.com`;
-      
-      console.log("Intentando iniciar sesión con Supabase");
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        console.error("Error en login:", error);
+        console.error("Error in login:", error);
         toast.error('Error al iniciar sesión', {
           description: error.message
         });
-        return;
+        throw error;
       }
       
       if (data.user) {
-        console.log("Login exitoso:", data.user);
+        console.log("Login successful:", data.user);
         toast.success('Inicio de sesión exitoso');
         navigate('/');
       }
     } catch (error) {
-      console.error('Login error detallado:', error);
-      toast.error('Error al iniciar sesión', {
-        description: 'Problema de conexión con el servidor'
-      });
+      console.error('Detailed login error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
