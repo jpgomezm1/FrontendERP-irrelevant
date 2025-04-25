@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Card,
@@ -11,28 +12,12 @@ import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
 import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-/* 🔗 ← NUEVO: hook que consulta la API real */
-import { useIncomesAPI } from "@/hooks/use-incomes-api";
+import { incomesData } from "./income-data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function IncomeList() {
-  /* ───────── Estado local ───────── */
   const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
 
-  /* ───────── Datos desde el backend ───────── */
-  const {
-    data: incomes = [],      // la lista (array vacío por defecto)
-    isLoading,               // true mientras llega la respuesta
-  } = useIncomesAPI();
-
-  /* ───────── Definición de columnas ───────── */
   const incomeColumns = [
     {
       accessorKey: "description",
@@ -43,7 +28,7 @@ export function IncomeList() {
       header: "Fecha",
       cell: ({ row }) => {
         const date = new Date(row.original.date);
-        return new Intl.DateTimeFormat("es-CO").format(date);
+        return new Intl.DateTimeFormat('es-CO').format(date);
       },
     },
     {
@@ -52,10 +37,9 @@ export function IncomeList() {
       cell: ({ row }) => {
         const originalAmount = row.original.amount;
         const originalCurrency = row.original.currency;
-        const amount =
-          displayCurrency === originalCurrency
-            ? originalAmount
-            : convertCurrency(originalAmount, originalCurrency, displayCurrency);
+        const amount = displayCurrency === originalCurrency 
+          ? originalAmount 
+          : convertCurrency(originalAmount, originalCurrency, displayCurrency);
 
         return (
           <div className="flex items-center space-x-2">
@@ -96,29 +80,25 @@ export function IncomeList() {
     {
       accessorKey: "receipt",
       header: "Comprobante",
-      cell: () => (
+      cell: ({ row }) => (
         <Button variant="ghost" size="sm" className="w-full justify-start">
-          <FileText className="mr-2 h-4 w-4" />
+          <FileText className="h-4 w-4 mr-2" />
           Ver
         </Button>
       ),
     },
   ];
 
-  /* ───────── Render ───────── */
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div>
           <CardTitle>Ingresos Registrados</CardTitle>
-          <CardDescription>Control y seguimiento de todos los ingresos</CardDescription>
+          <CardDescription>
+            Control y seguimiento de todos los ingresos
+          </CardDescription>
         </div>
-
-        {/* Selector de moneda */}
-        <Select
-          value={displayCurrency}
-          onValueChange={(value: Currency) => setDisplayCurrency(value)}
-        >
+        <Select value={displayCurrency} onValueChange={(value: Currency) => setDisplayCurrency(value)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Moneda de visualización" />
           </SelectTrigger>
@@ -128,23 +108,17 @@ export function IncomeList() {
           </SelectContent>
         </Select>
       </CardHeader>
-
       <CardContent>
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando ingresos…</p>
-        ) : (
-          <DataTable
-            columns={incomeColumns}
-            data={incomes}
-            searchColumn="description"
-            searchPlaceholder="Buscar ingresos..."
-          />
-        )}
+        <DataTable
+          columns={incomeColumns}
+          data={incomesData}
+          searchColumn="description"
+          searchPlaceholder="Buscar ingresos..."
+        />
       </CardContent>
-
       <CardFooter>
         <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
+          <Download className="h-4 w-4 mr-2" />
           Exportar Excel
         </Button>
       </CardFooter>

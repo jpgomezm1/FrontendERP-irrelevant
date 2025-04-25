@@ -1,9 +1,9 @@
+
 import React from "react";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatCurrency } from "@/lib/utils";
-/* 🔗 NUEVO: hook conectado al backend */
-import { usePaymentsAPI } from "@/hooks/use-payments-api";
+import { usePaymentsData } from "@/hooks/use-payments-data";
 import { Badge } from "@/components/ui/badge";
 import { FileText, CheckCircle2, XCircle } from "lucide-react";
 
@@ -12,23 +12,19 @@ interface ProjectPaymentsProps {
 }
 
 export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
-  /* ───────── Datos desde la API ───────── */
-  const {
-    data: payments = [],
-    isLoading,
-  } = usePaymentsAPI(projectId);
-
-  /* ───────── Columnas de la tabla ───────── */
+  const { getPaymentsByProjectId } = usePaymentsData();
+  const payments = getPaymentsByProjectId(projectId);
+  
   const paymentColumns = [
     {
       accessorKey: "date",
       header: "Fecha Programada",
-      cell: ({ row }: { row: any }) => formatDate(row.original.date),
+      cell: ({ row }) => formatDate(row.original.date),
     },
     {
       accessorKey: "type",
       header: "Tipo",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }) => {
         const type = row.original.type;
         if (type === "Implementación") {
           const installment = row.original.installmentNumber;
@@ -40,22 +36,19 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
     {
       accessorKey: "amount",
       header: "Monto",
-      cell: ({ row }: { row: any }) =>
-        formatCurrency(row.original.amount, row.original.currency),
+      cell: ({ row }) => formatCurrency(row.original.amount, row.original.currency),
     },
     {
       accessorKey: "status",
       header: "Estado",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }) => {
         const status = row.original.status;
         return (
-          <Badge
+          <Badge 
             variant={
-              status === "Pagado"
-                ? "success"
-                : status === "Pendiente"
-                ? "warning"
-                : "destructive"
+              status === "Pagado" ? "success" : 
+              status === "Pendiente" ? "warning" : 
+              "destructive"
             }
             className="flex items-center gap-1"
           >
@@ -72,64 +65,55 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
     {
       accessorKey: "paidDate",
       header: "Fecha de Pago",
-      cell: ({ row }: { row: any }) =>
-        row.original.paidDate ? formatDate(row.original.paidDate) : "-",
+      cell: ({ row }) => row.original.paidDate ? formatDate(row.original.paidDate) : "-",
     },
     {
       accessorKey: "invoiceNumber",
       header: "Factura",
-      cell: ({ row }: { row: any }) => row.original.invoiceNumber || "-",
+      cell: ({ row }) => row.original.invoiceNumber || "-",
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }) => {
         const { status, invoiceUrl } = row.original;
-
+        
         if (status === "Pagado" && invoiceUrl) {
           return (
             <Button variant="ghost" size="sm" asChild>
-              <a
-                href={invoiceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <FileText className="mr-1 h-4 w-4" />
+              <a href={invoiceUrl} target="_blank" rel="noopener noreferrer">
+                <FileText className="h-4 w-4 mr-1" />
                 Ver Factura
               </a>
             </Button>
           );
         }
-
+        
         if (status === "Pendiente") {
           return (
             <Button variant="ghost" size="sm">
-              <CheckCircle2 className="mr-1 h-4 w-4" />
+              <CheckCircle2 className="h-4 w-4 mr-1" />
               Marcar como Pagado
             </Button>
           );
         }
-
+        
         return null;
       },
     },
   ];
 
-  /* ───────── Render ───────── */
   return (
     <div>
-      {isLoading ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          Cargando pagos…
-        </p>
-      ) : payments.length === 0 ? (
-        <div className="py-6 text-center">
-          <p className="text-muted-foreground">
-            No hay pagos registrados para este proyecto
-          </p>
+      {payments.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-muted-foreground">No hay pagos registrados para este proyecto</p>
         </div>
       ) : (
-        <DataTable columns={paymentColumns} data={payments} />
+        <DataTable
+          columns={paymentColumns}
+          data={payments}
+        />
       )}
     </div>
   );

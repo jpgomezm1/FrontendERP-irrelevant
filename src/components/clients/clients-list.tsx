@@ -10,7 +10,7 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { useClientsAPI } from "@/hooks/use-clients-api";
+import { useClientsData } from "@/hooks/use-clients-data";
 import { Badge } from "@/components/ui/badge";
 
 interface ClientsListProps {
@@ -18,8 +18,7 @@ interface ClientsListProps {
 }
 
 export function ClientsList({ onClientSelect }: ClientsListProps) {
-  const { data: clients = [], isLoading } = useClientsAPI();
-  if (isLoading) return <p>Cargando…</p>;
+  const { clients } = useClientsData();
   
   const clientColumns = [
     {

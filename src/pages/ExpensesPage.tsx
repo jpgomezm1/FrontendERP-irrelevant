@@ -1,7 +1,3 @@
-/* ────────────────────────────────────────────────────────────────
-   FILE: src/pages/ExpensesPage.tsx
-   (100 % del archivo, con **todas** las líneas originales + ajustes)
-──────────────────────────────────────────────────────────────── */
 import React, { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
@@ -42,24 +38,29 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  CalendarIcon,
-  Plus,
-  FileText,
-  CreditCard,
-  Download,
+import { 
+  CalendarIcon, 
+  Plus, 
+  FileText, 
+  CreditCard, 
+  DollarSign, 
+  Download, 
   InfoIcon,
+  Check
 } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import { DataTable } from "@/components/ui/data-table";
 import { CurrencyInput } from "@/components/ui/currency-input";
-import {
-  Currency,
+import { 
+  Currency, 
+  CURRENCIES, 
   convertCurrency,
-  formatCurrency,
-  formatDate,
+  formatCurrency, 
+  formatDate, 
+  getRandomColor, 
   getStatusBadge,
-  generatePaymentDates,
+  calculateNextPaymentDate, 
+  generatePaymentDates 
 } from "@/lib/utils";
 import { format, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
@@ -70,42 +71,19 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { StatsCard } from "@/components/ui/stats-card";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
+import { 
+  Bar, 
+  BarChart, 
+  CartesianGrid, 
   Legend,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
+  ResponsiveContainer, 
+  Tooltip as RechartsTooltip, 
+  XAxis, 
+  YAxis 
 } from "recharts";
 import { AccruedExpenses } from "@/components/expenses/accrued-expenses";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-/* ★ Importamos un error boundary para evitar que el tab deje la pantalla en blanco */
-import { ErrorBoundary } from "react-error-boundary";
-
-/* ★ Componente de fallback que se muestra si AccruedExpenses lanza un error */
-function ErrorFallback({ error }: { error: Error }) {
-  return (
-    <div className="p-4 rounded-md border border-destructive/40 bg-destructive/10 text-destructive">
-      <p className="font-semibold mb-2">
-        Ocurrió un error al cargar los Gastos Causados:
-      </p>
-      <pre className="whitespace-pre-wrap text-xs">{error.message}</pre>
-    </div>
-  );
-}
-
-/* ────────────────────────────────────────────────────────────────
-   📊 Datos mock & constantes
-──────────────────────────────────────────────────────────────── */
 const expensesData = [
   {
     id: 1,
@@ -261,7 +239,6 @@ const recurringExpensesData = [
   },
 ];
 
-/* ───────── Esquemas de formulario ───────── */
 const expenseFormSchema = z.object({
   description: z.string().min(3, "La descripción debe tener al menos 3 caracteres"),
   date: z.date({
@@ -302,7 +279,6 @@ const recurringExpenseFormSchema = z.object({
   notes: z.string().optional(),
 });
 
-/* ───────── Catálogos ───────── */
 const expenseCategories = [
   "Transporte",
   "Alimentación",
@@ -338,9 +314,6 @@ const frequencies = [
   "Anual",
 ];
 
-/* ────────────────────────────────────────────────────────────────
-   COMPONENTE PRINCIPAL
-──────────────────────────────────────────────────────────────── */
 const ExpensesPage = () => {
   const { toast } = useToast();
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
@@ -349,8 +322,7 @@ const ExpensesPage = () => {
   const [viewCurrency, setViewCurrency] = useState<Currency>("COP");
   const [previewPayments, setPreviewPayments] = useState<any[]>([]);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
-
-  /* ───────── Formularios ───────── */
+  
   const expenseForm = useForm<z.infer<typeof expenseFormSchema>>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
@@ -378,20 +350,14 @@ const ExpensesPage = () => {
     },
   });
 
-  /* ───────── Filtros ───────── */
-  const filteredExpenses =
-    selectedCurrency === "all"
-      ? expensesData
-      : expensesData.filter((expense) => expense.currency === selectedCurrency);
+  const filteredExpenses = selectedCurrency === "all" 
+    ? expensesData 
+    : expensesData.filter(expense => expense.currency === selectedCurrency);
+  
+  const filteredRecurringExpenses = selectedCurrency === "all"
+    ? recurringExpensesData
+    : recurringExpensesData.filter(expense => expense.currency === selectedCurrency);
 
-  const filteredRecurringExpenses =
-    selectedCurrency === "all"
-      ? recurringExpensesData
-      : recurringExpensesData.filter(
-          (expense) => expense.currency === selectedCurrency,
-        );
-
-  /* ───────── Helpers ───────── */
   const calculateTotalInViewCurrency = (expenses: any[], currencyField = "currency") => {
     return expenses.reduce((total, expense) => {
       if (expense[currencyField] === viewCurrency) {
@@ -404,103 +370,102 @@ const ExpensesPage = () => {
 
   const variableTotalInViewCurrency = calculateTotalInViewCurrency(expensesData);
   const recurringTotalInViewCurrency = calculateTotalInViewCurrency(
-    recurringExpensesData.filter((expense) => expense.status === "Activo"),
+    recurringExpensesData.filter(expense => expense.status === "Activo")
   );
 
   const categoryTotals = [...expensesData, ...recurringExpensesData]
-    .filter((expense) => {
-      return "status" in expense ? expense.status !== "Pausado" : true;
+    .filter(expense => {
+      return 'status' in expense ? expense.status !== "Pausado" : true;
     })
     .reduce((acc, expense) => {
       const category = expense.category;
       if (!acc[category]) acc[category] = 0;
-
+      
       if (expense.currency === viewCurrency) {
         acc[category] += expense.amount;
       } else {
         acc[category] += convertCurrency(expense.amount, expense.currency, viewCurrency);
       }
-
+      
       return acc;
     }, {} as Record<string, number>);
 
   const totalByCurrency = {
     COP: expensesData
-      .filter((expense) => expense.currency === "COP")
+      .filter(expense => expense.currency === "COP")
       .reduce((sum, expense) => sum + expense.amount, 0),
     USD: expensesData
-      .filter((expense) => expense.currency === "USD")
+      .filter(expense => expense.currency === "USD")
       .reduce((sum, expense) => sum + expense.amount, 0),
   };
 
   const recurringTotalByCurrency = {
     COP: recurringExpensesData
-      .filter((expense) => expense.currency === "COP" && expense.status === "Activo")
+      .filter(expense => expense.currency === "COP" && expense.status === "Activo")
       .reduce((sum, expense) => sum + expense.amount, 0),
     USD: recurringExpensesData
-      .filter((expense) => expense.currency === "USD" && expense.status === "Activo")
+      .filter(expense => expense.currency === "USD" && expense.status === "Activo")
       .reduce((sum, expense) => sum + expense.amount, 0),
   };
 
   const prepareCategoryChartData = () => {
     const categoryData = Object.entries(
       [...expensesData, ...recurringExpensesData]
-        .filter((expense) => {
-          return "status" in expense ? expense.status !== "Pausado" : true;
+        .filter(expense => {
+          return 'status' in expense ? expense.status !== "Pausado" : true;
         })
         .reduce((acc, expense) => {
           const category = expense.category;
           const currency = expense.currency;
-
+          
           if (!acc[category]) {
             acc[category] = { COP: 0, USD: 0 };
           }
-
+          
           acc[category][currency] += expense.amount;
           return acc;
-        }, {} as Record<string, Record<Currency, number>>),
+        }, {} as Record<string, Record<Currency, number>>)
     ).map(([category, amounts]) => {
       if (viewCurrency === "COP") {
         return {
           category,
           COP: amounts.COP,
           USD_en_COP: convertCurrency(amounts.USD, "USD", "COP"),
-          original_USD: amounts.USD,
+          original_USD: amounts.USD
         };
-      } else {
+      } 
+      else {
         return {
           category,
           USD: amounts.USD,
           COP_en_USD: convertCurrency(amounts.COP, "COP", "USD"),
-          original_COP: amounts.COP,
+          original_COP: amounts.COP
         };
       }
     });
-
+    
     return categoryData;
   };
 
   const categoryChartData = prepareCategoryChartData();
 
-  /* ───────── Vista previa pagos ───────── */
   const handlePreviewPayments = (formValues: any) => {
     if (formValues.startDate && formValues.frequency && formValues.amount) {
       const dates = generatePaymentDates(formValues.startDate, formValues.frequency, 12);
-
+      
       const payments = dates.map((date, index) => ({
         id: index + 1,
         dueDate: date,
         amount: formValues.amount,
         currency: formValues.currency,
-        status: isBefore(date, new Date()) ? "vencido" : "pendiente",
+        status: isBefore(date, new Date()) ? 'vencido' : 'pendiente',
       }));
-
+      
       setPreviewPayments(payments);
       setPreviewModalOpen(true);
     }
   };
 
-  /* ───────── Submit handlers ───────── */
   const onExpenseSubmit = (data: z.infer<typeof expenseFormSchema>) => {
     console.log("Nuevo gasto:", data);
     toast({
@@ -521,7 +486,6 @@ const ExpensesPage = () => {
     setRecurringModalOpen(false);
   };
 
-  /* ───────── Columnas de tablas ───────── */
   const expenseColumns = [
     {
       accessorKey: "description",
@@ -537,20 +501,26 @@ const ExpensesPage = () => {
       header: "Monto",
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
-
+        
         if (viewCurrency === expense.currency) {
           return formatCurrency(expense.amount, expense.currency);
         }
-
-        const convertedAmount = convertCurrency(expense.amount, expense.currency, viewCurrency);
-
+        
+        const convertedAmount = convertCurrency(
+          expense.amount, 
+          expense.currency, 
+          viewCurrency
+        );
+        
         return (
           <div className="flex items-center">
             <span>{formatCurrency(convertedAmount, viewCurrency)}</span>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <span className="ml-1 text-xs text-muted-foreground">({expense.currency})</span>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({expense.currency})
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Original: {formatCurrency(expense.amount, expense.currency)}</p>
@@ -609,20 +579,26 @@ const ExpensesPage = () => {
       header: "Monto",
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
-
+        
         if (viewCurrency === expense.currency) {
           return formatCurrency(expense.amount, expense.currency);
         }
-
-        const convertedAmount = convertCurrency(expense.amount, expense.currency, viewCurrency);
-
+        
+        const convertedAmount = convertCurrency(
+          expense.amount, 
+          expense.currency, 
+          viewCurrency
+        );
+        
         return (
           <div className="flex items-center">
             <span>{formatCurrency(convertedAmount, viewCurrency)}</span>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
-                  <span className="ml-1 text-xs text-muted-foreground">({expense.currency})</span>
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    ({expense.currency})
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Original: {formatCurrency(expense.amount, expense.currency)}</p>
@@ -642,7 +618,9 @@ const ExpensesPage = () => {
       accessorKey: "status",
       header: "Estado",
       cell: ({ row }: { row: any }) => (
-        <span className={getStatusBadge(row.original.status)}>{row.original.status}</span>
+        <span className={getStatusBadge(row.original.status)}>
+          {row.original.status}
+        </span>
       ),
     },
     {
@@ -654,18 +632,21 @@ const ExpensesPage = () => {
       header: "Acciones",
       cell: ({ row }: { row: any }) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
-            {row.original.status === "Activo" ? "Pausar" : "Activar"}
-          </Button>
           <Button
             variant="ghost"
+            size="sm"
+          >
+            {row.original.status === "Activo" ? "Pausar" : "Activar"}
+          </Button>
+          <Button 
+            variant="ghost" 
             size="sm"
             onClick={() => {
               handlePreviewPayments({
                 startDate: row.original.startDate,
                 frequency: row.original.frequency.toLowerCase(),
                 amount: row.original.amount,
-                currency: row.original.currency,
+                currency: row.original.currency
               });
             }}
           >
@@ -679,13 +660,14 @@ const ExpensesPage = () => {
     },
   ];
 
-  /* ───────── Render ───────── */
   return (
     <div>
-      <PageHeader title="Gastos" description="Gestiona tus gastos variables, recurrentes y causados" />
+      <PageHeader
+        title="Gastos"
+        description="Gestiona tus gastos variables, recurrentes y causados"
+      />
 
       <Tabs defaultValue="variables">
-        {/* ───── Tabs header + filtros ───── */}
         <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
           <TabsList className="bg-background border mb-2">
             <TabsTrigger value="variables">Gastos Variables</TabsTrigger>
@@ -693,9 +675,12 @@ const ExpensesPage = () => {
             <TabsTrigger value="causados">Gastos Causados</TabsTrigger>
             <TabsTrigger value="resumen">Resumen</TabsTrigger>
           </TabsList>
-
+          
           <div className="flex flex-wrap gap-2">
-            <Select value={selectedCurrency} onValueChange={(val) => setSelectedCurrency(val as Currency | "all")}>
+            <Select
+              value={selectedCurrency}
+              onValueChange={(val) => setSelectedCurrency(val as Currency | "all")}
+            >
               <SelectTrigger className="w-[150px] bg-background">
                 <SelectValue placeholder="Moneda" />
               </SelectTrigger>
@@ -705,8 +690,11 @@ const ExpensesPage = () => {
                 <SelectItem value="USD">USD</SelectItem>
               </SelectContent>
             </Select>
-
-            <Select value={viewCurrency} onValueChange={(val) => setViewCurrency(val as Currency)}>
+            
+            <Select
+              value={viewCurrency}
+              onValueChange={(val) => setViewCurrency(val as Currency)}
+            >
               <SelectTrigger className="w-[150px] bg-background">
                 <SelectValue placeholder="Ver en" />
               </SelectTrigger>
@@ -715,8 +703,7 @@ const ExpensesPage = () => {
                 <SelectItem value="USD">Ver en USD</SelectItem>
               </SelectContent>
             </Select>
-
-            {/* ───── Botón + formulario GASTO ───── */}
+            
             <Dialog open={expenseModalOpen} onOpenChange={setExpenseModalOpen}>
               <DialogTrigger asChild>
                 <Button className="mr-2">
@@ -727,9 +714,11 @@ const ExpensesPage = () => {
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Registrar Nuevo Gasto</DialogTitle>
-                  <DialogDescription>Completa el formulario para registrar un nuevo gasto variable</DialogDescription>
+                  <DialogDescription>
+                    Completa el formulario para registrar un nuevo gasto variable
+                  </DialogDescription>
                 </DialogHeader>
-
+                
                 <Form {...expenseForm}>
                   <form onSubmit={expenseForm.handleSubmit(onExpenseSubmit)} className="space-y-4">
                     <FormField
@@ -745,7 +734,7 @@ const ExpensesPage = () => {
                         </FormItem>
                       )}
                     />
-
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={expenseForm.control}
@@ -760,10 +749,14 @@ const ExpensesPage = () => {
                                     variant={"outline"}
                                     className={cn(
                                       "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground",
+                                      !field.value && "text-muted-foreground"
                                     )}
                                   >
-                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
+                                    {field.value ? (
+                                      format(field.value, "PPP", { locale: es })
+                                    ) : (
+                                      <span>Seleccionar fecha</span>
+                                    )}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                   </Button>
                                 </FormControl>
@@ -806,7 +799,7 @@ const ExpensesPage = () => {
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={expenseForm.control}
                           name="amount"
@@ -892,7 +885,9 @@ const ExpensesPage = () => {
                               maxFileSizeMB={5}
                             />
                           </FormControl>
-                          <FormDescription>Formatos aceptados: PDF, JPG, PNG. Máx 5MB</FormDescription>
+                          <FormDescription>
+                            Formatos aceptados: PDF, JPG, PNG. Máx 5MB
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -905,7 +900,10 @@ const ExpensesPage = () => {
                         <FormItem>
                           <FormLabel>Notas</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="Notas adicionales (opcional)" {...field} />
+                            <Textarea
+                              placeholder="Notas adicionales (opcional)"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -913,7 +911,11 @@ const ExpensesPage = () => {
                     />
 
                     <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setExpenseModalOpen(false)}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setExpenseModalOpen(false)}
+                      >
                         Cancelar
                       </Button>
                       <Button type="submit">Guardar</Button>
@@ -923,7 +925,6 @@ const ExpensesPage = () => {
               </DialogContent>
             </Dialog>
 
-            {/* ───── Botón + formulario RECURRENTE ───── */}
             <Dialog open={recurringModalOpen} onOpenChange={setRecurringModalOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -934,9 +935,11 @@ const ExpensesPage = () => {
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                   <DialogTitle>Registrar Gasto Recurrente</DialogTitle>
-                  <DialogDescription>Configura un gasto que se repetirá periódicamente</DialogDescription>
+                  <DialogDescription>
+                    Configura un gasto que se repetirá periódicamente
+                  </DialogDescription>
                 </DialogHeader>
-
+                
                 <Form {...recurringExpenseForm}>
                   <form onSubmit={recurringExpenseForm.handleSubmit(onRecurringExpenseSubmit)} className="space-y-4">
                     <FormField
@@ -952,7 +955,7 @@ const ExpensesPage = () => {
                         </FormItem>
                       )}
                     />
-
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={recurringExpenseForm.control}
@@ -992,10 +995,14 @@ const ExpensesPage = () => {
                                     variant={"outline"}
                                     className={cn(
                                       "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground",
+                                      !field.value && "text-muted-foreground"
                                     )}
                                   >
-                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
+                                    {field.value ? (
+                                      format(field.value, "PPP", { locale: es })
+                                    ) : (
+                                      <span>Seleccionar fecha</span>
+                                    )}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                   </Button>
                                 </FormControl>
@@ -1039,7 +1046,7 @@ const ExpensesPage = () => {
                           </FormItem>
                         )}
                       />
-
+                      
                       <FormField
                         control={recurringExpenseForm.control}
                         name="amount"
@@ -1118,7 +1125,10 @@ const ExpensesPage = () => {
                         <FormItem>
                           <FormLabel>Notas</FormLabel>
                           <FormControl>
-                            <Textarea placeholder="Notas adicionales (opcional)" {...field} />
+                            <Textarea
+                              placeholder="Notas adicionales (opcional)"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1126,24 +1136,24 @@ const ExpensesPage = () => {
                     />
 
                     <DialogFooter className="gap-2 flex-col sm:flex-row">
-                      <Button
+                      <Button 
                         type="button"
                         variant="outline"
                         onClick={() => {
                           const formValues = recurringExpenseForm.getValues();
                           handlePreviewPayments(formValues);
                         }}
-                        disabled={
-                          !recurringExpenseForm.watch("startDate") ||
-                          !recurringExpenseForm.watch("frequency") ||
-                          !recurringExpenseForm.watch("amount")
-                        }
+                        disabled={!recurringExpenseForm.watch("startDate") || !recurringExpenseForm.watch("frequency") || !recurringExpenseForm.watch("amount")}
                       >
                         Vista Previa de Pagos
                       </Button>
 
                       <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={() => setRecurringModalOpen(false)}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setRecurringModalOpen(false)}
+                        >
                           Cancelar
                         </Button>
                         <Button type="submit">Guardar</Button>
@@ -1155,13 +1165,14 @@ const ExpensesPage = () => {
             </Dialog>
           </div>
         </div>
-
-        {/* ───── TAB: Variables ───── */}
+        
         <TabsContent value="variables">
           <Card>
             <CardHeader className="bg-muted/20">
               <CardTitle>Gastos Variables</CardTitle>
-              <CardDescription>Lista de gastos no recurrentes registrados en el sistema</CardDescription>
+              <CardDescription>
+                Lista de gastos no recurrentes registrados en el sistema
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <DataTable
@@ -1173,13 +1184,14 @@ const ExpensesPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* ───── TAB: Recurrentes ───── */}
+        
         <TabsContent value="recurrentes">
           <Card>
             <CardHeader className="bg-muted/20">
               <CardTitle>Gastos Recurrentes</CardTitle>
-              <CardDescription>Gastos periódicos programados y su estado actual</CardDescription>
+              <CardDescription>
+                Gastos periódicos programados y su estado actual
+              </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <DataTable
@@ -1191,20 +1203,18 @@ const ExpensesPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* ───── TAB: Causados (envuelto en ErrorBoundary) ───── */}
+        
         <TabsContent value="causados">
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <AccruedExpenses />
-          </ErrorBoundary>
+          <AccruedExpenses />
         </TabsContent>
-
-        {/* ───── TAB: Resumen ───── */}
+        
         <TabsContent value="resumen">
           <Card>
             <CardHeader className="bg-muted/20">
               <CardTitle>Resumen de Gastos</CardTitle>
-              <CardDescription>Análisis y estadísticas de gastos por categoría y periodo</CardDescription>
+              <CardDescription>
+                Análisis y estadísticas de gastos por categoría y periodo
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-8">
@@ -1224,9 +1234,7 @@ const ExpensesPage = () => {
                     description="Mensual (solo activos)"
                     displayCurrency={viewCurrency}
                     originalCurrency={viewCurrency === "COP" ? "USD" : "COP"}
-                    originalValue={
-                      viewCurrency === "COP" ? recurringTotalByCurrency.USD : recurringTotalByCurrency.COP
-                    }
+                    originalValue={viewCurrency === "COP" ? recurringTotalByCurrency.USD : recurringTotalByCurrency.COP}
                     showConversionInfo={false}
                   />
                   <StatsCard
@@ -1236,8 +1244,8 @@ const ExpensesPage = () => {
                     displayCurrency={viewCurrency}
                   />
                   {Object.entries(categoryTotals)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 1)
+                    .sort((a, b) => b[1] - a[1]) // Sort by amount in descending order
+                    .slice(0, 1) // Get top category
                     .map(([category, amount]) => (
                       <StatsCard
                         key={category}
@@ -1257,80 +1265,115 @@ const ExpensesPage = () => {
                     </Button>
                   </div>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categoryChartData} margin={{ top: 20, right: 30, left: 40, bottom: 60 }}>
+                    <BarChart
+                      data={categoryChartData}
+                      margin={{ top: 20, right: 30, left: 40, bottom: 60 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" angle={-45} textAnchor="end" height={70} />
+                      <XAxis
+                        dataKey="category"
+                        angle={-45}
+                        textAnchor="end"
+                        height={70}
+                      />
                       {viewCurrency === "COP" ? (
                         <>
-                          <YAxis
+                          <YAxis 
                             yAxisId="left"
                             orientation="left"
-                            tickFormatter={(value) => `$${value / 1000000}M`}
-                            label={{ value: "Millones de COP", angle: -90, position: "insideLeft" }}
+                            tickFormatter={(value) => `$${value / 1000000}M`} 
+                            label={{ value: 'Millones de COP', angle: -90, position: 'insideLeft' }}
                           />
-                          <YAxis yAxisId="right" orientation="right" hide />
-                          <Legend formatter={(value) => (value === "COP" ? "COP (Original)" : "USD (Conv. a COP)")} />
+                          <YAxis 
+                            yAxisId="right"
+                            orientation="right"
+                            hide
+                          />
+                          <Legend formatter={(value) => value === "COP" ? "COP (Original)" : "USD (Convertido a COP)"} />
                           <RechartsTooltip
                             formatter={(value, name) => [
-                              name === "COP"
-                                ? formatCurrency(Number(value), "COP")
-                                : `${formatCurrency(Number(value), "COP")} (Original: ${
-                                    categoryChartData.find((item) => item.category === name)?.original_USD || 0
-                                  } USD)`,
-                              name === "COP" ? "COP (Original)" : "USD (Convertido a COP)",
+                              name === "COP" 
+                                ? formatCurrency(Number(value), "COP") 
+                                : `${formatCurrency(Number(value), "COP")} (Original: ${formatCurrency(categoryChartData.find(item => item.category === name)?.original_USD || 0, "USD")})`,
+                              name === "COP" ? "COP (Original)" : "USD (Convertido a COP)"
                             ]}
                           />
-                          <Bar dataKey="COP" name="COP" fill="#4b4ce6" radius={[4, 4, 0, 0]} yAxisId="left" />
-                          <Bar dataKey="USD_en_COP" name="USD" fill="#e6664b" radius={[4, 4, 0, 0]} yAxisId="left" />
+                          <Bar 
+                            dataKey="COP" 
+                            name="COP" 
+                            fill="#4b4ce6" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
+                          <Bar 
+                            dataKey="USD_en_COP" 
+                            name="USD" 
+                            fill="#e6664b" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
                         </>
                       ) : (
                         <>
-                          <YAxis
+                          <YAxis 
                             yAxisId="left"
                             orientation="left"
-                            tickFormatter={(value) => `$${value / 1000}K`}
-                            label={{ value: "Miles de USD", angle: -90, position: "insideLeft" }}
+                            tickFormatter={(value) => `$${value / 1000}K`} 
+                            label={{ value: 'Miles de USD', angle: -90, position: 'insideLeft' }}
                           />
-                          <YAxis yAxisId="right" orientation="right" hide />
-                          <Legend formatter={(value) => (value === "USD" ? "USD (Original)" : "COP (Conv. a USD)")} />
+                          <YAxis 
+                            yAxisId="right"
+                            orientation="right"
+                            hide
+                          />
+                          <Legend formatter={(value) => value === "USD" ? "USD (Original)" : "COP (Convertido a USD)"} />
                           <RechartsTooltip
                             formatter={(value, name) => [
-                              name === "USD"
-                                ? formatCurrency(Number(value), "USD")
-                                : `${formatCurrency(Number(value), "USD")} (Original: ${
-                                    categoryChartData.find((item) => item.category === name)?.original_COP || 0
-                                  } COP)`,
-                              name === "USD" ? "USD (Original)" : "COP (Convertido a USD)",
+                              name === "USD" 
+                                ? formatCurrency(Number(value), "USD") 
+                                : `${formatCurrency(Number(value), "USD")} (Original: ${formatCurrency(categoryChartData.find(item => item.category === name)?.original_COP || 0, "COP")})`,
+                              name === "USD" ? "USD (Original)" : "COP (Convertido a USD)"
                             ]}
                           />
-                          <Bar dataKey="USD" name="USD" fill="#e6664b" radius={[4, 4, 0, 0]} yAxisId="left" />
-                          <Bar dataKey="COP_en_USD" name="COP" fill="#4b4ce6" radius={[4, 4, 0, 0]} yAxisId="left" />
+                          <Bar 
+                            dataKey="USD" 
+                            name="USD" 
+                            fill="#e6664b" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
+                          <Bar 
+                            dataKey="COP_en_USD" 
+                            name="COP" 
+                            fill="#4b4ce6" 
+                            radius={[4, 4, 0, 0]} 
+                            yAxisId="left"
+                          />
                         </>
                       )}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-
+                
                 <div className="pt-4">
                   <h3 className="text-lg font-medium mb-4">Próximos Pagos</h3>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {recurringExpensesData
-                      .filter((expense) => expense.status === "Activo")
+                      .filter(expense => expense.status === "Activo")
                       .sort((a, b) => a.nextPayment.getTime() - b.nextPayment.getTime())
                       .slice(0, 3)
                       .map((expense, index) => {
-                        const displayAmount =
-                          expense.currency === viewCurrency
-                            ? expense.amount
-                            : convertCurrency(expense.amount, expense.currency, viewCurrency);
-
+                        const displayAmount = expense.currency === viewCurrency 
+                          ? expense.amount 
+                          : convertCurrency(expense.amount, expense.currency, viewCurrency);
+                          
                         return (
                           <div key={index} className="p-4 border rounded-md space-y-2">
                             <div className="text-lg font-medium">{expense.description}</div>
                             <div className="text-sm text-muted-foreground">Vence: {formatDate(expense.nextPayment)}</div>
                             <div className="text-xl font-bold flex items-center">
                               {formatCurrency(displayAmount, viewCurrency)}
-
+                              
                               {expense.currency !== viewCurrency && (
                                 <TooltipProvider>
                                   <Tooltip>
@@ -1353,7 +1396,8 @@ const ExpensesPage = () => {
                             </div>
                           </div>
                         );
-                      })}
+                      })
+                    }
                   </div>
                 </div>
               </div>
@@ -1373,7 +1417,6 @@ const ExpensesPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* ───── Dialog: Vista previa pagos generados ───── */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
@@ -1382,7 +1425,7 @@ const ExpensesPage = () => {
               Estos son los pagos que serán generados automáticamente para este gasto recurrente
             </DialogDescription>
           </DialogHeader>
-
+          
           <div className="max-h-[400px] overflow-y-auto">
             <table className="w-full border-collapse">
               <thead>
@@ -1409,7 +1452,7 @@ const ExpensesPage = () => {
               </tbody>
             </table>
           </div>
-
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setPreviewModalOpen(false)}>
               Cerrar
