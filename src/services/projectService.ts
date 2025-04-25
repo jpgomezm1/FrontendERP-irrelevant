@@ -73,11 +73,17 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
 }
 
 export async function addProject(project: Omit<Project, 'id' | 'documents'>): Promise<Project> {
-  // Handle date conversion for DB
-  const payload = { 
+  // Handle date conversion for DB - ensure we're sending strings
+  const payload = {
     ...project,
-    startDate: project.startDate?.toISOString().split('T')[0],
-    endDate: project.endDate?.toISOString().split('T')[0] || null,
+    startDate: project.startDate instanceof Date ? 
+      project.startDate.toISOString().split('T')[0] : 
+      new Date(project.startDate).toISOString().split('T')[0],
+    endDate: project.endDate ? (
+      project.endDate instanceof Date ? 
+        project.endDate.toISOString().split('T')[0] : 
+        new Date(project.endDate).toISOString().split('T')[0]
+    ) : null,
   };
   
   const { data, error } = await supabase
@@ -91,6 +97,7 @@ export async function addProject(project: Omit<Project, 'id' | 'documents'>): Pr
     throw error;
   }
 
+  // Return with proper Date objects
   return {
     ...data,
     startDate: new Date(data.startDate),
@@ -100,15 +107,26 @@ export async function addProject(project: Omit<Project, 'id' | 'documents'>): Pr
 }
 
 export async function updateProject(id: number, updatedData: Partial<Project>): Promise<void> {
-  // Handle date conversion for DB
-  const payload = { ...updatedData };
+  // Create a new object to avoid modifying the original
+  const payload: any = { ...updatedData };
   
-  if (payload.startDate && payload.startDate instanceof Date) {
-    payload.startDate = payload.startDate.toISOString().split('T')[0];
+  // Properly convert dates to strings for the database
+  if (payload.startDate) {
+    if (payload.startDate instanceof Date) {
+      payload.startDate = payload.startDate.toISOString().split('T')[0];
+    } else if (typeof payload.startDate === 'string') {
+      const date = new Date(payload.startDate);
+      payload.startDate = date.toISOString().split('T')[0];
+    }
   }
   
-  if (payload.endDate && payload.endDate instanceof Date) {
-    payload.endDate = payload.endDate.toISOString().split('T')[0];
+  if (payload.endDate) {
+    if (payload.endDate instanceof Date) {
+      payload.endDate = payload.endDate.toISOString().split('T')[0];
+    } else if (typeof payload.endDate === 'string') {
+      const date = new Date(payload.endDate);
+      payload.endDate = date.toISOString().split('T')[0];
+    }
   }
   
   const { error } = await supabase
@@ -126,11 +144,15 @@ export async function addProjectDocument(
   projectId: number, 
   document: Omit<Document, 'id'>
 ): Promise<Document> {
-  // Ensure proper date handling
+  // Ensure proper date handling - convert to string for DB
   const documentToInsert = {
     ...document,
     projectId,
-    uploadDate: document.uploadDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+    uploadDate: document.uploadDate instanceof Date ? 
+      document.uploadDate.toISOString().split('T')[0] : 
+      (document.uploadDate ? 
+        new Date(document.uploadDate).toISOString().split('T')[0] : 
+        new Date().toISOString().split('T')[0])
   };
 
   const { data, error } = await supabase
@@ -144,6 +166,7 @@ export async function addProjectDocument(
     throw error;
   }
 
+  // Return with proper Date object
   return {
     ...data,
     uploadDate: new Date(data.uploadDate)
