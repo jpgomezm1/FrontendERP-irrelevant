@@ -1,22 +1,23 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
-import { FileText, Download, Check, Calendar, CreditCard } from "lucide-react";
+import { FileText, Download, Check, Calendar, CreditCard, AlertCircle } from "lucide-react";
 import { format, isBefore, isAfter, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatCurrency, convertCurrency, Currency, formatDate, getStatusBadge } from "@/lib/utils";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useToast } from "@/hooks/use-toast";
 import { StatsCard } from "@/components/ui/stats-card";
 import { useQuery } from "@tanstack/react-query";
 import { Expense, getAccruedExpenses } from "@/services/financeService";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 // Define the AccruedExpense interface that extends the Expense interface
 interface AccruedExpense extends Expense {
@@ -35,7 +36,7 @@ export function AccruedExpenses() {
   const [selectedExpense, setSelectedExpense] = useState<AccruedExpense | null>(null);
   const [markAsPaidOpen, setMarkAsPaidOpen] = useState(false);
 
-  // Fetch accrued expenses using the new getAccruedExpenses function
+  // Fetch accrued expenses using the getAccruedExpenses function
   const { data: fetchedExpenses = [], isLoading } = useQuery({
     queryKey: ['accrued-expenses'],
     queryFn: getAccruedExpenses
@@ -49,7 +50,7 @@ export function AccruedExpenses() {
     // Determine status based on date
     let status: 'pagado' | 'pendiente' | 'vencido';
     if (expense.date < today) {
-      status = 'pendiente'; // For now, all past expenses are considered pending
+      status = 'vencido'; // Past expenses are considered overdue
     } else {
       status = 'pendiente';
     }
@@ -141,16 +142,76 @@ export function AccruedExpenses() {
     }
   };
 
+  // Count recurring expense occurrences
+  const recurringExpenseCounts = fetchedExpenses.reduce((acc, expense) => {
+    if (expense.isRecurring) {
+      if (!acc[expense.id]) {
+        acc[expense.id] = {
+          count: 1,
+          originalDate: expense.date
+        };
+      } else {
+        acc[expense.id].count += 1;
+      }
+    }
+    return acc;
+  }, {} as Record<number, { count: number, originalDate: Date }>);
+
   // Columns for data table
   const columns = [
     {
       accessorKey: "description",
       header: "Descripción",
+      cell: ({ row }: { row: any }) => {
+        const expense = row.original;
+        const isRecurring = expense.isRecurring;
+        const count = isRecurring ? recurringExpenseCounts[expense.id]?.count : 0;
+        
+        return (
+          <div className="flex flex-col">
+            <span>{expense.description}</span>
+            {isRecurring && (
+              <div className="flex items-center mt-1">
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  Recurrente
+                </Badge>
+                <span className="text-xs text-muted-foreground ml-2">
+                  {count > 1 ? `${count} ocurrencias` : ''}
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       accessorKey: "date",
       header: "Fecha de Vencimiento",
-      cell: ({ row }: { row: any }) => formatDate(row.original.date),
+      cell: ({ row }: { row: any }) => {
+        const expense = row.original;
+        const formattedDate = formatDate(expense.date);
+        const isRecurring = expense.isRecurring;
+        
+        return (
+          <div className="flex items-center">
+            {formattedDate}
+            {isRecurring && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Calendar className="h-4 w-4 ml-1 text-blue-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Gasto recurrente</p>
+                    <p className="text-xs">Inicio: {formatDate(recurringExpenseCounts[expense.id]?.originalDate || expense.date)}</p>
+                    <p className="text-xs">Frecuencia: {expense.frequency}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "amount",
@@ -260,6 +321,9 @@ export function AccruedExpenses() {
     },
   ];
 
+  // Check if we have recurring expenses
+  const hasRecurringExpenses = filteredExpenses.some(expense => expense.isRecurring);
+
   return (
     <>
       <Card>
@@ -361,13 +425,36 @@ export function AccruedExpenses() {
             })}
           </div>
           
-          <DataTable 
-            columns={columns} 
-            data={filteredExpenses}
-            searchColumn="description"
-            searchPlaceholder="Buscar gastos causados..."
-            isLoading={isLoading}
-          />
+          {accruedExpenses.length === 0 && !isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No hay gastos causados</h3>
+              <p className="text-muted-foreground mt-2 max-w-md">
+                No se encontraron gastos causados en el período seleccionado. Intente cambiar los filtros o agregar nuevos gastos.
+              </p>
+            </div>
+          ) : (
+            <DataTable 
+              columns={columns} 
+              data={filteredExpenses}
+              searchColumn="description"
+              searchPlaceholder="Buscar gastos causados..."
+              isLoading={isLoading}
+            />
+          )}
+          
+          {hasRecurringExpenses && (
+            <div className="p-4 bg-blue-50 rounded-md border border-blue-200">
+              <div className="flex items-center">
+                <Calendar className="h-5 w-5 text-blue-700 mr-2" />
+                <h3 className="text-sm font-medium text-blue-800">Información sobre gastos recurrentes</h3>
+              </div>
+              <p className="text-sm text-blue-700 mt-1">
+                Los gastos recurrentes se muestran como entradas individuales para cada período. 
+                Un gasto con frecuencia mensual registrado desde enero aparecerá como una entrada por cada mes hasta la fecha actual.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
       

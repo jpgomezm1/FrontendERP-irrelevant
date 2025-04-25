@@ -288,6 +288,7 @@ export async function getAccruedExpenses(): Promise<Expense[]> {
 
   const accruedExpenses: Expense[] = [];
   
+  // Process each expense
   data.forEach(expense => {
     // For non-recurring expenses, just add them as is
     if (!expense.is_recurring) {
