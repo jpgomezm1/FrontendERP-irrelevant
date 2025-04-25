@@ -1,11 +1,14 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-// Use fallback values if environment variables are not available yet
-// When the Lovable-Supabase connection is established, these will be properly set
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-supabase-project.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'public-anon-key'
+// Verificar que las variables de entorno estén correctamente configuradas
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Create the Supabase client
+// Validar que las variables estén definidas
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+// Crear el cliente de Supabase
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-

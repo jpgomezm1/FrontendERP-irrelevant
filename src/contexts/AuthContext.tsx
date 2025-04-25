@@ -27,11 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+    }).catch(error => {
+      console.error("Error getting session:", error);
+      setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state change:", event);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -44,13 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (username: string, password: string) => {
     try {
       setLoading(true);
+      console.log("Intentando iniciar sesión para:", username);
       
       // Añadir dominio al nombre de usuario para crear un formato de email
       const email = `${username}@example.com`;
       
+      console.log("URL de Supabase:", import.meta.env.VITE_SUPABASE_URL);
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
+        console.error("Error en login:", error);
         toast.error('Error al iniciar sesión', {
           description: error.message
         });
@@ -58,12 +65,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       if (data.user) {
+        console.log("Login exitoso:", data.user);
         toast.success('Inicio de sesión exitoso');
         navigate('/');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Error al iniciar sesión');
+      console.error('Login error detallado:', error);
+      toast.error('Error al iniciar sesión', {
+        description: 'Problema de conexión con el servidor'
+      });
     } finally {
       setLoading(false);
     }

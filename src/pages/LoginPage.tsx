@@ -1,20 +1,33 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("jpgomezm");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const { signIn, loading } = useAuth();
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await signIn(username, password);
+    setError("");
+    
+    if (!username || !password) {
+      setError("Por favor ingrese usuario y contraseña");
+      return;
+    }
+    
+    try {
+      await signIn(username, password);
+    } catch (err) {
+      console.error("Error en login component:", err);
+      setError("Error al intentar iniciar sesión");
+    }
   };
 
   return (
@@ -49,6 +62,11 @@ const LoginPage = () => {
                 required
               />
             </div>
+            {error && (
+              <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+                {error}
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={loading}>
