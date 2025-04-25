@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React from "react";
 import {
   Card,
   CardContent,
@@ -18,7 +18,7 @@ interface ClientsListProps {
 }
 
 export function ClientsList({ onClientSelect }: ClientsListProps) {
-  const { clients } = useClientsData();
+  const { clients, isLoading } = useClientsData();
   
   const clientColumns = [
     {
@@ -36,7 +36,7 @@ export function ClientsList({ onClientSelect }: ClientsListProps) {
     {
       accessorKey: "startDate",
       header: "Fecha Inicio",
-      cell: ({ row }) => formatDate(row.original.startDate),
+      cell: ({ row }) => formatDate(new Date(row.original.startDate)),
     },
     {
       accessorKey: "status",
@@ -79,12 +79,18 @@ export function ClientsList({ onClientSelect }: ClientsListProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <DataTable
-          columns={clientColumns}
-          data={clients}
-          searchColumn="name"
-          searchPlaceholder="Buscar cliente..."
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <DataTable
+            columns={clientColumns}
+            data={clients}
+            searchColumn="name"
+            searchPlaceholder="Buscar cliente..."
+          />
+        )}
       </CardContent>
     </Card>
   );

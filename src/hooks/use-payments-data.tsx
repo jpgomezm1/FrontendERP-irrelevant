@@ -1,39 +1,63 @@
 
 import { useState, useEffect } from 'react';
 import { Payment } from '@/types/clients';
-import { useProjectsData } from './use-projects-data';
+import { getAllPayments, getPaymentsByProjectId, getPaymentsByClientId, addPayment, updatePaymentStatus } from '@/services/paymentService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function usePaymentsData() {
-  const { projects } = useProjectsData();
+  const queryClient = useQueryClient();
   
-  // Extraer todos los pagos de todos los proyectos
-  const allPayments = projects.flatMap(project => 
-    project.payments.map(payment => ({
-      ...payment,
-      projectName: project.name,
-      clientName: project.clientName,
-    }))
-  );
+  // Fetch all payments
+  const { data: payments = [], isLoading, error } = useQuery({
+    queryKey: ['payments'],
+    queryFn: getAllPayments,
+  });
   
-  const getPaymentsByProjectId = (projectId: number) => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return [];
-    
-    return project.payments.map(payment => ({
-      ...payment,
-      projectName: project.name,
-      clientName: project.clientName,
-    }));
+  // Get payments by project ID
+  const fetchPaymentsByProjectId = async (projectId: number) => {
+    return await getPaymentsByProjectId(projectId);
   };
   
-  const getPaymentsByClientId = (clientId: number) => {
-    return allPayments.filter(payment => payment.clientId === clientId);
+  // Get payments by client ID
+  const fetchPaymentsByClientId = async (clientId: number) => {
+    return await getPaymentsByClientId(clientId);
   };
+  
+  // Add a new payment
+  const addPaymentMutation = useMutation({
+    mutationFn: addPayment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      toast.success('Pago agregado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error adding payment:', error);
+      toast.error('Error al agregar pago');
+    },
+  });
+  
+  // Update payment status
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: ({ paymentId, status, paidDate }: { 
+      paymentId: number; 
+      status: Payment["status"]; 
+      paidDate?: Date 
+    }) => updatePaymentStatus(paymentId, status, paidDate),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      toast.success('Estado de pago actualizado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error updating payment status:', error);
+      toast.error('Error al actualizar estado de pago');
+    },
+  });
   
   const getOverduePayments = () => {
     const today = new Date();
-    return allPayments.filter(
-      payment => payment.status === "Pendiente" && payment.date < today
+    return payments.filter(
+      payment => payment.status === "Pendiente" && new Date(payment.date) < today
     );
   };
   
@@ -42,33 +66,25 @@ export function usePaymentsData() {
     const limit = new Date();
     limit.setDate(today.getDate() + days);
     
-    return allPayments.filter(
+    return payments.filter(
       payment => 
         payment.status === "Pendiente" && 
-        payment.date >= today && 
-        payment.date <= limit
+        new Date(payment.date) >= today && 
+        new Date(payment.date) <= limit
     );
   };
   
-  const addPayment = (payment: Omit<Payment, "id">) => {
-    // Esta implementación es simplificada ya que los pagos están anidados en los proyectos
-    // En una implementación real, esto requeriría una actualización del estado de proyectos
-    return payment;
-  };
-  
-  const updatePaymentStatus = (paymentId: number, status: Payment["status"], paidDate?: Date) => {
-    // Esta implementación es simplificada ya que los pagos están anidados en los proyectos
-    // En una implementación real, esto requeriría una actualización del estado de proyectos
-    return true;
-  };
-  
   return {
-    payments: allPayments,
-    getPaymentsByProjectId,
-    getPaymentsByClientId,
+    payments,
+    isLoading,
+    error,
+    getPaymentsByProjectId: fetchPaymentsByProjectId,
+    getPaymentsByClientId: fetchPaymentsByClientId,
     getOverduePayments,
     getUpcomingPayments,
-    addPayment,
-    updatePaymentStatus,
+    addPayment: (payment: Omit<Payment, "id">) => 
+      addPaymentMutation.mutate(payment),
+    updatePaymentStatus: (paymentId: number, status: Payment["status"], paidDate?: Date) => 
+      updatePaymentStatusMutation.mutate({ paymentId, status, paidDate }),
   };
 }

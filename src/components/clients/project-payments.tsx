@@ -6,20 +6,46 @@ import { formatDate, formatCurrency } from "@/lib/utils";
 import { usePaymentsData } from "@/hooks/use-payments-data";
 import { Badge } from "@/components/ui/badge";
 import { FileText, CheckCircle2, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getPaymentsByProjectId, updatePaymentStatus } from "@/services/paymentService";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProjectPaymentsProps {
   projectId: number;
 }
 
 export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
-  const { getPaymentsByProjectId } = usePaymentsData();
-  const payments = getPaymentsByProjectId(projectId);
+  const { toast } = useToast();
+  
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ['project-payments', projectId],
+    queryFn: () => getPaymentsByProjectId(projectId),
+  });
+  
+  const { updatePaymentStatus } = usePaymentsData();
+  
+  const handleMarkAsPaid = async (paymentId: number) => {
+    try {
+      await updatePaymentStatus(paymentId, "Pagado", new Date());
+      toast({
+        title: "Pago actualizado",
+        description: "El pago ha sido marcado como pagado correctamente"
+      });
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado del pago",
+        variant: "destructive"
+      });
+    }
+  };
   
   const paymentColumns = [
     {
       accessorKey: "date",
       header: "Fecha Programada",
-      cell: ({ row }) => formatDate(row.original.date),
+      cell: ({ row }) => formatDate(new Date(row.original.date)),
     },
     {
       accessorKey: "type",
@@ -65,7 +91,7 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
     {
       accessorKey: "paidDate",
       header: "Fecha de Pago",
-      cell: ({ row }) => row.original.paidDate ? formatDate(row.original.paidDate) : "-",
+      cell: ({ row }) => row.original.paidDate ? formatDate(new Date(row.original.paidDate)) : "-",
     },
     {
       accessorKey: "invoiceNumber",
@@ -76,7 +102,7 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
       id: "actions",
       header: "",
       cell: ({ row }) => {
-        const { status, invoiceUrl } = row.original;
+        const { status, invoiceUrl, id } = row.original;
         
         if (status === "Pagado" && invoiceUrl) {
           return (
@@ -91,7 +117,11 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
         
         if (status === "Pendiente") {
           return (
-            <Button variant="ghost" size="sm">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => handleMarkAsPaid(id)}
+            >
               <CheckCircle2 className="h-4 w-4 mr-1" />
               Marcar como Pagado
             </Button>
@@ -105,7 +135,11 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
 
   return (
     <div>
-      {payments.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : payments.length === 0 ? (
         <div className="text-center py-6">
           <p className="text-muted-foreground">No hay pagos registrados para este proyecto</p>
         </div>

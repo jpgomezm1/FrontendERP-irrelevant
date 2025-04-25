@@ -12,6 +12,9 @@ import ClientsPage from "./pages/ClientsPage";
 import CashFlowPage from "./pages/CashFlowPage";
 import ReportsPage from "./pages/ReportsPage";
 import NotFound from "./pages/NotFound";
+import LoginPage from "./pages/LoginPage";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -21,17 +24,24 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="gastos" element={<ExpensesPage />} />
-            <Route path="ingresos" element={<IncomePage />} />
-            <Route path="clientes" element={<ClientsPage />} />
-            <Route path="caja" element={<CashFlowPage />} />
-            <Route path="reportes" element={<ReportsPage />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<AppLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="gastos" element={<ExpensesPage />} />
+                <Route path="ingresos" element={<IncomePage />} />
+                <Route path="clientes" element={<ClientsPage />} />
+                <Route path="caja" element={<CashFlowPage />} />
+                <Route path="reportes" element={<ReportsPage />} />
+              </Route>
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

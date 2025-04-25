@@ -12,11 +12,17 @@ import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
 import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
-import { incomesData } from "./income-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { getIncomes } from "@/services/financeService";
 
 export function IncomeList() {
   const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
+  
+  const { data: incomesData = [], isLoading } = useQuery({
+    queryKey: ['incomes'],
+    queryFn: getIncomes
+  });
 
   const incomeColumns = [
     {
@@ -69,7 +75,7 @@ export function IncomeList() {
       header: "Cliente",
       cell: ({ row }) => (
         <span className={row.original.client === "-" ? "text-gray-400" : ""}>
-          {row.original.client}
+          {row.original.client || "-"}
         </span>
       ),
     },
@@ -81,10 +87,16 @@ export function IncomeList() {
       accessorKey: "receipt",
       header: "Comprobante",
       cell: ({ row }) => (
-        <Button variant="ghost" size="sm" className="w-full justify-start">
-          <FileText className="h-4 w-4 mr-2" />
-          Ver
-        </Button>
+        row.original.receipt ? (
+          <Button variant="ghost" size="sm" className="w-full justify-start" asChild>
+            <a href={row.original.receipt} target="_blank" rel="noopener noreferrer">
+              <FileText className="h-4 w-4 mr-2" />
+              Ver
+            </a>
+          </Button>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )
       ),
     },
   ];
@@ -109,12 +121,18 @@ export function IncomeList() {
         </Select>
       </CardHeader>
       <CardContent>
-        <DataTable
-          columns={incomeColumns}
-          data={incomesData}
-          searchColumn="description"
-          searchPlaceholder="Buscar ingresos..."
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <DataTable
+            columns={incomeColumns}
+            data={incomesData}
+            searchColumn="description"
+            searchPlaceholder="Buscar ingresos..."
+          />
+        )}
       </CardContent>
       <CardFooter>
         <Button variant="outline">

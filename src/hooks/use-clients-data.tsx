@@ -1,163 +1,92 @@
 
 import { useState, useEffect } from 'react';
 import { Client } from '@/types/clients';
-
-// Datos de ejemplo para clientes
-const INITIAL_CLIENTS: Client[] = [
-  {
-    id: 1,
-    name: "Empresa Innovadora S.A.S",
-    contactName: "Carlos Rodríguez",
-    email: "carlos@empresainnovadora.com",
-    phone: "315 789 1234",
-    address: "Calle 85 # 11-53, Oficina 401, Bogotá",
-    taxId: "901.234.567-8",
-    startDate: new Date("2023-03-15"),
-    status: "Activo",
-    notes: "Cliente prioritario, necesita atención VIP",
-    documents: [
-      {
-        id: 1,
-        name: "RUT Empresa Innovadora",
-        type: "RUT",
-        url: "#",
-        uploadDate: new Date("2023-03-15"),
-      },
-      {
-        id: 2,
-        name: "Cámara de Comercio Actualizada",
-        type: "Cámara de Comercio",
-        url: "#",
-        uploadDate: new Date("2023-04-02"),
-      },
-      {
-        id: 3,
-        name: "Contrato Marco de Servicios",
-        type: "Contrato",
-        url: "#",
-        uploadDate: new Date("2023-04-10"),
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Distribuciones Comerciales Ltda.",
-    contactName: "Ana Martínez",
-    email: "ana.martinez@discocom.com",
-    phone: "310 567 8901",
-    taxId: "800.123.456-7",
-    startDate: new Date("2023-01-20"),
-    status: "Activo",
-    documents: [
-      {
-        id: 4,
-        name: "RUT Distribuciones Comerciales",
-        type: "RUT",
-        url: "#",
-        uploadDate: new Date("2023-01-20"),
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Consultores Asociados S.A.",
-    contactName: "Fernando Gómez",
-    email: "fgomez@consultoresasoc.com",
-    phone: "320 234 5678",
-    address: "Av. El Dorado # 68D-35, Piso 3, Bogotá",
-    startDate: new Date("2022-11-05"),
-    status: "Pausado",
-    notes: "Contrato en pausa por reestructuración interna del cliente",
-    documents: [],
-  },
-  {
-    id: 4,
-    name: "Tecnología Avanzada C.A.",
-    contactName: "Luisa Torres",
-    email: "ltorres@tecavanzada.com",
-    phone: "300 456 7890",
-    taxId: "830.567.890-1",
-    startDate: new Date("2022-08-15"),
-    status: "Terminado",
-    documents: [
-      {
-        id: 5,
-        name: "Cámara de Comercio",
-        type: "Cámara de Comercio",
-        url: "#",
-        uploadDate: new Date("2022-08-15"),
-      },
-      {
-        id: 6,
-        name: "Acuerdo de Confidencialidad",
-        type: "NDA",
-        url: "#",
-        uploadDate: new Date("2022-08-20"),
-      },
-    ],
-  },
-];
+import { getClients, getClientById, addClient, updateClient, addDocument, removeDocument } from '@/services/clientService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export function useClientsData() {
-  const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
+  const queryClient = useQueryClient();
   
-  const getClientById = (id: number) => {
-    return clients.find(client => client.id === id);
+  // Fetch all clients
+  const { data: clients = [], isLoading, error } = useQuery({
+    queryKey: ['clients'],
+    queryFn: getClients,
+  });
+  
+  // Get a single client by ID
+  const fetchClientById = async (id: number) => {
+    return await getClientById(id);
   };
   
-  const addClient = (newClient: Omit<Client, "id" | "documents">) => {
-    const client: Client = {
-      ...newClient,
-      id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
-      documents: [],
-    };
-    
-    setClients([...clients, client]);
-    return client;
-  };
+  // Add a new client
+  const addClientMutation = useMutation({
+    mutationFn: addClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Cliente agregado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error adding client:', error);
+      toast.error('Error al agregar cliente');
+    },
+  });
   
-  const updateClient = (id: number, updatedData: Partial<Client>) => {
-    setClients(clients.map(client => 
-      client.id === id ? { ...client, ...updatedData } : client
-    ));
-  };
+  // Update an existing client
+  const updateClientMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => 
+      updateClient(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['client', variables.id] });
+      toast.success('Cliente actualizado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error updating client:', error);
+      toast.error('Error al actualizar cliente');
+    },
+  });
   
-  const addDocument = (
-    clientId: number, 
-    document: Omit<Client["documents"][0], "id">
-  ) => {
-    const client = getClientById(clientId);
-    if (!client) return;
-    
-    const newDoc = {
-      ...document,
-      id: client.documents.length > 0 
-        ? Math.max(...client.documents.map(d => d.id)) + 1 
-        : 1,
-    };
-    
-    updateClient(clientId, {
-      documents: [...client.documents, newDoc],
-    });
-    
-    return newDoc;
-  };
+  // Add a document to a client
+  const addDocumentMutation = useMutation({
+    mutationFn: ({ clientId, document }: { 
+      clientId: number; 
+      document: Omit<Client["documents"][0], "id">; 
+    }) => addDocument(clientId, document),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
+      toast.success('Documento agregado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error adding document:', error);
+      toast.error('Error al agregar documento');
+    },
+  });
   
-  const removeDocument = (clientId: number, documentId: number) => {
-    const client = getClientById(clientId);
-    if (!client) return;
-    
-    updateClient(clientId, {
-      documents: client.documents.filter(doc => doc.id !== documentId),
-    });
-  };
+  // Remove a document from a client
+  const removeDocumentMutation = useMutation({
+    mutationFn: ({ clientId, documentId }: { clientId: number; documentId: number }) => 
+      removeDocument(documentId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
+      toast.success('Documento eliminado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error removing document:', error);
+      toast.error('Error al eliminar documento');
+    },
+  });
   
   return {
     clients,
-    getClientById,
-    addClient,
-    updateClient,
-    addDocument,
-    removeDocument,
+    isLoading,
+    error,
+    getClientById: fetchClientById,
+    addClient: (client: Omit<Client, "id" | "documents">) => addClientMutation.mutate(client),
+    updateClient: (id: number, data: Partial<Client>) => updateClientMutation.mutate({ id, data }),
+    addDocument: (clientId: number, document: Omit<Client["documents"][0], "id">) => 
+      addDocumentMutation.mutate({ clientId, document }),
+    removeDocument: (clientId: number, documentId: number) => 
+      removeDocumentMutation.mutate({ clientId, documentId }),
   };
 }
