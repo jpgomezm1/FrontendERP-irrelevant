@@ -1,5 +1,5 @@
 
-import { Payment } from '@/types/clients';
+import { Payment, PaymentStatus } from '@/types/clients';
 import { getAllPayments, getPaymentsByClientId, getPaymentsByProjectId, addPayment, updatePaymentStatus } from '@/services/paymentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -46,7 +46,7 @@ export function usePaymentsData() {
   const updatePaymentStatusMutation = useMutation({
     mutationFn: ({ paymentId, status, paidDate }: { 
       paymentId: number; 
-      status: string;
+      status: PaymentStatus;
       paidDate?: Date;
     }) => updatePaymentStatus(paymentId, status, paidDate),
     onSuccess: () => {
@@ -67,7 +67,7 @@ export function usePaymentsData() {
     getPaymentsByProjectIdQuery,
     addPayment: (payment: Omit<Payment, "id">) => 
       addPaymentMutation.mutate(payment),
-    updatePaymentStatus: (paymentId: number, status: string, paidDate?: Date) => 
+    updatePaymentStatus: (paymentId: number, status: PaymentStatus, paidDate?: Date) => 
       updatePaymentStatusMutation.mutate({ paymentId, status, paidDate }),
   };
 }

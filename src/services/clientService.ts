@@ -88,15 +88,16 @@ export async function updateClient(id: number, updatedData: Partial<Client>): Pr
 }
 
 export async function addDocument(clientId: number, document: Omit<Document, 'id'>): Promise<Document> {
+  // Ensure proper date handling
+  const documentToInsert = {
+    ...document,
+    clientId,
+    uploadDate: document.uploadDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+  };
+
   const { data, error } = await supabase
     .from('documents')
-    .insert([
-      { 
-        ...document,
-        clientId,
-        uploadDate: new Date(document.uploadDate || new Date()).toISOString().split('T')[0]
-      }
-    ])
+    .insert([documentToInsert])
     .select()
     .single();
 

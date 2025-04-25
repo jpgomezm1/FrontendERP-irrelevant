@@ -104,11 +104,11 @@ export async function updateProject(id: number, updatedData: Partial<Project>): 
   const payload = { ...updatedData };
   
   if (payload.startDate && payload.startDate instanceof Date) {
-    payload.startDate = new Date(payload.startDate).toISOString().split('T')[0];
+    payload.startDate = payload.startDate.toISOString().split('T')[0];
   }
   
   if (payload.endDate && payload.endDate instanceof Date) {
-    payload.endDate = new Date(payload.endDate).toISOString().split('T')[0];
+    payload.endDate = payload.endDate.toISOString().split('T')[0];
   }
   
   const { error } = await supabase
@@ -126,15 +126,16 @@ export async function addProjectDocument(
   projectId: number, 
   document: Omit<Document, 'id'>
 ): Promise<Document> {
+  // Ensure proper date handling
+  const documentToInsert = {
+    ...document,
+    projectId,
+    uploadDate: document.uploadDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0]
+  };
+
   const { data, error } = await supabase
     .from('documents')
-    .insert([
-      { 
-        ...document,
-        projectId,
-        uploadDate: new Date(document.uploadDate || new Date()).toISOString().split('T')[0]
-      }
-    ])
+    .insert([documentToInsert])
     .select()
     .single();
 

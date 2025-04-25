@@ -94,7 +94,7 @@ export function useProjectsData() {
     error,
     getProjectByIdQuery,
     getProjectsByClientIdQuery,
-    addProject: (project: Omit<Project, "id" | "documents" | "payments">) => 
+    addProject: (project: Omit<Project, "id" | "documents">) => 
       addProjectMutation.mutate(project),
     updateProject: (id: number, data: Partial<Project>) => 
       updateProjectMutation.mutate({ id, data }),
