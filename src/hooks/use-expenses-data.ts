@@ -39,7 +39,9 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
   const { data: variableExpenses = [], isLoading: isLoadingVariable } = useQuery({
     queryKey: ['variable-expenses'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_variable_expenses');
+      // Using fetch directly to work around type limitations
+      const { data, error } = await supabase.functions.invoke('variable-expenses');
+      
       if (error) throw error;
       return data as Expense[];
     }
@@ -48,7 +50,9 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
   const { data: recurringExpenses = [], isLoading: isLoadingRecurring } = useQuery({
     queryKey: ['recurring-expenses'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_recurring_expenses');
+      // Using fetch directly to work around type limitations
+      const { data, error } = await supabase.functions.invoke('recurring-expenses');
+      
       if (error) throw error;
       return data as Expense[];
     }
@@ -57,10 +61,14 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
   const { data: expenseSummary, isLoading: isLoadingSummary } = useQuery({
     queryKey: ['expense-summary', startDate, endDate],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_expense_summary', {
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString()
+      // Using fetch directly to work around type limitations
+      const { data, error } = await supabase.functions.invoke('expense-summary', {
+        body: {
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString()
+        }
       });
+      
       if (error) throw error;
       return data as ExpenseSummary;
     }
