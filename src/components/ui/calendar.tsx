@@ -11,12 +11,14 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
+  fromDate,
+  toDate,
   ...props
 }: CalendarProps) {
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-3 pointer-events-auto", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -52,8 +54,14 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+      }}
+      disabled={date => {
+        if (!fromDate && !toDate) return false;
+        const date1 = fromDate ? date < fromDate : false;
+        const date2 = toDate ? date > toDate : false;
+        return date1 || date2;
       }}
       {...props}
     />

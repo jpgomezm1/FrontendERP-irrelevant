@@ -100,7 +100,10 @@ export type Database = {
           currency: string
           date: string
           description: string
+          frequency: string | null
           id: number
+          is_recurring: boolean | null
+          next_due_date: string | null
           notes: string | null
           paymentmethod: string
           receipt: string | null
@@ -111,7 +114,10 @@ export type Database = {
           currency: string
           date: string
           description: string
+          frequency?: string | null
           id?: number
+          is_recurring?: boolean | null
+          next_due_date?: string | null
           notes?: string | null
           paymentmethod: string
           receipt?: string | null
@@ -122,7 +128,10 @@ export type Database = {
           currency?: string
           date?: string
           description?: string
+          frequency?: string | null
           id?: number
+          is_recurring?: boolean | null
+          next_due_date?: string | null
           notes?: string | null
           paymentmethod?: string
           receipt?: string | null

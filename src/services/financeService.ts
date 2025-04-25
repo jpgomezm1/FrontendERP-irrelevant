@@ -28,6 +28,9 @@ export interface Expense {
   receipt?: string;
   notes?: string;
   currency: Currency;
+  frequency?: string;
+  isRecurring?: boolean;
+  nextDueDate?: Date;
 }
 
 export interface CashFlowItem {
@@ -130,16 +133,7 @@ export async function getExpenses(): Promise<Expense[]> {
   })) || [];
 }
 
-export async function addExpense(expense: {
-  description: string;
-  date: Date;
-  amount: number;
-  category: string;
-  paymentMethod: string;
-  receipt?: string;
-  notes?: string;
-  currency: Currency;
-}): Promise<Expense> {
+export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
   const { data, error } = await supabase
     .from('expenses')
     .insert([
@@ -151,7 +145,9 @@ export async function addExpense(expense: {
         paymentmethod: expense.paymentMethod,
         receipt: expense.receipt,
         notes: expense.notes,
-        currency: expense.currency
+        currency: expense.currency,
+        frequency: expense.frequency,
+        is_recurring: expense.isRecurring,
       }
     ])
     .select()
@@ -171,7 +167,10 @@ export async function addExpense(expense: {
     paymentMethod: data.paymentmethod,
     receipt: data.receipt || undefined,
     notes: data.notes || undefined,
-    currency: data.currency as Currency
+    currency: data.currency as Currency,
+    frequency: data.frequency || undefined,
+    isRecurring: data.is_recurring || false,
+    nextDueDate: data.next_due_date ? new Date(data.next_due_date) : undefined,
   };
 }
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -30,6 +29,7 @@ const expenseSchema = z.object({
   receipt: z.string().optional(),
   currency: z.enum(["COP", "USD"]),
   isRecurring: z.boolean().default(false),
+  frequency: z.string().optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -114,6 +114,16 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
     "PayPal", 
     "Nequi", 
     "Daviplata"
+  ];
+
+  const frequencies = [
+    { value: "weekly", label: "Semanal" },
+    { value: "biweekly", label: "Quincenal" },
+    { value: "monthly", label: "Mensual" },
+    { value: "bimonthly", label: "Bimensual" },
+    { value: "quarterly", label: "Trimestral" },
+    { value: "semiannual", label: "Semestral" },
+    { value: "annual", label: "Anual" },
   ];
 
   return (
@@ -307,7 +317,35 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
               )}
             />
 
-            {/* TODO: Add file upload for receipt */}
+            {isRecurring && (
+              <FormField
+                control={form.control}
+                name="frequency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Frecuencia</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar frecuencia" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {frequencies.map((freq) => (
+                          <SelectItem key={freq.value} value={freq.value}>
+                            {freq.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
