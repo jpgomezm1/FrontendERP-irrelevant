@@ -277,6 +277,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_cash_flow_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          month: string
+          year: number
+          ingresos: number
+          gastos: number
+          balance: number
+          category: string
+          category_amount: number
+          client: string
+          client_amount: number
+        }[]
+      }
       get_expense_by_category: {
         Args: Record<PropertyKey, never>
         Returns: {
