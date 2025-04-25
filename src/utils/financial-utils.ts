@@ -15,7 +15,7 @@ export function generateProjections(historicalData: MonthlyData[]) {
 
   // Generate 6 months of projections
   return Array(6).fill(0).map((_, i) => {
-    const lastMonth = historicalData[0];
+    const lastMonth = historicalData[0] || { ingresos: 0, gastos: 0, balance: 0 };
     const projectedMonth = addMonths(new Date(), i + 1);
     
     return {

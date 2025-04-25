@@ -11,6 +11,8 @@ import { FinancialProjections } from "@/components/financial/financial-projectio
 import { ClientAnalytics } from "@/components/financial/client-analytics";
 import { useCashFlowAnalytics } from "@/hooks/use-cash-flow-analytics";
 import { useMovements } from "@/hooks/use-movements";
+import { MovementsTab } from "@/components/cash-flow/movements-tab";
+import { generateProjections, generateClientProfitability } from "@/utils/financial-utils";
 
 const CashFlowPage = () => {
   const [analysisTimeFrame, setAnalysisTimeFrame] = useState("month");
@@ -55,6 +57,27 @@ const CashFlowPage = () => {
     // Implementation for generating PDF or Excel
   };
 
+  // Create a complete metrics object that includes all required properties
+  const dashboardMetrics = {
+    burnRate: averages.expenses,
+    mrr: averages.income,
+    mrrProjected: averages.income * 1.1, // Projected MRR (10% growth target)
+    topClientPercentage: clientIncome.length > 0 ? (clientIncome[0].value / currentMonth.ingresos) * 100 : 0,
+    monthlyVariation: {
+      income: { 
+        value: monthlyData.length > 1 ? monthlyData[0].ingresos - monthlyData[1].ingresos : 0, 
+        percentage: monthlyData.length > 1 ? ((monthlyData[0].ingresos / monthlyData[1].ingresos) - 1) * 100 : 0 
+      },
+      expense: { 
+        value: monthlyData.length > 1 ? monthlyData[0].gastos - monthlyData[1].gastos : 0, 
+        percentage: monthlyData.length > 1 ? ((monthlyData[0].gastos / monthlyData[1].gastos) - 1) * 100 : 0
+      }
+    },
+    structuralExpenses: categoryExpenses[0]?.value || 0,
+    avoidableExpenses: categoryExpenses.slice(1).reduce((sum, item) => sum + item.value, 0) * 0.3, // Assuming 30% of non-primary expenses are avoidable
+    ytdProfit: monthlyData.reduce((sum, item) => sum + item.balance, 0),
+  };
+
   return (
     <div>
       <PageHeader
@@ -90,12 +113,7 @@ const CashFlowPage = () => {
 
         <TabsContent value="dashboard">
           <FinancialDashboard 
-            metrics={{
-              burnRate: averages.expenses,
-              mrr: averages.income,
-              structuralExpenses: categoryExpenses[0]?.value || 0,
-              ytdProfit: monthlyData.reduce((sum, item) => sum + item.balance, 0),
-            }}
+            metrics={dashboardMetrics}
             monthlyData={monthlyData}
             clientData={clientIncome}
             expenseData={categoryExpenses}
@@ -106,7 +124,7 @@ const CashFlowPage = () => {
         </TabsContent>
 
         <TabsContent value="movimientos">
-          <MovementsTab data={movements} />
+          <MovementsTab data={movements || []} />
         </TabsContent>
 
         <TabsContent value="analisis">
