@@ -52,15 +52,18 @@ export function FinancialProjections({
   projectionData,
   metrics
 }: FinancialProjectionsProps) {
+  // Ensure currentData is defined with default values if it's not provided
+  const safeCurrentData = currentData || { name: '', ingresos: 0, gastos: 0, balance: 0 };
+  
   const [projectionType, setProjectionType] = useState("conservative");
   const [projectionScope, setProjectionScope] = useState("6m");
   
   // Calculamos runway actual y breakeven point
   const runway = metrics.mrr > 0 
     ? metrics.burnRate > metrics.mrr 
-      ? (currentData.balance / (metrics.burnRate - metrics.mrr)).toFixed(1)
+      ? (safeCurrentData.balance / (metrics.burnRate - metrics.mrr)).toFixed(1)
       : "∞" // Si MRR >= burnRate, runway es infinito
-    : (currentData.balance / metrics.burnRate).toFixed(1);
+    : (safeCurrentData.balance / metrics.burnRate).toFixed(1);
   
   const isRunwayInfinite = runway === "∞";
   const runwayMonths = isRunwayInfinite ? 999 : parseFloat(runway);
@@ -87,7 +90,7 @@ export function FinancialProjections({
   
   // Datos para el gráfico de áreas con acumulado
   const cumulativeData = modifiedProjections.reduce((acc, curr) => {
-    const lastValue = acc.length > 0 ? acc[acc.length - 1].accumulated : currentData.balance;
+    const lastValue = acc.length > 0 ? acc[acc.length - 1].accumulated : safeCurrentData.balance;
     const newAccumulated = lastValue + (curr.projectedIncome - curr.projectedExpense);
     
     return [...acc, {

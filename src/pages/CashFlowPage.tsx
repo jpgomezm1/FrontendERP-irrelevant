@@ -23,6 +23,11 @@ const CashFlowPage = () => {
     return <div>Cargando datos...</div>;
   }
 
+  // Check if analytics data is available
+  if (!analytics || analytics.length === 0) {
+    return <div>No hay datos disponibles para mostrar. Por favor, agregue movimientos de caja.</div>;
+  }
+
   const monthlyData = analytics?.map(item => ({
     name: `${item.month} ${item.year}`,
     ingresos: item.ingresos,
@@ -43,12 +48,12 @@ const CashFlowPage = () => {
   // Calculate totals for metrics
   const currentMonth = monthlyData[0] || { ingresos: 0, gastos: 0, balance: 0 };
   const averages = {
-    income: monthlyData.reduce((sum, item) => sum + item.ingresos, 0) / monthlyData.length,
-    expenses: monthlyData.reduce((sum, item) => sum + item.gastos, 0) / monthlyData.length
+    income: monthlyData.reduce((sum, item) => sum + item.ingresos, 0) / (monthlyData.length || 1),
+    expenses: monthlyData.reduce((sum, item) => sum + item.gastos, 0) / (monthlyData.length || 1)
   };
 
   // Calculate runway and break-even date
-  const runway = currentMonth.balance / (averages.expenses > averages.income ? averages.expenses - averages.income : 1);
+  const runway = averages.expenses > 0 ? currentMonth.balance / (averages.expenses > averages.income ? averages.expenses - averages.income : 1) : 0;
   const breakEvenDate = new Date();
   breakEvenDate.setMonth(breakEvenDate.getMonth() + Math.floor(runway));
 
