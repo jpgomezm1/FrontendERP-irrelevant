@@ -1,7 +1,6 @@
 
-import { useState, useEffect } from 'react';
 import { Payment } from '@/types/clients';
-import { getAllPayments, getPaymentsByProjectId, getPaymentsByClientId, addPayment, updatePaymentStatus } from '@/services/paymentService';
+import { getPayments, getPaymentsByClientId, getPaymentsByProjectId, addPayment, updatePaymentStatus } from '@/services/paymentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -11,17 +10,23 @@ export function usePaymentsData() {
   // Fetch all payments
   const { data: payments = [], isLoading, error } = useQuery({
     queryKey: ['payments'],
-    queryFn: getAllPayments,
+    queryFn: getPayments,
   });
   
-  // Get payments by project ID
-  const fetchPaymentsByProjectId = async (projectId: number) => {
-    return await getPaymentsByProjectId(projectId);
+  // Get payments by client ID
+  const getPaymentsByClientIdQuery = (clientId: number) => {
+    return useQuery({
+      queryKey: ['payments', 'client', clientId],
+      queryFn: () => getPaymentsByClientId(clientId),
+    });
   };
   
-  // Get payments by client ID
-  const fetchPaymentsByClientId = async (clientId: number) => {
-    return await getPaymentsByClientId(clientId);
+  // Get payments by project ID
+  const getPaymentsByProjectIdQuery = (projectId: number) => {
+    return useQuery({
+      queryKey: ['payments', 'project', projectId],
+      queryFn: () => getPaymentsByProjectId(projectId),
+    });
   };
   
   // Add a new payment
@@ -29,11 +34,11 @@ export function usePaymentsData() {
     mutationFn: addPayment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
-      toast.success('Pago agregado exitosamente');
+      toast.success('Pago registrado exitosamente');
     },
     onError: (error) => {
       console.error('Error adding payment:', error);
-      toast.error('Error al agregar pago');
+      toast.error('Error al registrar el pago');
     },
   });
   
@@ -41,50 +46,28 @@ export function usePaymentsData() {
   const updatePaymentStatusMutation = useMutation({
     mutationFn: ({ paymentId, status, paidDate }: { 
       paymentId: number; 
-      status: Payment["status"]; 
-      paidDate?: Date 
+      status: string;
+      paidDate?: Date;
     }) => updatePaymentStatus(paymentId, status, paidDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
-      toast.success('Estado de pago actualizado exitosamente');
+      toast.success('Estado de pago actualizado');
     },
     onError: (error) => {
       console.error('Error updating payment status:', error);
-      toast.error('Error al actualizar estado de pago');
+      toast.error('Error al actualizar el estado del pago');
     },
   });
-  
-  const getOverduePayments = () => {
-    const today = new Date();
-    return payments.filter(
-      payment => payment.status === "Pendiente" && new Date(payment.date) < today
-    );
-  };
-  
-  const getUpcomingPayments = (days: number = 30) => {
-    const today = new Date();
-    const limit = new Date();
-    limit.setDate(today.getDate() + days);
-    
-    return payments.filter(
-      payment => 
-        payment.status === "Pendiente" && 
-        new Date(payment.date) >= today && 
-        new Date(payment.date) <= limit
-    );
-  };
   
   return {
     payments,
     isLoading,
     error,
-    getPaymentsByProjectId: fetchPaymentsByProjectId,
-    getPaymentsByClientId: fetchPaymentsByClientId,
-    getOverduePayments,
-    getUpcomingPayments,
+    getPaymentsByClientIdQuery,
+    getPaymentsByProjectIdQuery,
     addPayment: (payment: Omit<Payment, "id">) => 
       addPaymentMutation.mutate(payment),
-    updatePaymentStatus: (paymentId: number, status: Payment["status"], paidDate?: Date) => 
+    updatePaymentStatus: (paymentId: number, status: string, paidDate?: Date) => 
       updatePaymentStatusMutation.mutate({ paymentId, status, paidDate }),
   };
 }

@@ -40,27 +40,23 @@ export function ProjectDetails({
   onBack,
   onViewFinancials 
 }: ProjectDetailsProps) {
-  const { getProjectById } = useProjectsData();
-  const { getClientById } = useClientsData();
-  const project = getProjectById(projectId);
-  const client = project ? getClientById(project.clientId) : null;
+  const { getProjectByIdQuery } = useProjectsData();
+  const { data: project, isLoading: isLoadingProject, error: projectError } = getProjectByIdQuery(projectId);
+  
+  const { getClientByIdQuery } = useClientsData();
+  const { data: client, isLoading: isLoadingClient, error: clientError } = project ? 
+    getClientByIdQuery(project.clientId) : { data: null, isLoading: false, error: null };
   
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  
-  if (!project || !client) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <p>Proyecto no encontrado</p>
-          <Button onClick={onBack} className="mt-4">Volver</Button>
-        </CardContent>
-      </Card>
-    );
-  }
 
+  const isLoading = isLoadingProject || isLoadingClient;
+  const hasError = projectError || clientError;
+  
   const renderPaymentPlan = () => {
+    if (!project || !project.paymentPlan) return null;
+    
     const { paymentPlan: plan } = project;
     
     return (
@@ -124,6 +120,27 @@ export function ProjectDetails({
       </div>
     );
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (hasError || !project || !client) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p>Error al cargar los datos del proyecto</p>
+          <Button onClick={onBack} className="mt-4">Volver</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -268,7 +285,7 @@ export function ProjectDetails({
             </CardHeader>
             <CardContent>
               <DocumentsList 
-                documents={project.documents} 
+                documents={project.documents || []} 
                 entityType="project"
                 entityId={project.id}
               />

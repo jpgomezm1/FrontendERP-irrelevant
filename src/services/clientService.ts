@@ -12,7 +12,12 @@ export async function getClients(): Promise<Client[]> {
     throw error;
   }
 
-  return data || [];
+  // Convert string dates to Date objects
+  return (data || []).map(client => ({
+    ...client,
+    startDate: new Date(client.startDate),
+    documents: client.documents || [],
+  }));
 }
 
 export async function getClientById(id: number): Promise<Client | null> {
@@ -27,7 +32,17 @@ export async function getClientById(id: number): Promise<Client | null> {
     throw error;
   }
 
-  return data;
+  if (!data) return null;
+
+  // Convert string dates to Date objects
+  return {
+    ...data,
+    startDate: new Date(data.startDate),
+    documents: (data.documents || []).map((doc: any) => ({
+      ...doc,
+      uploadDate: new Date(doc.uploadDate)
+    })),
+  };
 }
 
 export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promise<Client> {
@@ -49,6 +64,7 @@ export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promi
 
   return {
     ...data,
+    startDate: new Date(data.startDate),
     documents: [],
   };
 }
@@ -89,7 +105,10 @@ export async function addDocument(clientId: number, document: Omit<Document, 'id
     throw error;
   }
 
-  return data;
+  return {
+    ...data,
+    uploadDate: new Date(data.uploadDate)
+  };
 }
 
 export async function removeDocument(documentId: number): Promise<void> {

@@ -15,13 +15,19 @@ export function useProjectsData() {
   });
   
   // Get a project by ID
-  const fetchProjectById = async (id: number) => {
-    return await getProjectById(id);
+  const getProjectByIdQuery = (id: number) => {
+    return useQuery({
+      queryKey: ['project', id],
+      queryFn: () => getProjectById(id),
+    });
   };
   
   // Get projects by client ID
-  const fetchProjectsByClientId = async (clientId: number) => {
-    return await getProjectsByClientId(clientId);
+  const getProjectsByClientIdQuery = (clientId: number) => {
+    return useQuery({
+      queryKey: ['projects', clientId],
+      queryFn: () => getProjectsByClientId(clientId),
+    });
   };
   
   // Add a new project
@@ -86,8 +92,8 @@ export function useProjectsData() {
     projects,
     isLoading,
     error,
-    getProjectById: fetchProjectById,
-    getProjectsByClientId: fetchProjectsByClientId,
+    getProjectByIdQuery,
+    getProjectsByClientIdQuery,
     addProject: (project: Omit<Project, "id" | "documents" | "payments">) => 
       addProjectMutation.mutate(project),
     updateProject: (id: number, data: Partial<Project>) => 

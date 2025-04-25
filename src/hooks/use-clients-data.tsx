@@ -15,8 +15,11 @@ export function useClientsData() {
   });
   
   // Get a single client by ID
-  const fetchClientById = async (id: number) => {
-    return await getClientById(id);
+  const getClientByIdQuery = (id: number) => {
+    return useQuery({
+      queryKey: ['client', id],
+      queryFn: () => getClientById(id),
+    });
   };
   
   // Add a new client
@@ -81,7 +84,7 @@ export function useClientsData() {
     clients,
     isLoading,
     error,
-    getClientById: fetchClientById,
+    getClientByIdQuery,
     addClient: (client: Omit<Client, "id" | "documents">) => addClientMutation.mutate(client),
     updateClient: (id: number, data: Partial<Client>) => updateClientMutation.mutate({ id, data }),
     addDocument: (clientId: number, document: Omit<Client["documents"][0], "id">) => 

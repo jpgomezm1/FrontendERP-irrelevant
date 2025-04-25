@@ -19,8 +19,8 @@ interface ClientProjectsProps {
 }
 
 export function ClientProjects({ clientId }: ClientProjectsProps) {
-  const { getClientById } = useClientsData();
-  const client = getClientById(clientId);
+  const { getClientByIdQuery } = useClientsData();
+  const { data: client } = getClientByIdQuery(clientId);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
 
   return (

@@ -15,11 +15,15 @@ export async function getProjects(): Promise<Project[]> {
     throw error;
   }
 
-  // Transform data to match our client structure
-  return data.map(project => ({
+  // Transform data to match our client structure and convert dates
+  return (data || []).map(project => ({
     ...project,
-    clientName: project.clients?.name || "Cliente Desconocido"
-  })) || [];
+    startDate: new Date(project.startDate),
+    endDate: project.endDate ? new Date(project.endDate) : undefined,
+    clientName: project.clients?.name || "Cliente Desconocido",
+    documents: project.documents || [],
+    payments: project.payments || []
+  }));
 }
 
 export async function getProjectById(id: number): Promise<Project | null> {
@@ -43,7 +47,18 @@ export async function getProjectById(id: number): Promise<Project | null> {
   if (data) {
     return {
       ...data,
+      startDate: new Date(data.startDate),
+      endDate: data.endDate ? new Date(data.endDate) : undefined,
       clientName: data.clients?.name || "Cliente Desconocido",
+      documents: (data.documents || []).map((doc: any) => ({
+        ...doc,
+        uploadDate: new Date(doc.uploadDate)
+      })),
+      payments: (data.payments || []).map((payment: any) => ({
+        ...payment,
+        date: new Date(payment.date),
+        paidDate: payment.paidDate ? new Date(payment.paidDate) : undefined
+      }))
     };
   }
 
@@ -65,10 +80,14 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
   }
 
   // Transform data to match our expected structure
-  return data.map(project => ({
+  return (data || []).map(project => ({
     ...project,
-    clientName: project.clients?.name || "Cliente Desconocido"
-  })) || [];
+    startDate: new Date(project.startDate),
+    endDate: project.endDate ? new Date(project.endDate) : undefined,
+    clientName: project.clients?.name || "Cliente Desconocido",
+    documents: project.documents || [],
+    payments: project.payments || []
+  }));
 }
 
 export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments'>): Promise<Project> {
@@ -76,7 +95,7 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
   const payload = {
     ...project,
     startDate: project.startDate?.toISOString().split('T')[0],
-    endDate: project.endDate?.toISOString().split('T')[0] || null,
+    endDate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
   };
   
   const { data, error } = await supabase
@@ -92,6 +111,8 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
 
   return {
     ...data,
+    startDate: new Date(data.startDate),
+    endDate: data.endDate ? new Date(data.endDate) : undefined,
     documents: [],
     payments: [],
     clientName: "", // Will be populated when fetched
@@ -137,7 +158,10 @@ export async function addProjectDocument(projectId: number, document: Omit<Docum
     throw error;
   }
 
-  return data;
+  return {
+    ...data,
+    uploadDate: new Date(data.uploadDate)
+  };
 }
 
 export async function removeProjectDocument(documentId: number): Promise<void> {

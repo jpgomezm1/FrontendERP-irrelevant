@@ -38,16 +38,26 @@ export function ClientDetails({
   onBack,
   onViewFinancials 
 }: ClientDetailsProps) {
-  const { getClientById } = useClientsData();
-  const client = getClientById(clientId);
+  const { getClientByIdQuery } = useClientsData();
+  const { data: client, isLoading, error } = getClientByIdQuery(clientId);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  if (!client) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !client) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <p>Cliente no encontrado</p>
+          <p>Error al cargar los datos del cliente</p>
           <Button onClick={onBack} className="mt-4">Volver</Button>
         </CardContent>
       </Card>
@@ -161,7 +171,7 @@ export function ClientDetails({
             </CardHeader>
             <CardContent>
               <DocumentsList 
-                documents={client.documents} 
+                documents={client.documents || []} 
                 entityType="client"
                 entityId={client.id}
               />

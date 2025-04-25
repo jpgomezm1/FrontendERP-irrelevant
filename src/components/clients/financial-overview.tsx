@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -35,9 +34,11 @@ export function FinancialOverview({
   clientId, 
   projectId 
 }: FinancialOverviewProps) {
-  const { payments, getPaymentsByProjectId, getPaymentsByClientId } = usePaymentsData();
-  const { getClientById } = useClientsData();
-  const { getProjectById } = useProjectsData();
+  const { payments, isLoading: isLoadingPayments } = usePaymentsData();
+  const { getClientByIdQuery } = useClientsData();
+  const { data: client } = clientId ? getClientByIdQuery(clientId) : { data: null };
+  const { getProjectByIdQuery } = useProjectsData();
+  const { data: project } = projectId ? getProjectByIdQuery(projectId) : { data: null };
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().setDate(1)), // Primero del mes actual
@@ -50,9 +51,9 @@ export function FinancialOverview({
   let filteredPayments = payments;
   
   if (projectId) {
-    filteredPayments = getPaymentsByProjectId(projectId);
+    filteredPayments = filteredPayments.filter(p => p.projectId === projectId);
   } else if (clientId) {
-    filteredPayments = getPaymentsByClientId(clientId);
+    filteredPayments = filteredPayments.filter(p => p.clientId === clientId);
   }
   
   // Aplicar filtro de fechas
@@ -178,20 +179,16 @@ export function FinancialOverview({
   let description = "Visión general de todos los pagos";
   
   if (clientId && projectId) {
-    const project = getProjectById(projectId);
-    const client = getClientById(clientId);
     if (project && client) {
       title = `Pagos: ${project.name}`;
       description = `Cliente: ${client.name}`;
     }
   } else if (clientId) {
-    const client = getClientById(clientId);
     if (client) {
       title = `Pagos de ${client.name}`;
       description = "Todos los proyectos";
     }
   } else if (projectId) {
-    const project = getProjectById(projectId);
     if (project) {
       title = `Pagos: ${project.name}`;
     }
@@ -212,130 +209,138 @@ export function FinancialOverview({
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="pagos" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="pagos">Pagos</TabsTrigger>
-            <TabsTrigger value="resumen">Resumen</TabsTrigger>
-          </TabsList>
-          
-          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4">
-            <DatePickerWithRange
-              value={dateRange}
-              onChange={setDateRange}
-            />
-            
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrar por estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos los estados</SelectItem>
-                <SelectItem value="Pagado">Pagados</SelectItem>
-                <SelectItem value="Pendiente">Pendientes</SelectItem>
-                <SelectItem value="Vencido">Vencidos</SelectItem>
-              </SelectContent>
-            </Select>
+        {isLoadingPayments ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
-          
-          <TabsContent value="pagos">
-            <DataTable
-              columns={paymentColumns}
-              data={filteredPayments}
-              searchColumn="projectName"
-              searchPlaceholder="Buscar por proyecto..."
-            />
-          </TabsContent>
-          
-          <TabsContent value="resumen">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Total Facturado</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(totalGeneral, "COP")}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Periodo: {dateRange?.from && formatDate(dateRange.from)} - {dateRange?.to && formatDate(dateRange.to)}
-                  </p>
-                </CardContent>
-              </Card>
+        ) : (
+          <Tabs defaultValue="pagos" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="pagos">Pagos</TabsTrigger>
+              <TabsTrigger value="resumen">Resumen</TabsTrigger>
+            </TabsList>
+            
+            <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4">
+              <DatePickerWithRange
+                value={dateRange}
+                onChange={setDateRange}
+              />
               
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-green-600">Pagado</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(totalPaid, "COP")}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {((totalPaid / totalGeneral) * 100).toFixed(1)}% del total
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-amber-600">Pendiente</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-amber-600">
-                    {formatCurrency(totalPending, "COP")}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {((totalPending / totalGeneral) * 100).toFixed(1)}% del total
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg text-red-600">Vencido</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(totalOverdue, "COP")}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {((totalOverdue / totalGeneral) * 100).toFixed(1)}% del total
-                  </p>
-                </CardContent>
-              </Card>
+              <div>
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar por estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los estados</SelectItem>
+                    <SelectItem value="Pagado">Pagados</SelectItem>
+                    <SelectItem value="Pendiente">Pendientes</SelectItem>
+                    <SelectItem value="Vencido">Vencidos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-lg font-medium mb-4">Distribución de Pagos</h3>
-                <div className="flex items-center">
-                  <div className="w-full bg-gray-200 rounded-full h-4">
-                    <div className="h-4 rounded-l-full bg-green-500" style={{ 
-                      width: `${(totalPaid / totalGeneral) * 100}%` 
-                    }}></div>
-                  </div>
-                </div>
-                <div className="flex justify-between mt-2 text-sm">
+            <TabsContent value="pagos">
+              <DataTable
+                columns={paymentColumns}
+                data={filteredPayments}
+                searchColumn="projectName"
+                searchPlaceholder="Buscar por proyecto..."
+              />
+            </TabsContent>
+            
+            <TabsContent value="resumen">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Total Facturado</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(totalGeneral, "COP")}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Periodo: {dateRange?.from && formatDate(dateRange.from)} - {dateRange?.to && formatDate(dateRange.to)}
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg text-green-600">Pagado</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(totalPaid, "COP")}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {((totalPaid / totalGeneral) * 100).toFixed(1)}% del total
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg text-amber-600">Pendiente</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-amber-600">
+                      {formatCurrency(totalPending, "COP")}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {((totalPending / totalGeneral) * 100).toFixed(1)}% del total
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg text-red-600">Vencido</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {formatCurrency(totalOverdue, "COP")}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {((totalOverdue / totalGeneral) * 100).toFixed(1)}% del total
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-medium mb-4">Distribución de Pagos</h3>
                   <div className="flex items-center">
-                    <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
-                    <span>Pagado: {((totalPaid / totalGeneral) * 100).toFixed(1)}%</span>
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div className="h-4 rounded-l-full bg-green-500" style={{ 
+                        width: `${(totalPaid / totalGeneral) * 100}%` 
+                      }}></div>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-amber-500 rounded mr-1"></div>
-                    <span>Pendiente: {((totalPending / totalGeneral) * 100).toFixed(1)}%</span>
+                  <div className="flex justify-between mt-2 text-sm">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                      <span>Pagado: {((totalPaid / totalGeneral) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-amber-500 rounded mr-1"></div>
+                      <span>Pendiente: {((totalPending / totalGeneral) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 bg-red-500 rounded mr-1"></div>
+                      <span>Vencido: {((totalOverdue / totalGeneral) * 100).toFixed(1)}%</span>
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-red-500 rounded mr-1"></div>
-                    <span>Vencido: {((totalOverdue / totalGeneral) * 100).toFixed(1)}%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
       </CardContent>
     </Card>
   );
