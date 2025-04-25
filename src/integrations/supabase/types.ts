@@ -192,9 +192,11 @@ export type Database = {
           category: string
           currency: string
           description: string
+          end_date: string | null
           frequency: string
           id: number
           is_active: boolean
+          is_auto_debit: boolean
           notes: string | null
           paymentmethod: string
           receipt: string | null
@@ -205,9 +207,11 @@ export type Database = {
           category: string
           currency: string
           description: string
+          end_date?: string | null
           frequency: string
           id?: number
           is_active?: boolean
+          is_auto_debit?: boolean
           notes?: string | null
           paymentmethod: string
           receipt?: string | null
@@ -218,9 +222,11 @@ export type Database = {
           category?: string
           currency?: string
           description?: string
+          end_date?: string | null
           frequency?: string
           id?: number
           is_active?: boolean
+          is_auto_debit?: boolean
           notes?: string | null
           paymentmethod?: string
           receipt?: string | null

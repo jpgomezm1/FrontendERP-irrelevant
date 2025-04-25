@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -17,6 +16,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { addVariableExpense, addRecurringExpense } from "@/services/expenseService";
 import { useQueryClient } from "@tanstack/react-query";
+import { Switch } from "@/components/ui/switch";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "La descripción es requerida"),
@@ -31,6 +31,8 @@ const expenseSchema = z.object({
   currency: z.enum(["COP", "USD"]),
   isRecurring: z.boolean().default(false),
   frequency: z.string().optional(),
+  endDate: z.date().optional(),
+  isAutoDebit: z.boolean().default(false)
 });
 
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -51,6 +53,8 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
     currency: "COP",
     isRecurring: isRecurring,
     frequency: isRecurring ? "monthly" : undefined,
+    endDate: undefined,
+    isAutoDebit: false
   };
 
   const form = useForm<ExpenseFormValues>({
@@ -61,10 +65,10 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
       if (data.isRecurring) {
-        // For recurring expenses, use the addRecurringExpense function
         await addRecurringExpense({
           description: data.description,
           startDate: data.date,
+          endDate: data.endDate,
           amount: data.amount,
           category: data.category,
           paymentMethod: data.paymentMethod,
@@ -72,9 +76,9 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
           receipt: data.receipt,
           currency: data.currency,
           frequency: data.frequency || "monthly",
+          isAutoDebit: data.isAutoDebit
         });
       } else {
-        // For variable expenses, use the addVariableExpense function
         await addVariableExpense({
           description: data.description,
           date: data.date,
@@ -92,12 +96,10 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
         description: `El gasto ha sido ${data.isRecurring ? 'programado' : 'agregado'} exitosamente`,
       });
       
-      // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['variable-expenses'] });
       queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] });
       queryClient.invalidateQueries({ queryKey: ['caused-expenses'] });
       
-      // Close dialog and reset form
       setOpen(false);
       form.reset(defaultValues);
     } catch (error) {
@@ -335,33 +337,101 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
             />
 
             {isRecurring && (
-              <FormField
-                control={form.control}
-                name="frequency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Frecuencia</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+              <>
+                <FormField
+                  control={form.control}
+                  name="frequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frecuencia</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar frecuencia" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {frequencies.map((freq) => (
+                            <SelectItem key={freq.value} value={freq.value}>
+                              {freq.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Fecha de Finalización (Opcional)</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                formatDate(field.value)
+                              ) : (
+                                <span>Sin fecha de finalización</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                              field.onChange(date);
+                            }}
+                            disabled={(date) => date <= form.getValues("date")}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        Opcional: define cuándo terminará este gasto recurrente
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isAutoDebit"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Débito Automático</FormLabel>
+                        <FormDescription>
+                          Marca si este gasto se debita automáticamente de tu cuenta
+                        </FormDescription>
+                      </div>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar frecuencia" />
-                        </SelectTrigger>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {frequencies.map((freq) => (
-                          <SelectItem key={freq.value} value={freq.value}>
-                            {freq.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </FormItem>
+                  )}
+                />
+              </>
             )}
 
             <DialogFooter>
