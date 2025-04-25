@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Añadir dominio al nombre de usuario para crear un formato de email
       const email = `${username}@example.com`;
       
-      console.log("Usando URL de Supabase:", SUPABASE_URL);
+      console.log("Intentando iniciar sesión con Supabase");
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {

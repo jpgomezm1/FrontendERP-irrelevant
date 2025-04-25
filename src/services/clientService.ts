@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Client, Document } from '@/types/clients';
 
 export async function getClients(): Promise<Client[]> {
