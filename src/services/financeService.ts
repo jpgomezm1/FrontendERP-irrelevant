@@ -275,10 +275,10 @@ export async function getAccruedExpenses(): Promise<Expense[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  // Get all expenses from the database
   const { data, error } = await supabase
     .from('expenses')
     .select('*')
-    .eq('is_recurring', true)
     .order('date', { ascending: true });
 
   if (error) {
@@ -289,15 +289,12 @@ export async function getAccruedExpenses(): Promise<Expense[]> {
   const accruedExpenses: Expense[] = [];
   
   data.forEach(expense => {
-    const startDate = new Date(expense.date);
-    startDate.setHours(0, 0, 0, 0);
-    let currentDate = new Date(startDate);
-    
-    while (currentDate <= today) {
+    // For non-recurring expenses, just add them as is
+    if (!expense.is_recurring) {
       accruedExpenses.push({
         id: expense.id,
         description: expense.description,
-        date: new Date(currentDate),
+        date: new Date(expense.date),
         amount: expense.amount,
         category: expense.category,
         paymentMethod: expense.paymentmethod,
@@ -305,12 +302,37 @@ export async function getAccruedExpenses(): Promise<Expense[]> {
         notes: expense.notes || undefined,
         currency: expense.currency as Currency,
         frequency: expense.frequency || undefined,
-        isRecurring: true,
+        isRecurring: false,
       });
+      return;
+    }
+    
+    // For recurring expenses, we need to generate instances for each period
+    const startDate = new Date(expense.date);
+    startDate.setHours(0, 0, 0, 0);
+    let currentDate = new Date(startDate);
+    
+    // Add the first occurrence
+    accruedExpenses.push({
+      id: expense.id,
+      description: expense.description,
+      date: new Date(startDate),
+      amount: expense.amount,
+      category: expense.category,
+      paymentMethod: expense.paymentmethod,
+      receipt: expense.receipt || undefined,
+      notes: expense.notes || undefined,
+      currency: expense.currency as Currency,
+      frequency: expense.frequency || undefined,
+      isRecurring: true,
+    });
+    
+    if (!expense.frequency) return;
+    
+    // Calculate and add all recurring instances until today
+    while (true) {
+      let nextDate = new Date(currentDate);
       
-      if (!expense.frequency) break;
-      
-      const nextDate = new Date(currentDate);
       switch (expense.frequency.toLowerCase()) {
         case 'weekly':
           nextDate.setDate(nextDate.getDate() + 7);
@@ -336,9 +358,29 @@ export async function getAccruedExpenses(): Promise<Expense[]> {
         default:
           return;
       }
+      
+      // Stop adding instances once we reach a date beyond today
+      if (nextDate > today) break;
+      
+      // Add this instance to accrued expenses
+      accruedExpenses.push({
+        id: expense.id,
+        description: expense.description,
+        date: new Date(nextDate),
+        amount: expense.amount,
+        category: expense.category,
+        paymentMethod: expense.paymentmethod,
+        receipt: expense.receipt || undefined,
+        notes: expense.notes || undefined,
+        currency: expense.currency as Currency,
+        frequency: expense.frequency || undefined,
+        isRecurring: true,
+      });
+      
       currentDate = nextDate;
     }
   });
   
-  return accruedExpenses;
+  // Sort all accrued expenses by date, newest first
+  return accruedExpenses.sort((a, b) => b.date.getTime() - a.date.getTime());
 }
