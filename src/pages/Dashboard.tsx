@@ -25,6 +25,11 @@ const Dashboard = () => {
     ytdProfit: monthlyData.reduce((acc, month) => acc + (month.total_income - month.total_expense), 0)
   };
 
+  const handleTimeFrameChange = (timeFrame: string) => {
+    // This could be implemented in the future to fetch data for different time frames
+    console.log("Time frame changed:", timeFrame);
+  };
+
   return (
     <div>
       <PageHeader
@@ -80,7 +85,7 @@ const Dashboard = () => {
           value: Number(e.total)
         }))}
         expenseHeatMap={[]} // This could be implemented later if needed
-        onTimeFrameChange={() => {}} // This could be implemented later if needed
+        onTimeFrameChange={handleTimeFrameChange}
         timeFrame="month"
       />
     </div>

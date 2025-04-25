@@ -84,77 +84,79 @@ export function FinancialDashboard({
         </Select>
       </div>
       
-      <TabsContent value="basic" className="m-0">
-        <div className="grid gap-4 md:grid-cols-4">
-          <KpiCard 
-            title="Burn Rate Mensual" 
-            value={formatCurrency(metrics.burnRate)} 
-            icon={<TrendingDown />}
-            description="Gasto promedio mensual"
-            status="neutral"
-          />
-          
-          <KpiCard 
-            title="MRR Actual" 
-            value={formatCurrency(metrics.mrr)} 
-            icon={<TrendingUp />}
-            description={`${mrrPerformance === "positive" ? "+" : ""}${((metrics.mrr / metrics.mrrProjected - 1) * 100).toFixed(1)}% vs proyectado`}
-            status={mrrPerformance}
-          />
-          
-          <KpiCard 
-            title="Runway" 
-            value={typeof runway === "string" ? runway : `${runway.toFixed(1)} meses`}
-            icon={<Clock />}
-            description={typeof runway === "string" ? "MRR cubre gastos" : "Basado en burn rate actual"}
-            status={runwayStatus}
-          />
-          
-          <KpiCard 
-            title="Variación Mensual" 
-            value={formatCurrency(metrics.monthlyVariation.income.value)} 
-            icon={metrics.monthlyVariation.income.percentage > 0 ? <TrendingUp /> : <TrendingDown />}
-            description={`${metrics.monthlyVariation.income.percentage > 0 ? "+" : ""}${metrics.monthlyVariation.income.percentage.toFixed(1)}% vs mes anterior`}
-            status={variationStatus}
-          />
-        </div>
-      </TabsContent>
-      
-      <TabsContent value="advanced" className="m-0">
-        <div className="grid gap-4 md:grid-cols-4">
-          <KpiCard 
-            title="Utilidad YTD" 
-            value={formatCurrency(metrics.ytdProfit)} 
-            icon={<Wallet />}
-            description="Acumulado año a la fecha"
-            status="neutral"
-          />
-          
-          <KpiCard 
-            title="Concentración de Clientes" 
-            value={`${metrics.topClientPercentage}%`} 
-            icon={<AlertCircle />}
-            description="Del ingreso en cliente principal"
-            status={metrics.topClientPercentage > 40 ? "negative" : "neutral"}
-          />
-          
-          <KpiCard 
-            title="Gastos Estructurales" 
-            value={formatCurrency(metrics.structuralExpenses)} 
-            icon={<DollarSign />}
-            description={`${((metrics.structuralExpenses / metrics.burnRate) * 100).toFixed(0)}% del gasto total`}
-            status="neutral"
-          />
-          
-          <KpiCard 
-            title="Gastos Evitables" 
-            value={formatCurrency(metrics.avoidableExpenses)} 
-            icon={<DollarSign />}
-            description={`${((metrics.avoidableExpenses / metrics.burnRate) * 100).toFixed(0)}% del gasto total`}
-            status="neutral"
-          />
-        </div>
-      </TabsContent>
+      <Tabs value={kpiView} onValueChange={(v) => setKpiView(v as "basic" | "advanced")}>
+        <TabsContent value="basic">
+          <div className="grid gap-4 md:grid-cols-4">
+            <KpiCard 
+              title="Burn Rate Mensual" 
+              value={formatCurrency(metrics.burnRate)} 
+              icon={<TrendingDown />}
+              description="Gasto promedio mensual"
+              status="neutral"
+            />
+            
+            <KpiCard 
+              title="MRR Actual" 
+              value={formatCurrency(metrics.mrr)} 
+              icon={<TrendingUp />}
+              description={`${mrrPerformance === "positive" ? "+" : ""}${((metrics.mrr / metrics.mrrProjected - 1) * 100).toFixed(1)}% vs proyectado`}
+              status={mrrPerformance}
+            />
+            
+            <KpiCard 
+              title="Runway" 
+              value={typeof runway === "string" ? runway : `${runway.toFixed(1)} meses`}
+              icon={<Clock />}
+              description={typeof runway === "string" ? "MRR cubre gastos" : "Basado en burn rate actual"}
+              status={runwayStatus}
+            />
+            
+            <KpiCard 
+              title="Variación Mensual" 
+              value={formatCurrency(metrics.monthlyVariation.income.value)} 
+              icon={metrics.monthlyVariation.income.percentage > 0 ? <TrendingUp /> : <TrendingDown />}
+              description={`${metrics.monthlyVariation.income.percentage > 0 ? "+" : ""}${metrics.monthlyVariation.income.percentage.toFixed(1)}% vs mes anterior`}
+              status={variationStatus}
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="advanced">
+          <div className="grid gap-4 md:grid-cols-4">
+            <KpiCard 
+              title="Utilidad YTD" 
+              value={formatCurrency(metrics.ytdProfit)} 
+              icon={<Wallet />}
+              description="Acumulado año a la fecha"
+              status="neutral"
+            />
+            
+            <KpiCard 
+              title="Concentración de Clientes" 
+              value={`${metrics.topClientPercentage.toFixed(1)}%`} 
+              icon={<AlertCircle />}
+              description="Del ingreso en cliente principal"
+              status={metrics.topClientPercentage > 40 ? "negative" : "neutral"}
+            />
+            
+            <KpiCard 
+              title="Gastos Estructurales" 
+              value={formatCurrency(metrics.structuralExpenses)} 
+              icon={<DollarSign />}
+              description={`${((metrics.structuralExpenses / metrics.burnRate) * 100).toFixed(0)}% del gasto total`}
+              status="neutral"
+            />
+            
+            <KpiCard 
+              title="Gastos Evitables" 
+              value={formatCurrency(metrics.avoidableExpenses)} 
+              icon={<DollarSign />}
+              description={`${((metrics.avoidableExpenses / metrics.burnRate) * 100).toFixed(0)}% del gasto total`}
+              status="neutral"
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
       
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
