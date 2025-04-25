@@ -11,18 +11,13 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Download, FileText } from "lucide-react";
-import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
-import { getIncomes } from "@/services/financeService";
+import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
+import { useIncomeList } from "@/hooks/use-income-list";
 
 export function IncomeList() {
   const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
-  
-  const { data: incomesData = [], isLoading } = useQuery({
-    queryKey: ['incomes'],
-    queryFn: getIncomes
-  });
+  const { data: incomes = [], isLoading } = useIncomeList();
 
   const incomeColumns = [
     {
@@ -74,7 +69,7 @@ export function IncomeList() {
       accessorKey: "client",
       header: "Cliente",
       cell: ({ row }) => (
-        <span className={row.original.client === "-" ? "text-gray-400" : ""}>
+        <span className={!row.original.client ? "text-gray-400" : ""}>
           {row.original.client || "-"}
         </span>
       ),
@@ -128,7 +123,7 @@ export function IncomeList() {
         ) : (
           <DataTable
             columns={incomeColumns}
-            data={incomesData}
+            data={incomes}
             searchColumn="description"
             searchPlaceholder="Buscar ingresos..."
           />

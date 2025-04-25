@@ -16,7 +16,19 @@ export function IncomeAnalysis() {
   const { data: analytics, isLoading } = useIncomeAnalytics(timeFrame);
 
   if (isLoading) {
-    return <div>Cargando análisis de ingresos...</div>;
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No hay datos de ingresos disponibles para analizar
+      </div>
+    );
   }
 
   return (
@@ -41,7 +53,7 @@ export function IncomeAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">
-              {formatCurrency(analytics?.total_month || 0)}
+              {formatCurrency(analytics.total_month)}
             </div>
             <p className="text-xs text-blue-600/80">Este mes</p>
           </CardContent>
@@ -53,7 +65,7 @@ export function IncomeAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              {formatCurrency(analytics?.avg_month || 0)}
+              {formatCurrency(analytics.avg_month)}
             </div>
             <p className="text-xs text-green-600/80">
               {timeFrame === "month" ? "Último mes" : 
@@ -69,10 +81,10 @@ export function IncomeAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-700">
-              {formatCurrency(analytics?.client_income || 0)}
+              {formatCurrency(analytics.client_income)}
             </div>
             <p className="text-xs text-purple-600/80">
-              {analytics?.client_percentage.toFixed(1)}% del total
+              {analytics.client_percentage.toFixed(1)}% del total
             </p>
           </CardContent>
         </Card>
@@ -86,7 +98,7 @@ export function IncomeAnalysis() {
           <div className="h-[400px] mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={analytics?.monthly_data || []}
+                data={analytics.monthly_data as any}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />
