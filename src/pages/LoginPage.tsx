@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const LoginPage = () => {
-  const [username, setUsername] = useState("jpgomezm");
+  const [username, setUsername] = useState("jpgomez");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const { signIn, loading } = useAuth();
@@ -23,11 +23,17 @@ const LoginPage = () => {
     }
     
     try {
-      console.log("Iniciando sesión desde LoginPage");
-      await signIn(username, password);
+      // Construct email by appending domain to username
+      const email = `${username}@stayirrelevant.com`;
+      console.log("Attempting login with:", email);
+      
+      await signIn(email, password);
     } catch (err) {
-      console.error("Error en login component:", err);
+      console.error("Error in login component:", err);
       setError("Error al intentar iniciar sesión");
+      toast.error('Error de inicio de sesión', {
+        description: 'Verifique sus credenciales'
+      });
     }
   };
 
