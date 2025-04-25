@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
@@ -57,12 +58,7 @@ function Calendar({
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
       }}
-      disabled={date => {
-        if (!fromDate && !toDate) return false;
-        const date1 = fromDate ? date < fromDate : false;
-        const date2 = toDate ? date > toDate : false;
-        return date1 || date2;
-      }}
+      // Remove the disabled prop to allow scrolling to previous months
       {...props}
     />
   );

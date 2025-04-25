@@ -129,17 +129,23 @@ export async function getExpenses(): Promise<Expense[]> {
     paymentMethod: expense.paymentmethod,
     receipt: expense.receipt || undefined,
     notes: expense.notes || undefined,
-    currency: expense.currency as Currency
+    currency: expense.currency as Currency,
+    frequency: expense.frequency || undefined,
+    isRecurring: expense.is_recurring || false,
+    nextDueDate: expense.next_due_date ? new Date(expense.next_due_date) : undefined,
   })) || [];
 }
 
 export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
+  const adjustedDate = new Date(expense.date);
+  adjustedDate.setUTCHours(12, 0, 0, 0);
+  
   const { data, error } = await supabase
     .from('expenses')
     .insert([
       {
         description: expense.description,
-        date: expense.date.toISOString().split('T')[0],
+        date: adjustedDate.toISOString().split('T')[0],
         amount: expense.amount,
         category: expense.category,
         paymentmethod: expense.paymentMethod,
@@ -263,4 +269,76 @@ export async function getClientIncomes() {
   }
 
   return data || [];
+}
+
+export async function getAccruedExpenses(): Promise<Expense[]> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('is_recurring', true)
+    .order('date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching accrued expenses:', error);
+    throw error;
+  }
+
+  const accruedExpenses: Expense[] = [];
+  
+  data.forEach(expense => {
+    const startDate = new Date(expense.date);
+    startDate.setHours(0, 0, 0, 0);
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= today) {
+      accruedExpenses.push({
+        id: expense.id,
+        description: expense.description,
+        date: new Date(currentDate),
+        amount: expense.amount,
+        category: expense.category,
+        paymentMethod: expense.paymentmethod,
+        receipt: expense.receipt || undefined,
+        notes: expense.notes || undefined,
+        currency: expense.currency as Currency,
+        frequency: expense.frequency || undefined,
+        isRecurring: true,
+      });
+      
+      if (!expense.frequency) break;
+      
+      const nextDate = new Date(currentDate);
+      switch (expense.frequency.toLowerCase()) {
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + 7);
+          break;
+        case 'biweekly':
+          nextDate.setDate(nextDate.getDate() + 14);
+          break;
+        case 'monthly':
+          nextDate.setMonth(nextDate.getMonth() + 1);
+          break;
+        case 'bimonthly':
+          nextDate.setMonth(nextDate.getMonth() + 2);
+          break;
+        case 'quarterly':
+          nextDate.setMonth(nextDate.getMonth() + 3);
+          break;
+        case 'semiannual':
+          nextDate.setMonth(nextDate.getMonth() + 6);
+          break;
+        case 'annual':
+          nextDate.setFullYear(nextDate.getFullYear() + 1);
+          break;
+        default:
+          return;
+      }
+      currentDate = nextDate;
+    }
+  });
+  
+  return accruedExpenses;
 }

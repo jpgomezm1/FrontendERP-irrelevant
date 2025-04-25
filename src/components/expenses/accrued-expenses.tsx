@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -14,136 +14,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { useToast } from "@/hooks/use-toast";
 import { StatsCard } from "@/components/ui/stats-card";
+import { useQuery } from "@tanstack/react-query";
+import { Expense, getAccruedExpenses } from "@/services/financeService";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-// Types for our accrued expenses
-interface AccruedExpense {
-  id: number;
-  description: string;
-  dueDate: Date;
-  amount: number;
-  currency: Currency;
-  category: string;
-  paymentMethod: string;
+// Define the AccruedExpense interface that extends the Expense interface
+interface AccruedExpense extends Expense {
   status: 'pagado' | 'pendiente' | 'vencido';
-  receipt?: string;
-  isRecurring: boolean;
-  recurringId?: number;
-  notes?: string;
 }
-
-// Mock accrued expenses data
-const accruedExpensesData: AccruedExpense[] = [
-  {
-    id: 1,
-    description: "Arriendo Oficina",
-    dueDate: new Date(2023, 8, 5), // September 5, 2023
-    amount: 3200000,
-    currency: "COP",
-    category: "Arriendo",
-    paymentMethod: "Transferencia",
-    status: "pagado",
-    receipt: "recibo-arriendo-sept.pdf",
-    isRecurring: true,
-    recurringId: 2
-  },
-  {
-    id: 2,
-    description: "Arriendo Oficina",
-    dueDate: new Date(2023, 9, 5), // October 5, 2023
-    amount: 3200000,
-    currency: "COP",
-    category: "Arriendo",
-    paymentMethod: "Transferencia",
-    status: "pagado",
-    receipt: "recibo-arriendo-oct.pdf",
-    isRecurring: true,
-    recurringId: 2
-  },
-  {
-    id: 3,
-    description: "Arriendo Oficina",
-    dueDate: new Date(2023, 10, 5), // November 5, 2023
-    amount: 3200000,
-    currency: "COP",
-    category: "Arriendo",
-    paymentMethod: "Transferencia",
-    status: "pendiente",
-    isRecurring: true,
-    recurringId: 2
-  },
-  {
-    id: 4,
-    description: "Servicios Cloud",
-    dueDate: new Date(2023, 10, 10), // November 10, 2023
-    amount: 950000,
-    currency: "COP",
-    category: "Tecnología",
-    paymentMethod: "Tarjeta de Crédito",
-    status: "pendiente",
-    isRecurring: true,
-    recurringId: 3
-  },
-  {
-    id: 5,
-    description: "Suscripción Herramientas de Diseño",
-    dueDate: new Date(2023, 10, 15), // November 15, 2023
-    amount: 50,
-    currency: "USD",
-    category: "Tecnología",
-    paymentMethod: "Tarjeta de Crédito",
-    status: "pendiente",
-    isRecurring: true,
-    recurringId: 5
-  },
-  {
-    id: 6,
-    description: "Licencia Software Anual",
-    dueDate: new Date(2023, 5, 20), // June 20, 2023
-    amount: 1200,
-    currency: "USD",
-    category: "Tecnología",
-    paymentMethod: "Tarjeta de Crédito",
-    status: "pagado",
-    receipt: "licencia-adobe.pdf",
-    isRecurring: false
-  },
-  {
-    id: 7,
-    description: "Servicio AWS",
-    dueDate: new Date(2023, 5, 25), // June 25, 2023
-    amount: 350,
-    currency: "USD",
-    category: "Tecnología",
-    paymentMethod: "Tarjeta de Crédito",
-    status: "pagado",
-    receipt: "aws-junio.pdf",
-    isRecurring: false
-  },
-  {
-    id: 8,
-    description: "Nómina",
-    dueDate: new Date(2023, 10, 15), // November 15, 2023
-    amount: 7500000,
-    currency: "COP",
-    category: "Personal",
-    paymentMethod: "Transferencia",
-    status: "pendiente",
-    isRecurring: true,
-    recurringId: 1
-  },
-  {
-    id: 9,
-    description: "Servicios Contables",
-    dueDate: new Date(2023, 10, 20), // November 20, 2023
-    amount: 1800000,
-    currency: "COP",
-    category: "Servicios Profesionales",
-    paymentMethod: "Transferencia",
-    status: "vencido",
-    isRecurring: true,
-    recurringId: 4
-  }
-];
 
 export function AccruedExpenses() {
   const { toast } = useToast();
@@ -156,6 +34,31 @@ export function AccruedExpenses() {
   const [periodFilter, setPeriodFilter] = useState<string>("month");
   const [selectedExpense, setSelectedExpense] = useState<AccruedExpense | null>(null);
   const [markAsPaidOpen, setMarkAsPaidOpen] = useState(false);
+
+  // Fetch accrued expenses using the new getAccruedExpenses function
+  const { data: fetchedExpenses = [], isLoading } = useQuery({
+    queryKey: ['accrued-expenses'],
+    queryFn: getAccruedExpenses
+  });
+
+  // Process fetched expenses to add status
+  const accruedExpenses: AccruedExpense[] = fetchedExpenses.map(expense => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Determine status based on date
+    let status: 'pagado' | 'pendiente' | 'vencido';
+    if (expense.date < today) {
+      status = 'pendiente'; // For now, all past expenses are considered pending
+    } else {
+      status = 'pendiente';
+    }
+    
+    return {
+      ...expense,
+      status
+    };
+  });
 
   // Set date range based on period selection
   const handlePeriodChange = (period: string) => {
@@ -186,9 +89,9 @@ export function AccruedExpenses() {
   };
 
   // Filter expenses based on date range and currency
-  const filteredExpenses = accruedExpensesData.filter(expense => {
+  const filteredExpenses = accruedExpenses.filter(expense => {
     const inDateRange = dateRange?.from && dateRange?.to 
-      ? !isBefore(expense.dueDate, dateRange.from) && !isAfter(expense.dueDate, dateRange.to)
+      ? !isBefore(expense.date, dateRange.from) && !isAfter(expense.date, dateRange.to)
       : true;
     
     const matchesCurrency = selectedCurrency === "all" || expense.currency === selectedCurrency;
@@ -245,9 +148,9 @@ export function AccruedExpenses() {
       header: "Descripción",
     },
     {
-      accessorKey: "dueDate",
+      accessorKey: "date",
       header: "Fecha de Vencimiento",
-      cell: ({ row }: { row: any }) => formatDate(row.original.dueDate),
+      cell: ({ row }: { row: any }) => formatDate(row.original.date),
     },
     {
       accessorKey: "amount",
@@ -299,6 +202,11 @@ export function AccruedExpenses() {
           {row.original.paymentMethod}
         </div>
       )
+    },
+    {
+      accessorKey: "frequency",
+      header: "Frecuencia",
+      cell: ({ row }: { row: any }) => row.original.frequency || "Único",
     },
     {
       accessorKey: "status",
@@ -458,6 +366,7 @@ export function AccruedExpenses() {
             data={filteredExpenses}
             searchColumn="description"
             searchPlaceholder="Buscar gastos causados..."
+            isLoading={isLoading}
           />
         </CardContent>
       </Card>
@@ -537,6 +446,3 @@ export function AccruedExpenses() {
     </>
   );
 }
-
-// Helper components that will be used in the AccruedExpenses component
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
