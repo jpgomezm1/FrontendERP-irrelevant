@@ -9,6 +9,8 @@ import { formatCurrency } from "@/lib/utils";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Expense } from "@/hooks/use-expenses-data";
+import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ExpensesPage = () => {
   const [timeFrame, setTimeFrame] = useState<"month" | "quarter" | "year">("month");
@@ -45,6 +47,22 @@ const ExpensesPage = () => {
         title="Gastos"
         description="Gestión y análisis de gastos"
       />
+
+      <div className="flex items-center justify-between mb-6">
+        <Select
+          value={timeFrame}
+          onValueChange={(value) => setTimeFrame(value as "month" | "quarter" | "year")}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Seleccionar período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="month">Este Mes</SelectItem>
+            <SelectItem value="quarter">Este Trimestre</SelectItem>
+            <SelectItem value="year">Este Año</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <Tabs defaultValue="resumen" className="space-y-4">
         <TabsList>
@@ -124,24 +142,42 @@ const ExpensesPage = () => {
 
         <TabsContent value="variables">
           <Card>
-            <CardHeader>
-              <CardTitle>Gastos Variables</CardTitle>
-              <CardDescription>Listado de gastos no recurrentes</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Gastos Variables</CardTitle>
+                <CardDescription>Listado de gastos no recurrentes</CardDescription>
+              </div>
+              <AddExpenseDialog isRecurring={false} />
             </CardHeader>
             <CardContent>
-              <DataTable columns={columns} data={variableExpenses} />
+              <DataTable 
+                columns={columns} 
+                data={variableExpenses} 
+                isLoading={isLoading}
+                searchColumn="description"
+                searchPlaceholder="Buscar por descripción..."
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="recurrentes">
           <Card>
-            <CardHeader>
-              <CardTitle>Gastos Recurrentes</CardTitle>
-              <CardDescription>Gastos fijos y periódicos</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Gastos Recurrentes</CardTitle>
+                <CardDescription>Gastos fijos y periódicos</CardDescription>
+              </div>
+              <AddExpenseDialog isRecurring={true} />
             </CardHeader>
             <CardContent>
-              <DataTable columns={columns} data={recurringExpenses} />
+              <DataTable 
+                columns={columns} 
+                data={recurringExpenses} 
+                isLoading={isLoading}
+                searchColumn="description"
+                searchPlaceholder="Buscar por descripción..."
+              />
             </CardContent>
           </Card>
         </TabsContent>
