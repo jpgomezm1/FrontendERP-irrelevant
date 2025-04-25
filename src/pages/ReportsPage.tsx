@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -22,70 +21,10 @@ import { es } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { CalendarIcon } from "lucide-react";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { useFinancialReports, ReportPeriod } from "@/hooks/use-financial-reports";
 
 // Paleta de colores para gráficos
 const COLORS = ['#4b4ce6', '#4ade80', '#f87171', '#facc15', '#60a5fa', '#c084fc', '#2dd4bf'];
-
-// Datos simulados para los reportes
-const monthlyRevenueExpenses = [
-  { month: "Ene", ingresos: 24500000, gastos: 18700000, utilidad: 5800000 },
-  { month: "Feb", ingresos: 26700000, gastos: 19200000, utilidad: 7500000 },
-  { month: "Mar", ingresos: 23900000, gastos: 17800000, utilidad: 6100000 },
-  { month: "Abr", ingresos: 28400000, gastos: 20100000, utilidad: 8300000 },
-  { month: "May", ingresos: 27800000, gastos: 21300000, utilidad: 6500000 },
-  { month: "Jun", ingresos: 25600000, gastos: 22400000, utilidad: 3200000 },
-];
-
-const clientRevenue = [
-  { name: "Cliente A", value: 12400000 },
-  { name: "Cliente B", value: 8700000 },
-  { name: "Cliente C", value: 5300000 },
-  { name: "Cliente D", value: 3200000 },
-  { name: "Otros", value: 5600000 },
-];
-
-const expensesByCategory = [
-  { name: "Personal", value: 9800000 },
-  { name: "Tecnología", value: 5200000 },
-  { name: "Arriendo", value: 3200000 },
-  { name: "Marketing", value: 2700000 },
-  { name: "Freelancers", value: 2300000 },
-  { name: "Servicios", value: 1800000 },
-  { name: "Otros", value: 1400000 },
-];
-
-const cashFlowTrend = [
-  { date: "31/01", saldo: 5800000 },
-  { date: "28/02", saldo: 13300000 },
-  { date: "31/03", saldo: 19400000 },
-  { date: "30/04", saldo: 27700000 },
-  { date: "31/05", saldo: 34200000 },
-  { date: "30/06", saldo: 37400000 },
-];
-
-// Datos para el estado de resultados
-const financialStatementData = {
-  periodo: "Enero - Junio 2023",
-  ingresos: {
-    clientes: 125200000,
-    aportesSocios: 15000000,
-    otros: 3600000,
-    total: 143800000,
-  },
-  gastos: {
-    personal: 58800000,
-    tecnologia: 31200000,
-    arriendo: 19200000,
-    marketing: 16200000,
-    freelancers: 13800000,
-    servicios: 10800000,
-    otros: 8400000,
-    total: 158400000,
-  },
-  utilidadBruta: -14600000,
-  impuestos: 0,
-  utilidadNeta: -14600000,
-};
 
 const ReportsPage = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -93,7 +32,16 @@ const ReportsPage = () => {
     to: new Date(2023, 5, 30),  // 30 de junio de 2023
   });
   
-  const [reportPeriod, setReportPeriod] = useState("semestral");
+  const [reportPeriod, setReportPeriod] = useState<ReportPeriod>("semestral");
+  const { metrics, isLoading } = useFinancialReports(reportPeriod);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -141,7 +89,7 @@ const ReportsPage = () => {
 
           <Select
             value={reportPeriod}
-            onValueChange={setReportPeriod}
+            onValueChange={(value) => setReportPeriod(value as ReportPeriod)}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Seleccionar periodo" />
@@ -177,26 +125,26 @@ const ReportsPage = () => {
                 <CardContent>
                   <div className="h-[350px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={monthlyRevenueExpenses}>
+                      <BarChart data={metrics.monthly_data}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
                         <Tooltip formatter={(value) => [formatCurrency(Number(value)), ""]} />
                         <Legend />
                         <Bar
-                          dataKey="ingresos"
+                          dataKey="total_income"
                           name="Ingresos"
                           fill="#4ade80"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
-                          dataKey="gastos"
+                          dataKey="total_expense"
                           name="Gastos"
                           fill="#f87171"
                           radius={[4, 4, 0, 0]}
                         />
                         <Bar
-                          dataKey="utilidad"
+                          dataKey="net_income"
                           name="Utilidad"
                           fill="#4b4ce6"
                           radius={[4, 4, 0, 0]}
@@ -217,14 +165,14 @@ const ReportsPage = () => {
                 <CardContent>
                   <div className="h-[350px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={cashFlowTrend}>
+                      <LineChart data={metrics.monthly_data}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
+                        <XAxis dataKey="month" />
                         <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
                         <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Saldo"]} />
                         <Line
                           type="monotone"
-                          dataKey="saldo"
+                          dataKey="net_income"
                           name="Saldo en Caja"
                           stroke="#4b4ce6"
                           strokeWidth={3}
@@ -251,16 +199,17 @@ const ReportsPage = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={clientRevenue}
+                          data={metrics.income_by_client}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
                           outerRadius={120}
                           fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          dataKey="total"
+                          nameKey="client"
+                          label={({ client, percent }) => `${client} ${(percent * 100).toFixed(0)}%`}
                         >
-                          {clientRevenue.map((entry, index) => (
+                          {metrics.income_by_client.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -283,16 +232,17 @@ const ReportsPage = () => {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={expensesByCategory}
+                          data={metrics.expense_by_category}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
                           outerRadius={120}
                           fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          dataKey="total"
+                          nameKey="category"
+                          label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
                         >
-                          {expensesByCategory.map((entry, index) => (
+                          {metrics.expense_by_category.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -312,7 +262,7 @@ const ReportsPage = () => {
             <CardHeader>
               <CardTitle>Estado de Resultados</CardTitle>
               <CardDescription>
-                {financialStatementData.periodo}
+                {`${metrics.monthly_data[0]?.month || ''} - ${metrics.monthly_data[metrics.monthly_data.length - 1]?.month || ''} ${metrics.monthly_data[0]?.year || ''}`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -321,21 +271,23 @@ const ReportsPage = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Ingresos</h3>
                   <div className="space-y-2">
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Ingresos por Clientes</span>
-                      <span>{formatCurrency(financialStatementData.ingresos.clientes)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Aportes de Socios</span>
-                      <span>{formatCurrency(financialStatementData.ingresos.aportesSocios)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Otros Ingresos</span>
-                      <span>{formatCurrency(financialStatementData.ingresos.otros)}</span>
-                    </div>
+                    {metrics.income_by_client.slice(0, 3).map((client, index) => (
+                      <div key={index} className="flex justify-between py-2 border-b">
+                        <span>{client.client}</span>
+                        <span>{formatCurrency(client.total)}</span>
+                      </div>
+                    ))}
+                    {metrics.income_by_client.length > 3 && (
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Otros Clientes</span>
+                        <span>{formatCurrency(
+                          metrics.income_by_client.slice(3).reduce((sum, client) => sum + client.total, 0)
+                        )}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-2 font-bold">
                       <span>Total Ingresos</span>
-                      <span>{formatCurrency(financialStatementData.ingresos.total)}</span>
+                      <span>{formatCurrency(metrics.total_income)}</span>
                     </div>
                   </div>
                 </div>
@@ -344,37 +296,15 @@ const ReportsPage = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Gastos</h3>
                   <div className="space-y-2">
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Personal</span>
-                      <span>{formatCurrency(financialStatementData.gastos.personal)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Tecnología</span>
-                      <span>{formatCurrency(financialStatementData.gastos.tecnologia)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Arriendo</span>
-                      <span>{formatCurrency(financialStatementData.gastos.arriendo)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Marketing</span>
-                      <span>{formatCurrency(financialStatementData.gastos.marketing)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Freelancers</span>
-                      <span>{formatCurrency(financialStatementData.gastos.freelancers)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Servicios</span>
-                      <span>{formatCurrency(financialStatementData.gastos.servicios)}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b">
-                      <span>Otros</span>
-                      <span>{formatCurrency(financialStatementData.gastos.otros)}</span>
-                    </div>
+                    {metrics.expense_by_category.map((category, index) => (
+                      <div key={index} className="flex justify-between py-2 border-b">
+                        <span>{category.category}</span>
+                        <span>{formatCurrency(category.total)}</span>
+                      </div>
+                    ))}
                     <div className="flex justify-between py-2 font-bold">
                       <span>Total Gastos</span>
-                      <span>{formatCurrency(financialStatementData.gastos.total)}</span>
+                      <span>{formatCurrency(metrics.total_expense)}</span>
                     </div>
                   </div>
                 </div>
@@ -383,18 +313,18 @@ const ReportsPage = () => {
                 <div className="pt-4 border-t-2">
                   <div className="flex justify-between py-2 text-lg font-bold">
                     <span>Utilidad Bruta</span>
-                    <span className={financialStatementData.utilidadBruta >= 0 ? "text-green-600" : "text-red-600"}>
-                      {formatCurrency(financialStatementData.utilidadBruta)}
+                    <span className={metrics.net_income >= 0 ? "text-green-600" : "text-red-600"}>
+                      {formatCurrency(metrics.net_income)}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span>Impuestos</span>
-                    <span>{formatCurrency(financialStatementData.impuestos)}</span>
+                    <span>{formatCurrency(0)}</span>
                   </div>
                   <div className="flex justify-between py-4 text-xl font-bold">
                     <span>Utilidad Neta</span>
-                    <span className={financialStatementData.utilidadNeta >= 0 ? "text-green-600" : "text-red-600"}>
-                      {formatCurrency(financialStatementData.utilidadNeta)}
+                    <span className={metrics.net_income >= 0 ? "text-green-600" : "text-red-600"}>
+                      {formatCurrency(metrics.net_income)}
                     </span>
                   </div>
                 </div>
@@ -419,8 +349,16 @@ const ReportsPage = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center">
-                    <span className="text-3xl font-bold">-10.2%</span>
-                    <ChevronDown className="h-6 w-6 text-red-500 ml-2" />
+                    <span className="text-3xl font-bold">
+                      {metrics.total_income > 0 
+                        ? `${((metrics.net_income / metrics.total_income) * 100).toFixed(1)}%` 
+                        : "0%"}
+                    </span>
+                    {metrics.net_income > 0 ? (
+                      <ChevronUp className="h-6 w-6 text-green-500 ml-2" />
+                    ) : (
+                      <ChevronDown className="h-6 w-6 text-red-500 ml-2" />
+                    )}
                   </div>
                   <p className="text-muted-foreground mt-1">
                     Utilidad / Ingresos Totales
@@ -428,11 +366,24 @@ const ReportsPage = () => {
                   <div className="mt-4 text-sm">
                     <div className="flex justify-between">
                       <span>Mes Anterior:</span>
-                      <span className="font-medium">23.4%</span>
+                      <span className="font-medium">
+                        {metrics.monthly_data[1] && metrics.monthly_data[1].total_income > 0
+                          ? `${((metrics.monthly_data[1].net_income / metrics.monthly_data[1].total_income) * 100).toFixed(1)}%`
+                          : "0%"}
+                      </span>
                     </div>
                     <div className="flex justify-between mt-1">
                       <span>Variación:</span>
-                      <span className="font-medium text-red-500">-33.6%</span>
+                      <span className={`font-medium ${
+                        metrics.monthly_data[0]?.net_income > metrics.monthly_data[1]?.net_income 
+                          ? "text-green-500" 
+                          : "text-red-500"
+                      }`}>
+                        {metrics.monthly_data[1] && metrics.monthly_data[1].total_income > 0
+                          ? `${(((metrics.monthly_data[0]?.net_income / metrics.monthly_data[0]?.total_income) - 
+                              (metrics.monthly_data[1]?.net_income / metrics.monthly_data[1]?.total_income)) * 100).toFixed(1)}%`
+                          : "0%"}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -443,23 +394,37 @@ const ReportsPage = () => {
                   <CardTitle>ROI Marketing</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center">
-                    <span className="text-3xl font-bold">3.2x</span>
-                    <ChevronUp className="h-6 w-6 text-green-500 ml-2" />
-                  </div>
-                  <p className="text-muted-foreground mt-1">
-                    Ingresos / Gasto en Marketing
-                  </p>
-                  <div className="mt-4 text-sm">
-                    <div className="flex justify-between">
-                      <span>Mes Anterior:</span>
-                      <span className="font-medium">2.8x</span>
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span>Variación:</span>
-                      <span className="font-medium text-green-500">+14.3%</span>
-                    </div>
-                  </div>
+                  {/* Calculate ROI based on marketing expenses if available */}
+                  {(() => {
+                    const marketingExpense = metrics.expense_by_category.find(
+                      cat => cat.category.toLowerCase().includes('marketing')
+                    );
+                    const roi = marketingExpense && marketingExpense.total > 0
+                      ? metrics.total_income / marketingExpense.total
+                      : 0;
+                    
+                    return (
+                      <>
+                        <div className="flex items-center">
+                          <span className="text-3xl font-bold">{roi.toFixed(1)}x</span>
+                          <ChevronUp className="h-6 w-6 text-green-500 ml-2" />
+                        </div>
+                        <p className="text-muted-foreground mt-1">
+                          Ingresos / Gasto en Marketing
+                        </p>
+                        <div className="mt-4 text-sm">
+                          <div className="flex justify-between">
+                            <span>Mes Anterior:</span>
+                            <span className="font-medium">-</span>
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            <span>Variación:</span>
+                            <span className="font-medium text-green-500">-</span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </CardContent>
               </Card>
 
@@ -469,7 +434,7 @@ const ReportsPage = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">
-                    {formatCurrency(37400000)}
+                    {formatCurrency(metrics.accumulated_balance)}
                   </div>
                   <p className="text-muted-foreground mt-1">
                     Saldo acumulado
@@ -477,11 +442,15 @@ const ReportsPage = () => {
                   <div className="mt-4 text-sm">
                     <div className="flex justify-between">
                       <span>Meses de operación cubiertos:</span>
-                      <span className="font-medium">2.1 meses</span>
+                      <span className="font-medium">
+                        {metrics.total_expense > 0 
+                          ? (metrics.accumulated_balance / metrics.total_expense).toFixed(1) 
+                          : "∞"} meses
+                      </span>
                     </div>
                     <div className="flex justify-between mt-1">
                       <span>Burn rate mensual:</span>
-                      <span className="font-medium">{formatCurrency(22400000)}</span>
+                      <span className="font-medium">{formatCurrency(metrics.total_expense)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -498,13 +467,13 @@ const ReportsPage = () => {
               <CardContent>
                 <div className="h-[400px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyRevenueExpenses}>
+                    <LineChart data={metrics.monthly_data}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="month" />
                       <YAxis yAxisId="left" tickFormatter={(value) => `$${value / 1000000}M`} />
                       <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value / 1000000}M`} />
                       <Tooltip formatter={(value, name) => {
-                        if (name === "utilidad") {
+                        if (name === "net_income") {
                           return [formatCurrency(Number(value)), "Utilidad"];
                         } else if (name === "margen") {
                           return [`${(Number(value) * 100).toFixed(1)}%`, "Margen"];
@@ -515,7 +484,7 @@ const ReportsPage = () => {
                       <Line
                         yAxisId="left"
                         type="monotone"
-                        dataKey="ingresos"
+                        dataKey="total_income"
                         name="Ingresos"
                         stroke="#4ade80"
                         strokeWidth={2}
@@ -524,7 +493,7 @@ const ReportsPage = () => {
                       <Line
                         yAxisId="left"
                         type="monotone"
-                        dataKey="gastos"
+                        dataKey="total_expense"
                         name="Gastos"
                         stroke="#f87171"
                         strokeWidth={2}
@@ -533,7 +502,7 @@ const ReportsPage = () => {
                       <Line
                         yAxisId="left"
                         type="monotone"
-                        dataKey="utilidad"
+                        dataKey="net_income"
                         name="Utilidad"
                         stroke="#4b4ce6"
                         strokeWidth={3}
@@ -542,7 +511,7 @@ const ReportsPage = () => {
                       <Line
                         yAxisId="right"
                         type="monotone"
-                        dataKey={(item) => item.utilidad / item.ingresos}
+                        dataKey={(item) => item.total_income > 0 ? item.net_income / item.total_income : 0}
                         name="margen"
                         stroke="#facc15"
                         strokeWidth={2}
@@ -570,7 +539,7 @@ const ReportsPage = () => {
                         <p className="text-muted-foreground text-sm">Próximos 6 meses</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold">{formatCurrency(168000000)}</p>
+                        <p className="text-xl font-bold">{formatCurrency(metrics.total_income * 6)}</p>
                         <p className="text-sm text-green-500">+9.4% vs periodo anterior</p>
                       </div>
                     </div>
@@ -581,7 +550,7 @@ const ReportsPage = () => {
                         <p className="text-muted-foreground text-sm">Próximos 6 meses</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold">{formatCurrency(145000000)}</p>
+                        <p className="text-xl font-bold">{formatCurrency(metrics.total_expense * 6)}</p>
                         <p className="text-sm text-red-500">+7.2% vs periodo anterior</p>
                       </div>
                     </div>
@@ -592,7 +561,7 @@ const ReportsPage = () => {
                         <p className="text-muted-foreground text-sm">Próximos 6 meses</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold">{formatCurrency(23000000)}</p>
+                        <p className="text-xl font-bold">{formatCurrency(metrics.net_income * 6)}</p>
                         <p className="text-sm text-green-500">vs. pérdida periodo anterior</p>
                       </div>
                     </div>
@@ -620,7 +589,9 @@ const ReportsPage = () => {
                     <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
                       <h4 className="font-medium text-blue-800 mb-1">Diversificación de Clientes</h4>
                       <p className="text-sm text-blue-700">
-                        El 34% de los ingresos proviene de un solo cliente. Buscar
+                        El {metrics.income_by_client[0] ? 
+                          ((metrics.income_by_client[0].total / metrics.total_income) * 100).toFixed(0) : 0}% 
+                        de los ingresos proviene de un solo cliente. Buscar
                         oportunidades para reducir la dependencia.
                       </p>
                     </div>
@@ -636,7 +607,9 @@ const ReportsPage = () => {
                     <div className="p-3 bg-purple-50 rounded-md border border-purple-200">
                       <h4 className="font-medium text-purple-800 mb-1">Gestión de Liquidez</h4>
                       <p className="text-sm text-purple-700">
-                        Las reservas actuales cubren 2.1 meses de operación. Considerar
+                        Las reservas actuales cubren {metrics.total_expense > 0 
+                          ? (metrics.accumulated_balance / metrics.total_expense).toFixed(1) 
+                          : "∞"} meses de operación. Considerar
                         estrategias para aumentar el flujo de caja.
                       </p>
                     </div>
