@@ -39,7 +39,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const defaultValues: Partial<ExpenseFormValues> = {
+  const defaultValues: ExpenseFormValues = {
     description: "",
     amount: 0,
     date: new Date(),
@@ -58,7 +58,17 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
 
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
-      await addExpense(data);
+      await addExpense({
+        description: data.description,
+        amount: data.amount,
+        date: data.date,
+        category: data.category,
+        paymentMethod: data.paymentMethod,
+        notes: data.notes,
+        receipt: data.receipt,
+        currency: data.currency,
+        // isRecurring is handled on the backend
+      });
       
       toast({
         title: "Gasto agregado",

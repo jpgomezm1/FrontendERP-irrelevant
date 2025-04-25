@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
@@ -57,7 +56,6 @@ export async function getIncomes(): Promise<Income[]> {
     throw error;
   }
 
-  // Convert date strings to Date objects and map db fields
   return data.map(income => ({
     id: income.id,
     description: income.description,
@@ -65,7 +63,7 @@ export async function getIncomes(): Promise<Income[]> {
     amount: income.amount,
     type: income.type,
     client: income.client || undefined,
-    paymentMethod: income.paymentmethod, // Map from DB field
+    paymentMethod: income.paymentmethod,
     receipt: income.receipt || undefined,
     notes: income.notes || undefined,
     currency: income.currency as Currency
@@ -81,7 +79,7 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
       amount: income.amount,
       type: income.type,
       client: income.client,
-      paymentmethod: income.paymentMethod, // Map to DB field
+      paymentmethod: income.paymentMethod,
       receipt: income.receipt,
       notes: income.notes,
       currency: income.currency
@@ -108,7 +106,6 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   };
 }
 
-// Expenses functions
 export async function getExpenses(): Promise<Expense[]> {
   const { data, error } = await supabase
     .from('expenses')
@@ -120,21 +117,29 @@ export async function getExpenses(): Promise<Expense[]> {
     throw error;
   }
 
-  // Convert date strings to Date objects and map db fields
   return data.map(expense => ({
     id: expense.id,
     description: expense.description,
     date: new Date(expense.date),
     amount: expense.amount,
     category: expense.category,
-    paymentMethod: expense.paymentmethod, // Map from DB field
+    paymentMethod: expense.paymentmethod,
     receipt: expense.receipt || undefined,
     notes: expense.notes || undefined,
     currency: expense.currency as Currency
   })) || [];
 }
 
-export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
+export async function addExpense(expense: {
+  description: string;
+  date: Date;
+  amount: number;
+  category: string;
+  paymentMethod: string;
+  receipt?: string;
+  notes?: string;
+  currency: Currency;
+}): Promise<Expense> {
   const { data, error } = await supabase
     .from('expenses')
     .insert([
@@ -143,7 +148,7 @@ export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense>
         date: expense.date.toISOString().split('T')[0],
         amount: expense.amount,
         category: expense.category,
-        paymentmethod: expense.paymentMethod, // Map to DB field
+        paymentmethod: expense.paymentMethod,
         receipt: expense.receipt,
         notes: expense.notes,
         currency: expense.currency
@@ -170,9 +175,7 @@ export async function addExpense(expense: Omit<Expense, 'id'>): Promise<Expense>
   };
 }
 
-// Combined cash flow functions
 export async function getCashFlow(): Promise<CashFlowItem[]> {
-  // Get incomes
   const { data: incomesData, error: incomesError } = await supabase
     .from('incomes')
     .select('*')
@@ -183,7 +186,6 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     throw incomesError;
   }
 
-  // Get expenses
   const { data: expensesData, error: expensesError } = await supabase
     .from('expenses')
     .select('*')
@@ -194,7 +196,6 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     throw expensesError;
   }
 
-  // Convert incomes to cash flow items
   const incomeItems: CashFlowItem[] = (incomesData || []).map(income => ({
     id: income.id,
     date: new Date(income.date),
@@ -207,7 +208,6 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     currency: income.currency as Currency,
   }));
 
-  // Convert expenses to cash flow items
   const expenseItems: CashFlowItem[] = (expensesData || []).map(expense => ({
     id: expense.id,
     date: new Date(expense.date),
@@ -219,17 +219,15 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     currency: expense.currency as Currency,
   }));
 
-  // Combine and sort by date (newest first)
   const combined = [...incomeItems, ...expenseItems].sort((a, b) => 
     b.date.getTime() - a.date.getTime()
   );
 
-  // Calculate running balance
   let balance = 0;
   return combined.map(item => {
     balance += item.type === 'Ingreso' ? item.amount : -item.amount;
     return { ...item, balance };
-  }).reverse(); // Reverse to get oldest first for balance calculation
+  }).reverse();
 }
 
 export async function getMonthlyData() {
