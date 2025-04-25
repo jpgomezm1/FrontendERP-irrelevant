@@ -6,53 +6,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { monthlyData, incomesData } from "./income-data";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useIncomeAnalytics } from "@/hooks/use-income-analytics";
 
 export function IncomeAnalysis() {
-  const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
+  const [timeFrame, setTimeFrame] = useState<"month" | "quarter" | "year">("month");
+  const { data: analytics, isLoading } = useIncomeAnalytics(timeFrame);
 
-  // Convert values based on selected currency
-  const totalMonth = incomesData
-    .filter(income => {
-      const incomeDate = new Date(income.date);
-      const now = new Date();
-      return incomeDate.getMonth() === now.getMonth() && 
-             incomeDate.getFullYear() === now.getFullYear();
-    })
-    .reduce((acc, income) => {
-      const amount = displayCurrency === income.currency 
-        ? income.amount 
-        : convertCurrency(income.amount, income.currency, displayCurrency);
-      return acc + amount;
-    }, 0);
-
-  const avgMonth = monthlyData.reduce((acc, month) => acc + month.ingresos, 0) / monthlyData.length;
-  const avgMonthConverted = displayCurrency === "COP" 
-    ? avgMonth 
-    : convertCurrency(avgMonth, "COP", "USD");
-
-  const clientIncome = incomesData
-    .filter(income => income.type === "Cliente")
-    .reduce((acc, income) => {
-      const amount = displayCurrency === income.currency 
-        ? income.amount 
-        : convertCurrency(income.amount, income.currency, displayCurrency);
-      return acc + amount;
-    }, 0);
+  if (isLoading) {
+    return <div>Cargando análisis de ingresos...</div>;
+  }
 
   return (
     <div className="grid gap-4">
       <div className="flex justify-end">
-        <Select value={displayCurrency} onValueChange={(value: Currency) => setDisplayCurrency(value)}>
+        <Select value={timeFrame} onValueChange={(value: "month" | "quarter" | "year") => setTimeFrame(value)}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Moneda de visualización" />
+            <SelectValue placeholder="Periodo de análisis" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="COP">Pesos Colombianos (COP)</SelectItem>
-            <SelectItem value="USD">Dólares (USD)</SelectItem>
+            <SelectItem value="month">Último Mes</SelectItem>
+            <SelectItem value="quarter">Último Trimestre</SelectItem>
+            <SelectItem value="year">Último Año</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -64,9 +41,9 @@ export function IncomeAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700">
-              {formatCurrency(25600000)}
+              {formatCurrency(analytics?.total_month || 0)}
             </div>
-            <p className="text-xs text-blue-600/80">Junio 2023</p>
+            <p className="text-xs text-blue-600/80">Este mes</p>
           </CardContent>
         </Card>
 
@@ -76,9 +53,13 @@ export function IncomeAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700">
-              {formatCurrency(20750000)}
+              {formatCurrency(analytics?.avg_month || 0)}
             </div>
-            <p className="text-xs text-green-600/80">Últimos 6 meses</p>
+            <p className="text-xs text-green-600/80">
+              {timeFrame === "month" ? "Último mes" : 
+               timeFrame === "quarter" ? "Último trimestre" : 
+               "Último año"}
+            </p>
           </CardContent>
         </Card>
 
@@ -88,9 +69,11 @@ export function IncomeAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-700">
-              {formatCurrency(15600000)}
+              {formatCurrency(analytics?.client_income || 0)}
             </div>
-            <p className="text-xs text-purple-600/80">60.9% del total</p>
+            <p className="text-xs text-purple-600/80">
+              {analytics?.client_percentage.toFixed(1)}% del total
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -103,12 +86,7 @@ export function IncomeAnalysis() {
           <div className="h-[400px] mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={monthlyData.map(month => ({
-                  ...month,
-                  ingresos: displayCurrency === "COP" 
-                    ? month.ingresos 
-                    : convertCurrency(month.ingresos, "COP", "USD")
-                }))}
+                data={analytics?.monthly_data || []}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200" />

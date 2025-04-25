@@ -284,6 +284,16 @@ export type Database = {
           total: number
         }[]
       }
+      get_income_analytics: {
+        Args: { start_date: string; end_date: string }
+        Returns: {
+          total_month: number
+          avg_month: number
+          client_income: number
+          client_percentage: number
+          monthly_data: Json
+        }[]
+      }
       get_income_by_client: {
         Args: Record<PropertyKey, never>
         Returns: {
