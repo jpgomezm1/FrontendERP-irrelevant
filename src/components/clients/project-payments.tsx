@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { DataTable } from "../ui/data-table";
 import { Button } from "../ui/button";
@@ -34,15 +33,12 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
     }
   });
   
-  // Filter payments based on due date
   const currentDate = new Date();
   
-  // Current payments: due today or in the past
   const currentPayments = allPayments.filter(payment => 
     new Date(payment.date) <= currentDate
   );
   
-  // Future payments: due in the future
   const futurePayments = allPayments.filter(payment => 
     new Date(payment.date) > currentDate
   );
@@ -73,7 +69,6 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
     }
   };
   
-  // Define columns for the payments tables
   const paymentColumns: ColumnDef<Payment>[] = [
     {
       accessorKey: "installmentNumber",
@@ -230,7 +225,6 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
         </TabsContent>
       </Tabs>
       
-      {/* Dialog for marking a payment as paid */}
       <Dialog open={markAsPaidDialogOpen} onOpenChange={setMarkAsPaidDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -251,9 +245,14 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
                     <FormLabel>Comprobante de pago (opcional)</FormLabel>
                     <FormControl>
                       <FileUpload
+                        onFileSelect={(file) => {
+                          if (file) {
+                            field.onChange(URL.createObjectURL(file));
+                          }
+                        }}
                         value={field.value}
                         onChange={field.onChange}
-                        bucket="payment_documents"
+                        bucket="payment-documents"
                         accept="application/pdf,image/png,image/jpeg"
                       />
                     </FormControl>

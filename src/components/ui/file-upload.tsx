@@ -1,17 +1,15 @@
-
 import React, { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Upload, X } from "lucide-react";
 import { Button } from "./button";
 
-interface FileUploadProps {
+export interface FileUploadProps {
   onFileSelect: (file: File | null) => void;
   acceptedFileTypes?: string;
   maxFileSizeMB?: number;
   className?: string;
   buttonText?: string;
   selectedFile?: File | null;
-  // Add the new props needed by the project-payments component
   value?: string;
   onChange?: (value: string) => void;
   bucket?: string;
@@ -25,7 +23,6 @@ export function FileUpload({
   className,
   buttonText = "Seleccionar archivo",
   selectedFile = null,
-  // Handle the new props with default values
   value,
   onChange,
   bucket,
@@ -35,7 +32,6 @@ export function FileUpload({
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the accept prop if provided, otherwise use acceptedFileTypes
   const fileTypes = accept || acceptedFileTypes;
 
   const handleFileSelect = useCallback(
@@ -47,7 +43,6 @@ export function FileUpload({
         return;
       }
 
-      // Check file type
       const fileExtension = `.${selectedFile.name.split(".").pop()?.toLowerCase()}`;
       const isValidType = fileTypes
         .split(",")
@@ -58,7 +53,6 @@ export function FileUpload({
         return;
       }
 
-      // Check file size
       const maxSizeBytes = maxFileSizeMB * 1024 * 1024;
       if (selectedFile.size > maxSizeBytes) {
         setError(`El archivo excede el tamaño máximo de ${maxFileSizeMB}MB`);
@@ -69,10 +63,7 @@ export function FileUpload({
       setFile(selectedFile);
       onFileSelect(selectedFile);
       
-      // For compatibility with the new onChange prop
       if (onChange) {
-        // Simulate uploading a file and getting a URL back
-        // In a real implementation, this would need to handle actual file upload
         const mockFileUrl = URL.createObjectURL(selectedFile);
         onChange(mockFileUrl);
       }

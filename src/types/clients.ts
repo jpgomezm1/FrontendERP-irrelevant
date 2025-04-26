@@ -1,4 +1,3 @@
-
 import { Currency } from "@/lib/utils";
 
 // Tipo de documento
@@ -49,7 +48,7 @@ export type PaymentMethod =
   | "Otro";
 
 // Re-export Currency from utils to avoid the import error
-export { Currency };
+export type { Currency };
 
 // Interface para documentos
 export interface Document {
