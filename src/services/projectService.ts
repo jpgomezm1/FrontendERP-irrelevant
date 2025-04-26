@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Project, Document, ProjectStatus, DocumentType, PaymentPlan } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
@@ -208,7 +209,10 @@ function processPaymentPlan(dbPaymentPlan: any): PaymentPlan {
   return paymentPlan;
 }
 
-export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments' | 'paymentPlan' | 'totalValue'>, paymentPlanData?: any): Promise<Project> {
+export async function addProject(
+  project: Omit<Project, 'id' | 'documents' | 'payments' | 'paymentPlan' | 'totalValue'>, 
+  paymentPlanData?: any
+): Promise<Project> {
   try {
     // Begin a transaction
     const { data: projectData, error: projectError } = await supabase
@@ -238,7 +242,7 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
     
     // If payment plan data is provided, create the payment plan
     if (paymentPlanData) {
-      const paymentPlanPayload = {
+      const paymentPlanPayload: any = {
         project_id: projectData.id,
         type: paymentPlanData.planType,
       };
@@ -263,7 +267,7 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
       
       console.log("Creating payment plan:", paymentPlanPayload);
       
-      const { data: paymentPlanData, error: paymentPlanError } = await supabase
+      const { data: paymentPlanDataResult, error: paymentPlanError } = await supabase
         .from('payment_plans')
         .insert([paymentPlanPayload])
         .select()
@@ -273,7 +277,7 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
         console.error('Error creating payment plan:', paymentPlanError);
         // Still continue as the project was created
       } else {
-        console.log("Payment plan created successfully:", paymentPlanData);
+        console.log("Payment plan created successfully:", paymentPlanDataResult);
         // The trigger will automatically generate payments
       }
     }

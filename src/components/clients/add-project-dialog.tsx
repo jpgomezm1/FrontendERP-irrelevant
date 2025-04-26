@@ -149,8 +149,8 @@ export function AddProjectDialog({
       };
       
       // Prepare payment plan data
-      const paymentPlanData = {
-        planType: data.planType,
+      const paymentPlanData: any = {
+        planType: data.planType
       };
       
       // Add implementation fee data if applicable
