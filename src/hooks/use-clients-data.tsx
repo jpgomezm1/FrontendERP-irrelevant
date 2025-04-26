@@ -29,10 +29,11 @@ export function useClientsData() {
   }, [error]);
   
   // Get a single client by ID
-  const getClientByIdQuery = (id: number) => {
+  const getClientByIdQuery = (id: number | undefined) => {
     return useQuery({
       queryKey: ['client', id],
-      queryFn: () => getClientById(id),
+      queryFn: () => id ? getClientById(id) : Promise.resolve(null),
+      enabled: !!id, // Only run the query if id is provided
     });
   };
   

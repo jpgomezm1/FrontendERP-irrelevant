@@ -43,9 +43,11 @@ export function ProjectDetails({
   const { getProjectByIdQuery } = useProjectsData();
   const { data: project, isLoading: isLoadingProject, error: projectError } = getProjectByIdQuery(projectId);
   
+  // Only fetch client if we have a valid project with clientId
   const { getClientByIdQuery } = useClientsData();
-  const { data: client, isLoading: isLoadingClient, error: clientError } = project ? 
-    getClientByIdQuery(project.clientId) : { data: null, isLoading: false, error: null };
+  const { data: client, isLoading: isLoadingClient, error: clientError } = getClientByIdQuery(
+    project ? project.clientId : undefined
+  );
   
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);

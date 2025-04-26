@@ -25,18 +25,20 @@ export function useProjectsData() {
   }, [error]);
   
   // Get a project by ID
-  const getProjectByIdQuery = (id: number) => {
+  const getProjectByIdQuery = (id: number | undefined) => {
     return useQuery({
       queryKey: ['project', id],
-      queryFn: () => getProjectById(id),
+      queryFn: () => id ? getProjectById(id) : Promise.resolve(null),
+      enabled: !!id, // Only run the query if id is provided
     });
   };
   
   // Get projects by client ID
-  const getProjectsByClientIdQuery = (clientId: number) => {
+  const getProjectsByClientIdQuery = (clientId: number | undefined) => {
     return useQuery({
       queryKey: ['projects', clientId],
-      queryFn: () => getProjectsByClientId(clientId),
+      queryFn: () => clientId ? getProjectsByClientId(clientId) : Promise.resolve([]),
+      enabled: !!clientId, // Only run the query if clientId is provided
     });
   };
   
