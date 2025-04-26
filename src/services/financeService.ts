@@ -34,6 +34,8 @@ export interface CashFlowItem {
   sourceId?: number;
   balance?: number;
   currency: Currency;
+  originalCurrency?: Currency;
+  originalAmount?: number;
 }
 
 export async function getIncomes(): Promise<Income[]> {
@@ -157,6 +159,8 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     source: 'Manual Income',
     sourceId: income.id,
     currency: income.currency as Currency,
+    originalCurrency: income.currency,
+    originalAmount: income.amount
   }));
 
   // Convert paid project payments to cash flow items
@@ -174,6 +178,8 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     source: `Project Payment: ${payment.projects?.name || 'Unknown Project'}`,
     sourceId: payment.id,
     currency: payment.currency as Currency,
+    originalCurrency: payment.currency,
+    originalAmount: payment.amount
   }));
 
   // Convert paid expenses to cash flow items
@@ -189,6 +195,8 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     source: `Expense: ${expense.source_type === 'recurrente' ? 'Recurring' : 'Variable'}`,
     sourceId: expense.id,
     currency: expense.currency as Currency,
+    originalCurrency: expense.currency,
+    originalAmount: expense.amount
   }));
 
   // Combine all items

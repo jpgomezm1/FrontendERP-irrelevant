@@ -61,7 +61,7 @@ export const cashFlowColumns = [
             {row.original.type === "Ingreso" ? "+" : "-"}
             {formatCurrency(row.original.amount, "COP")}
           </span>
-          {wasConverted && (
+          {wasConverted && row.original.originalAmount && (
             <div className="text-xs text-muted-foreground mt-1">
               (Convertido de {formatCurrency(row.original.originalAmount, "USD")})
             </div>

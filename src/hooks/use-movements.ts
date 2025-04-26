@@ -1,6 +1,7 @@
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCashFlow } from "@/services/financeService";
-import { convertCurrency } from "@/lib/utils";
+import { convertCurrency, Currency } from "@/lib/utils";
 
 export interface MovementsFilter {
   startDate?: Date;
@@ -25,13 +26,12 @@ export const useMovements = (filters?: MovementsFilter) => {
   // Convert all amounts to COP and calculate aggregated metrics
   const convertedData = query.data?.map(item => ({
     ...item,
+    originalCurrency: item.currency === 'USD' ? 'USD' as Currency : undefined,
+    originalAmount: item.currency === 'USD' ? item.amount : undefined,
     amount: item.currency === 'USD' ? 
       convertCurrency(item.amount, 'USD', 'COP') : 
       item.amount,
-    // Keep original currency for reference, but all calculations will use the converted amount
-    originalCurrency: item.currency,
-    originalAmount: item.amount,
-    currency: 'COP' // Standardize to COP
+    currency: 'COP' as Currency // Standardize to COP
   }));
 
   const totalIncome = convertedData?.filter(item => item.type === 'Ingreso')
