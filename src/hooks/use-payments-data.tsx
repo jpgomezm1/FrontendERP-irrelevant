@@ -18,6 +18,7 @@ export function usePaymentsData() {
     return useQuery({
       queryKey: ['payments', 'client', clientId],
       queryFn: () => getPaymentsByClientId(clientId),
+      enabled: !!clientId
     });
   };
   
@@ -26,6 +27,7 @@ export function usePaymentsData() {
     return useQuery({
       queryKey: ['payments', 'project', projectId],
       queryFn: () => getPaymentsByProjectId(projectId),
+      enabled: !!projectId
     });
   };
   
