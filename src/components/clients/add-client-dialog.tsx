@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ClientStatus } from "@/types/clients";
+import { useClientsData } from "@/hooks/use-clients-data";
+import { useToast } from "@/components/ui/use-toast";
 
 const clientFormSchema = z.object({
   name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres" }),
@@ -70,6 +72,10 @@ export function AddClientDialog({
   onOpenChange,
   onClientAdded
 }: AddClientDialogProps) {
+  const { addClient } = useClientsData();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: {
@@ -81,16 +87,45 @@ export function AddClientDialog({
     },
   });
 
-  function onSubmit(data: ClientFormValues) {
+  async function onSubmit(data: ClientFormValues) {
     console.log("Añadiendo cliente:", data);
-    // Aquí iría la lógica para agregar el cliente
+    setIsSubmitting(true);
     
-    if (onClientAdded) {
-      onClientAdded();
+    try {
+      // Actually add the client to the database using the hook function
+      await addClient({
+        name: data.name,
+        contactName: data.contactName,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        taxId: data.taxId,
+        status: data.status,
+        startDate: data.startDate,
+        notes: data.notes
+      });
+      
+      toast({
+        title: "Cliente agregado",
+        description: "El cliente ha sido registrado exitosamente"
+      });
+      
+      if (onClientAdded) {
+        onClientAdded();
+      }
+      
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error al agregar cliente:", error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al agregar el cliente",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    form.reset();
-    onOpenChange(false);
   }
   
   return (
@@ -285,10 +320,13 @@ export function AddClientDialog({
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Guardando..." : "Guardar"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

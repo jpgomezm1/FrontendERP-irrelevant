@@ -12,13 +12,26 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { useClientsData } from "@/hooks/use-clients-data";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ClientsListProps {
   onClientSelect: (clientId: number) => void;
 }
 
 export function ClientsList({ onClientSelect }: ClientsListProps) {
-  const { clients, isLoading } = useClientsData();
+  const { clients, isLoading, error } = useClientsData();
+  const { toast } = useToast();
+  
+  // Show error toast if there's an error fetching clients
+  React.useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error al cargar clientes",
+        description: "No se pudieron cargar los clientes. Por favor, intente de nuevo.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
   
   const clientColumns = [
     {

@@ -85,7 +85,8 @@ export function useClientsData() {
     isLoading,
     error,
     getClientByIdQuery,
-    addClient: (client: Omit<Client, "id" | "documents">) => addClientMutation.mutate(client),
+    // Update the addClient function to use the mutation
+    addClient: (client: Omit<Client, "id" | "documents">) => addClientMutation.mutateAsync(client),
     updateClient: (id: number, data: Partial<Client>) => updateClientMutation.mutate({ id, data }),
     addDocument: (clientId: number, document: Omit<Client["documents"][0], "id">) => 
       addDocumentMutation.mutate({ clientId, document }),
