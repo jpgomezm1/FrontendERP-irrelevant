@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
@@ -159,7 +160,7 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     source: 'Manual Income',
     sourceId: income.id,
     currency: income.currency as Currency,
-    originalCurrency: income.currency,
+    originalCurrency: income.currency as Currency,
     originalAmount: income.amount
   }));
 
@@ -178,7 +179,7 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     source: `Project Payment: ${payment.projects?.name || 'Unknown Project'}`,
     sourceId: payment.id,
     currency: payment.currency as Currency,
-    originalCurrency: payment.currency,
+    originalCurrency: payment.currency as Currency,
     originalAmount: payment.amount
   }));
 
@@ -195,7 +196,7 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     source: `Expense: ${expense.source_type === 'recurrente' ? 'Recurring' : 'Variable'}`,
     sourceId: expense.id,
     currency: expense.currency as Currency,
-    originalCurrency: expense.currency,
+    originalCurrency: expense.currency as Currency,
     originalAmount: expense.amount
   }));
 
