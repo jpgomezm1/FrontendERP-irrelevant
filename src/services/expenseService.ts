@@ -196,6 +196,7 @@ export async function updateVariableExpense(expense: VariableExpense): Promise<V
 }
 
 export async function addRecurringExpense(expense: Omit<RecurringExpense, 'id' | 'isActive'>): Promise<RecurringExpense> {
+  // First, add the recurring expense to the database
   const { data, error } = await supabase
     .from('gastos_recurrentes')
     .insert([{
@@ -220,6 +221,14 @@ export async function addRecurringExpense(expense: Omit<RecurringExpense, 'id' |
     throw error;
   }
 
+  // After adding the recurring expense, trigger the edge function to generate the caused expenses
+  try {
+    await supabase.functions.invoke("recurring-expenses");
+  } catch (error) {
+    console.error("Error syncing recurring expenses after adding a new one:", error);
+    // Don't throw here, as the recurring expense was already created successfully
+  }
+
   return {
     id: data.id,
     description: data.description,
@@ -238,6 +247,7 @@ export async function addRecurringExpense(expense: Omit<RecurringExpense, 'id' |
 }
 
 export async function updateRecurringExpense(expense: RecurringExpense): Promise<RecurringExpense> {
+  // Update the recurring expense in the database
   const { data, error } = await supabase
     .from('gastos_recurrentes')
     .update({
@@ -261,6 +271,23 @@ export async function updateRecurringExpense(expense: RecurringExpense): Promise
   if (error) {
     console.error('Error updating recurring expense:', error);
     throw error;
+  }
+
+  // After updating the recurring expense, trigger the edge function to update the caused expenses
+  try {
+    // Remove future caused expenses and regenerate them
+    await supabase
+      .from('gastos_causados')
+      .delete()
+      .eq('source_type', 'recurrente')
+      .eq('source_id', expense.id)
+      .gt('date', new Date().toISOString().split('T')[0]);
+      
+    // Sync to generate new caused expenses based on the updated recurring expense
+    await supabase.functions.invoke("recurring-expenses");
+  } catch (error) {
+    console.error("Error syncing recurring expenses after update:", error);
+    // Don't throw here, as the recurring expense was already updated successfully
   }
 
   return {
@@ -293,6 +320,29 @@ export async function updateCausedExpenseStatus(id: number, status: 'pendiente' 
 
   if (error) {
     console.error('Error updating caused expense status:', error);
+    throw error;
+  }
+}
+
+// New function to sync recurring expenses manually
+export async function syncRecurringExpenses(): Promise<{ 
+  success: boolean, 
+  newExpensesCount: number 
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke("recurring-expenses");
+    
+    if (error) {
+      console.error("Error calling recurring-expenses function:", error);
+      throw error;
+    }
+    
+    return {
+      success: data.success,
+      newExpensesCount: data.details?.length || 0
+    };
+  } catch (error) {
+    console.error("Error syncing recurring expenses:", error);
     throw error;
   }
 }

@@ -42,7 +42,7 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
     queryFn: getCausedExpenses
   });
 
-  // Process summary data manually until we update the backend function
+  // Process summary data using only caused expenses
   const expenseSummary = React.useMemo(() => {
     if (isLoadingVariable || isLoadingRecurring || isLoadingCaused) {
       return null;
@@ -52,15 +52,19 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
       expense.date >= startDate && expense.date <= endDate
     );
 
+    // Calculate total expenses using only caused expenses
     const total_expenses = filteredCausedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    
+    // Calculate recurring vs variable expenses using the sourceType field
     const recurring_expenses = filteredCausedExpenses
       .filter(expense => expense.sourceType === 'recurrente')
       .reduce((sum, expense) => sum + expense.amount, 0);
+      
     const variable_expenses = filteredCausedExpenses
       .filter(expense => expense.sourceType === 'variable')
       .reduce((sum, expense) => sum + expense.amount, 0);
 
-    // Calculate top category
+    // Calculate top category based only on caused expenses
     const categoryAmounts = filteredCausedExpenses.reduce((acc, expense) => {
       acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
       return acc;
@@ -76,10 +80,13 @@ export const useExpensesData = (timeFrame: "month" | "quarter" | "year" = "month
       }
     });
 
-    // For now, we'll use simple placeholders for average and trend
+    // Calculate average monthly expense
     const avg_monthly_expense = total_expenses / 
       (timeFrame === "month" ? 1 : timeFrame === "quarter" ? 3 : 12);
-    const expense_trend = 0; // We'd need historical data for a real calculation
+    
+    // For trend calculation, we currently use a placeholder
+    // In a real implementation, we would compare with previous periods
+    const expense_trend = 0;
 
     return {
       total_expenses,

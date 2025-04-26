@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AccruedExpenses } from "@/components/expenses/accrued-expenses";
@@ -13,6 +13,9 @@ import { EditExpenseDialog } from "@/components/expenses/edit-expense-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VariableExpense, RecurringExpense } from "@/services/expenseService";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ExpensesPage = () => {
   const [timeFrame, setTimeFrame] = useState<"month" | "quarter" | "year">("month");
@@ -22,6 +25,42 @@ const ExpensesPage = () => {
   const [selectedRecurringExpense, setSelectedRecurringExpense] = useState<RecurringExpense | null>(null);
   const [isEditVariableOpen, setIsEditVariableOpen] = useState(false);
   const [isEditRecurringOpen, setIsEditRecurringOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  // Effect to sync recurring expenses on load and periodically
+  useEffect(() => {
+    // Sync on initial load
+    syncRecurringExpenses();
+    
+    // Set up interval to sync every 30 minutes
+    const intervalId = setInterval(syncRecurringExpenses, 30 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
+  // Function to call the edge function for syncing recurring expenses
+  const syncRecurringExpenses = async () => {
+    try {
+      // Call the Edge Function to sync recurring expenses
+      const { data, error } = await supabase.functions.invoke("recurring-expenses");
+      
+      if (error) {
+        console.error("Error syncing recurring expenses:", error);
+      } else {
+        // If any new caused expenses were created, refresh the data
+        if (data.details && data.details.length > 0) {
+          queryClient.invalidateQueries({ queryKey: ['caused-expenses'] });
+          toast({
+            title: "Gastos actualizados",
+            description: `Se han creado ${data.details.length} nuevos gastos causados.`
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error calling recurring-expenses function:", error);
+    }
+  };
 
   const handleEditVariableExpense = (expense: VariableExpense) => {
     setSelectedVariableExpense(expense);
@@ -59,11 +98,14 @@ const ExpensesPage = () => {
     {
       accessorKey: "amount",
       header: "Monto",
-      cell: ({ row }) => formatAmountInViewCurrency(row.getValue("amount"), row.original.currency),
-    },
-    {
-      accessorKey: "currency",
-      header: "Moneda Original",
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          {formatAmountInViewCurrency(row.getValue("amount"), row.original.currency)}
+          <span className="ml-1 text-xs text-muted-foreground">
+            ({row.original.currency})
+          </span>
+        </div>
+      ),
     },
     {
       accessorKey: "paymentMethod",
@@ -100,12 +142,15 @@ const ExpensesPage = () => {
     },
     {
       accessorKey: "amount",
-      header: "Monto",
-      cell: ({ row }) => formatAmountInViewCurrency(row.getValue("amount"), row.original.currency),
-    },
-    {
-      accessorKey: "currency",
-      header: "Moneda Original",
+      header: "Monto Mensual",
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          {formatCurrency(row.getValue("amount"), row.original.currency)}
+          <span className="ml-1 text-xs text-muted-foreground">
+            ({row.original.currency})
+          </span>
+        </div>
+      ),
     },
     {
       accessorKey: "frequency",
@@ -190,6 +235,14 @@ const ExpensesPage = () => {
               <SelectItem value="USD">Ver en USD</SelectItem>
             </SelectContent>
           </Select>
+          
+          <Button 
+            variant="outline"
+            onClick={syncRecurringExpenses}
+            size="sm"
+          >
+            Sincronizar Gastos Recurrentes
+          </Button>
         </div>
       </div>
 
