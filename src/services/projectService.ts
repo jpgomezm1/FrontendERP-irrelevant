@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Project, Document, ProjectStatus, DocumentType } from '@/types/clients';
+import { Project, Document, ProjectStatus, DocumentType, PaymentPlan } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
 
 type DbProject = Database['public']['Tables']['projects']['Row'];
@@ -10,7 +9,8 @@ export async function getProjects(): Promise<Project[]> {
     .from('projects')
     .select(`
       *,
-      clients (name)
+      clients (name),
+      payment_plans (*)
     `);
 
   if (error) {
@@ -18,24 +18,39 @@ export async function getProjects(): Promise<Project[]> {
     throw error;
   }
 
-  return (data || []).map(project => ({
-    id: project.id,
-    clientId: project.clientid,
-    name: project.name,
-    description: project.description,
-    startDate: new Date(project.startdate),
-    endDate: project.enddate ? new Date(project.enddate) : undefined,
-    status: project.status as ProjectStatus,
-    notes: project.notes || undefined,
-    clientName: project.clients?.name || "Cliente Desconocido",
-    documents: [],
-    payments: [],
-    paymentPlan: {
-      id: 0, // Default placeholder
-      projectId: project.id,
-      type: "Fee único" // Default placeholder
+  return (data || []).map(project => {
+    // Calculate project value based on payment plan
+    let projectValue = 0;
+    const paymentPlan = project.payment_plans?.[0];
+    
+    if (paymentPlan) {
+      // Add implementation fee to project value if exists
+      if (paymentPlan.implementation_fee_total) {
+        projectValue += Number(paymentPlan.implementation_fee_total);
+      }
+      
+      // Add 12 months of recurring fee if exists
+      if (paymentPlan.recurring_fee_amount) {
+        projectValue += Number(paymentPlan.recurring_fee_amount) * 12;
+      }
     }
-  }));
+
+    return {
+      id: project.id,
+      clientId: project.clientid,
+      name: project.name,
+      description: project.description,
+      startDate: new Date(project.startdate),
+      endDate: project.enddate ? new Date(project.enddate) : undefined,
+      status: project.status as ProjectStatus,
+      notes: project.notes || undefined,
+      clientName: project.clients?.name || "Cliente Desconocido",
+      documents: [],
+      payments: [],
+      totalValue: projectValue,
+      paymentPlan: processPaymentPlan(project.payment_plans?.[0])
+    };
+  });
 }
 
 export async function getProjectById(id: number): Promise<Project | null> {
@@ -43,7 +58,9 @@ export async function getProjectById(id: number): Promise<Project | null> {
     .from('projects')
     .select(`
       *,
-      documents(*)
+      clients (name),
+      documents(*),
+      payment_plans(*)
     `)
     .eq('id', id)
     .single();
@@ -63,6 +80,22 @@ export async function getProjectById(id: number): Promise<Project | null> {
     uploadDate: new Date(doc.uploaddate)
   }));
 
+  // Calculate project value based on payment plan
+  let projectValue = 0;
+  const paymentPlan = data.payment_plans?.[0];
+  
+  if (paymentPlan) {
+    // Add implementation fee to project value if exists
+    if (paymentPlan.implementation_fee_total) {
+      projectValue += Number(paymentPlan.implementation_fee_total);
+    }
+    
+    // Add 12 months of recurring fee if exists
+    if (paymentPlan.recurring_fee_amount) {
+      projectValue += Number(paymentPlan.recurring_fee_amount) * 12;
+    }
+  }
+
   return {
     id: data.id,
     clientId: data.clientid,
@@ -72,20 +105,21 @@ export async function getProjectById(id: number): Promise<Project | null> {
     endDate: data.enddate ? new Date(data.enddate) : undefined,
     status: data.status as ProjectStatus,
     notes: data.notes || undefined,
+    clientName: data.clients?.name || "Cliente Desconocido",
     documents,
     payments: [],
-    paymentPlan: {
-      id: 0, // Default placeholder
-      projectId: data.id,
-      type: "Fee único" // Default placeholder
-    }
+    totalValue: projectValue,
+    paymentPlan: processPaymentPlan(data.payment_plans?.[0])
   };
 }
 
 export async function getProjectsByClientId(clientId: number): Promise<Project[]> {
   const { data, error } = await supabase
     .from('projects')
-    .select('*')
+    .select(`
+      *,
+      payment_plans(*)
+    `)
     .eq('clientid', clientId);
 
   if (error) {
@@ -93,72 +127,174 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
     throw error;
   }
 
-  return (data || []).map(project => ({
-    id: project.id,
-    clientId: project.clientid,
-    name: project.name,
-    description: project.description,
-    startDate: new Date(project.startdate),
-    endDate: project.enddate ? new Date(project.enddate) : undefined,
-    status: project.status as ProjectStatus,
-    notes: project.notes || undefined,
-    documents: [],
-    payments: [],
-    paymentPlan: {
-      id: 0, // Default placeholder
-      projectId: project.id,
-      type: "Fee único" // Default placeholder
+  return (data || []).map(project => {
+    // Calculate project value based on payment plan
+    let projectValue = 0;
+    const paymentPlan = project.payment_plans?.[0];
+    
+    if (paymentPlan) {
+      // Add implementation fee to project value if exists
+      if (paymentPlan.implementation_fee_total) {
+        projectValue += Number(paymentPlan.implementation_fee_total);
+      }
+      
+      // Add 12 months of recurring fee if exists
+      if (paymentPlan.recurring_fee_amount) {
+        projectValue += Number(paymentPlan.recurring_fee_amount) * 12;
+      }
     }
-  }));
-}
 
-export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments' | 'paymentPlan'>): Promise<Project> {
-  try {
-    // Ensure numeric values are properly parsed
-    const payload = {
-      clientid: project.clientId,
+    return {
+      id: project.id,
+      clientId: project.clientid,
       name: project.name,
       description: project.description,
-      startdate: project.startDate.toISOString().split('T')[0],
-      enddate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
-      status: project.status,
-      notes: project.notes
+      startDate: new Date(project.startdate),
+      endDate: project.enddate ? new Date(project.enddate) : undefined,
+      status: project.status as ProjectStatus,
+      notes: project.notes || undefined,
+      documents: [],
+      payments: [],
+      totalValue: projectValue,
+      paymentPlan: processPaymentPlan(project.payment_plans?.[0])
     };
-    
-    console.log("Sending project data to Supabase:", payload);
-    
-    const { data, error } = await supabase
+  });
+}
+
+function processPaymentPlan(dbPaymentPlan: any): PaymentPlan {
+  if (!dbPaymentPlan) {
+    return {
+      id: 0,
+      projectId: 0,
+      type: "Fee único"
+    };
+  }
+  
+  const paymentPlan: PaymentPlan = {
+    id: dbPaymentPlan.id,
+    projectId: dbPaymentPlan.project_id,
+    type: dbPaymentPlan.type,
+  };
+
+  // Add implementation fee if exists
+  if (dbPaymentPlan.implementation_fee_total) {
+    paymentPlan.implementationFee = {
+      total: Number(dbPaymentPlan.implementation_fee_total),
+      currency: dbPaymentPlan.implementation_fee_currency,
+      installments: dbPaymentPlan.implementation_fee_installments
+    };
+  }
+
+  // Add recurring fee if exists
+  if (dbPaymentPlan.recurring_fee_amount) {
+    paymentPlan.recurringFee = {
+      amount: Number(dbPaymentPlan.recurring_fee_amount),
+      currency: dbPaymentPlan.recurring_fee_currency,
+      frequency: dbPaymentPlan.recurring_fee_frequency,
+      dayOfCharge: dbPaymentPlan.recurring_fee_day_of_charge,
+    };
+
+    // Add optional fields if they exist
+    if (dbPaymentPlan.recurring_fee_grace_periods) {
+      paymentPlan.recurringFee.gracePeriods = dbPaymentPlan.recurring_fee_grace_periods;
+    }
+
+    if (dbPaymentPlan.recurring_fee_discount_periods) {
+      paymentPlan.recurringFee.discountPeriods = dbPaymentPlan.recurring_fee_discount_periods;
+      paymentPlan.recurringFee.discountPercentage = dbPaymentPlan.recurring_fee_discount_percentage;
+    }
+  }
+
+  return paymentPlan;
+}
+
+export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments' | 'paymentPlan' | 'totalValue'>, paymentPlanData?: any): Promise<Project> {
+  try {
+    // Begin a transaction
+    const { data: projectData, error: projectError } = await supabase
       .from('projects')
-      .insert([payload])
+      .insert([{
+        clientid: project.clientId,
+        name: project.name,
+        description: project.description,
+        startdate: project.startDate.toISOString().split('T')[0],
+        enddate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+        status: project.status,
+        notes: project.notes
+      }])
       .select()
       .single();
 
-    if (error) {
-      console.error('Error adding project:', error);
-      throw new Error(`Error al agregar proyecto: ${error.message}`);
+    if (projectError) {
+      console.error('Error adding project:', projectError);
+      throw new Error(`Error al agregar proyecto: ${projectError.message}`);
     }
 
-    if (!data) {
+    if (!projectData) {
       throw new Error('No se recibieron datos del servidor al crear el proyecto');
     }
 
-    console.log("Project created successfully:", data);
+    console.log("Project created successfully:", projectData);
+    
+    // If payment plan data is provided, create the payment plan
+    if (paymentPlanData) {
+      const paymentPlanPayload = {
+        project_id: projectData.id,
+        type: paymentPlanData.planType,
+      };
+      
+      // Add implementation fee fields if applicable
+      if (['Fee único', 'Fee por cuotas', 'Mixto'].includes(paymentPlanData.planType)) {
+        paymentPlanPayload.implementation_fee_total = paymentPlanData.implementationFeeTotal;
+        paymentPlanPayload.implementation_fee_currency = paymentPlanData.implementationFeeCurrency;
+        paymentPlanPayload.implementation_fee_installments = paymentPlanData.implementationFeeInstallments;
+      }
+      
+      // Add recurring fee fields if applicable
+      if (['Suscripción periódica', 'Mixto'].includes(paymentPlanData.planType)) {
+        paymentPlanPayload.recurring_fee_amount = paymentPlanData.recurringFeeAmount;
+        paymentPlanPayload.recurring_fee_currency = paymentPlanData.recurringFeeCurrency;
+        paymentPlanPayload.recurring_fee_frequency = paymentPlanData.recurringFeeFrequency;
+        paymentPlanPayload.recurring_fee_day_of_charge = paymentPlanData.recurringFeeDayOfCharge;
+        paymentPlanPayload.recurring_fee_grace_periods = paymentPlanData.recurringFeeGracePeriods || 0;
+        paymentPlanPayload.recurring_fee_discount_periods = paymentPlanData.recurringFeeDiscountPeriods || 0;
+        paymentPlanPayload.recurring_fee_discount_percentage = paymentPlanData.recurringFeeDiscountPercentage || 0;
+      }
+      
+      console.log("Creating payment plan:", paymentPlanPayload);
+      
+      const { data: paymentPlanData, error: paymentPlanError } = await supabase
+        .from('payment_plans')
+        .insert([paymentPlanPayload])
+        .select()
+        .single();
+        
+      if (paymentPlanError) {
+        console.error('Error creating payment plan:', paymentPlanError);
+        // Still continue as the project was created
+      } else {
+        console.log("Payment plan created successfully:", paymentPlanData);
+        // The trigger will automatically generate payments
+      }
+    }
 
+    // Return the created project
     return {
-      id: data.id,
-      clientId: data.clientid,
-      name: data.name,
-      description: data.description,
-      startDate: new Date(data.startdate),
-      endDate: data.enddate ? new Date(data.enddate) : undefined,
-      status: data.status as ProjectStatus,
-      notes: data.notes || undefined,
+      id: projectData.id,
+      clientId: projectData.clientid,
+      name: projectData.name,
+      description: projectData.description,
+      startDate: new Date(projectData.startdate),
+      endDate: projectData.enddate ? new Date(projectData.enddate) : undefined,
+      status: projectData.status as ProjectStatus,
+      notes: projectData.notes || undefined,
       documents: [],
       payments: [],
+      totalValue: 0, // Will be filled later
       paymentPlan: {
-        id: 0, // Default placeholder
-        projectId: data.id,
-        type: "Fee único" // Default placeholder
+        id: 0, // Will be filled later
+        projectId: projectData.id,
+        type: paymentPlanData?.planType || "Fee único"
       }
     };
   } catch (error: any) {

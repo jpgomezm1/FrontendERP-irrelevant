@@ -21,7 +21,6 @@ export type PaymentStatus = "Pagado" | "Pendiente" | "Vencido";
 
 // Frecuencia de pago
 export type PaymentFrequency = 
-  | "Única"
   | "Semanal"
   | "Quincenal"
   | "Mensual"
@@ -106,9 +105,12 @@ export interface Payment {
   status: PaymentStatus;
   invoiceNumber?: string;
   invoiceUrl?: string;
+  documentUrl?: string; // URL del documento de respaldo (comprobante o factura)
   type: "Implementación" | "Recurrente";
   installmentNumber?: number; // Número de cuota
   notes?: string;
+  projectName?: string;
+  clientName?: string;
 }
 
 // Interface para proyecto
@@ -123,5 +125,7 @@ export interface Project {
   paymentPlan: PaymentPlan;
   payments: Payment[];
   documents: Document[];
+  totalValue: number; // Valor total del proyecto
   notes?: string;
+  clientName?: string;
 }

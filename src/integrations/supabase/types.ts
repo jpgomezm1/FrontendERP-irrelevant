@@ -309,12 +309,72 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_plans: {
+        Row: {
+          created_at: string | null
+          id: number
+          implementation_fee_currency: string | null
+          implementation_fee_installments: number | null
+          implementation_fee_total: number | null
+          project_id: number
+          recurring_fee_amount: number | null
+          recurring_fee_currency: string | null
+          recurring_fee_day_of_charge: number | null
+          recurring_fee_discount_percentage: number | null
+          recurring_fee_discount_periods: number | null
+          recurring_fee_frequency: string | null
+          recurring_fee_grace_periods: number | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          implementation_fee_currency?: string | null
+          implementation_fee_installments?: number | null
+          implementation_fee_total?: number | null
+          project_id: number
+          recurring_fee_amount?: number | null
+          recurring_fee_currency?: string | null
+          recurring_fee_day_of_charge?: number | null
+          recurring_fee_discount_percentage?: number | null
+          recurring_fee_discount_periods?: number | null
+          recurring_fee_frequency?: string | null
+          recurring_fee_grace_periods?: number | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          implementation_fee_currency?: string | null
+          implementation_fee_installments?: number | null
+          implementation_fee_total?: number | null
+          project_id?: number
+          recurring_fee_amount?: number | null
+          recurring_fee_currency?: string | null
+          recurring_fee_day_of_charge?: number | null
+          recurring_fee_discount_percentage?: number | null
+          recurring_fee_discount_periods?: number | null
+          recurring_fee_frequency?: string | null
+          recurring_fee_grace_periods?: number | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
           clientid: number
           currency: string
           date: string
+          document_url: string | null
           id: number
           installmentnumber: number | null
           invoicenumber: string | null
@@ -330,6 +390,7 @@ export type Database = {
           clientid: number
           currency: string
           date: string
+          document_url?: string | null
           id?: number
           installmentnumber?: number | null
           invoicenumber?: string | null
@@ -345,6 +406,7 @@ export type Database = {
           clientid?: number
           currency?: string
           date?: string
+          document_url?: string | null
           id?: number
           installmentnumber?: number | null
           invoicenumber?: string | null

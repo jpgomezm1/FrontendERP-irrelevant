@@ -44,11 +44,14 @@ export function useProjectsData() {
   
   // Add a new project
   const addProjectMutation = useMutation({
-    mutationFn: addProject,
+    mutationFn: ({ project, paymentPlanData }: { 
+      project: Omit<Project, "id" | "documents" | "payments" | "paymentPlan" | "totalValue">;
+      paymentPlanData?: any; 
+    }) => addProject(project, paymentPlanData),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      if (variables.clientId) {
-        queryClient.invalidateQueries({ queryKey: ['projects', variables.clientId] });
+      if (variables.project.clientId) {
+        queryClient.invalidateQueries({ queryKey: ['projects', variables.project.clientId] });
       }
       toast.success('Proyecto agregado exitosamente');
     },
@@ -126,8 +129,10 @@ export function useProjectsData() {
     error,
     getProjectByIdQuery,
     getProjectsByClientIdQuery,
-    addProject: (project: Omit<Project, "id" | "documents" | "payments" | "paymentPlan">) => 
-      addProjectMutation.mutateAsync(project),
+    addProject: (
+      project: Omit<Project, "id" | "documents" | "payments" | "paymentPlan" | "totalValue">, 
+      paymentPlanData?: any
+    ) => addProjectMutation.mutateAsync({ project, paymentPlanData }),
     updateProject: (id: number, data: Partial<Project>) => 
       updateProjectMutation.mutate({ id, data }),
     deleteProject: (id: number) => deleteProjectMutation.mutateAsync(id),

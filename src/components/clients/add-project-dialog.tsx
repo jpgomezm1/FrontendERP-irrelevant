@@ -148,10 +148,34 @@ export function AddProjectDialog({
         notes: data.notes,
       };
       
-      console.log("Proyecto procesado para guardar:", projectToAdd);
+      // Prepare payment plan data
+      const paymentPlanData = {
+        planType: data.planType,
+      };
       
-      // Add the project to the database
-      await addProject(projectToAdd);
+      // Add implementation fee data if applicable
+      if (showImplementationFee) {
+        paymentPlanData.implementationFeeTotal = data.implementationFeeTotal;
+        paymentPlanData.implementationFeeCurrency = data.implementationFeeCurrency;
+        paymentPlanData.implementationFeeInstallments = data.implementationFeeInstallments;
+      }
+      
+      // Add recurring fee data if applicable
+      if (showRecurringFee) {
+        paymentPlanData.recurringFeeAmount = data.recurringFeeAmount;
+        paymentPlanData.recurringFeeCurrency = data.recurringFeeCurrency;
+        paymentPlanData.recurringFeeFrequency = data.recurringFeeFrequency;
+        paymentPlanData.recurringFeeDayOfCharge = data.recurringFeeDayOfCharge;
+        paymentPlanData.recurringFeeGracePeriods = data.recurringFeeGracePeriods;
+        paymentPlanData.recurringFeeDiscountPeriods = data.recurringFeeDiscountPeriods;
+        paymentPlanData.recurringFeeDiscountPercentage = data.recurringFeeDiscountPercentage;
+      }
+      
+      console.log("Proyecto procesado para guardar:", projectToAdd);
+      console.log("Plan de pagos para guardar:", paymentPlanData);
+      
+      // Add the project to the database with payment plan
+      await addProject(projectToAdd, paymentPlanData);
       
       if (onProjectAdded) {
         onProjectAdded();
@@ -373,6 +397,9 @@ export function AddProjectDialog({
                         <SelectItem value="Mixto">Mixto (implementación + recurrente)</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormDescription>
+                      Las cuotas de pago se generarán automáticamente según el plan seleccionado
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -449,6 +476,9 @@ export function AddProjectDialog({
                             <SelectItem value="12">12 cuotas</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Se crearán automáticamente {field.value} pagos programados
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -523,7 +553,6 @@ export function AddProjectDialog({
                               <SelectItem value="Trimestral">Trimestral</SelectItem>
                               <SelectItem value="Semestral">Semestral</SelectItem>
                               <SelectItem value="Anual">Anual</SelectItem>
-                              <SelectItem value="Personalizada">Personalizada</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -567,6 +596,9 @@ export function AddProjectDialog({
                               onChange={(e) => field.onChange(parseInt(e.target.value))}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Número de periodos antes de iniciar los cobros
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -586,6 +618,9 @@ export function AddProjectDialog({
                               onChange={(e) => field.onChange(parseInt(e.target.value))}
                             />
                           </FormControl>
+                          <FormDescription>
+                            Número de periodos con precio especial
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}

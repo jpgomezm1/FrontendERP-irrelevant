@@ -1,6 +1,6 @@
 
 import { Payment, PaymentStatus } from '@/types/clients';
-import { getAllPayments, getPaymentsByClientId, getPaymentsByProjectId, addPayment, updatePaymentStatus } from '@/services/paymentService';
+import { getAllPayments, getPaymentsByClientId, getPaymentsByProjectId, addPayment, updatePaymentStatus, generatePaymentInstallments } from '@/services/paymentService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -48,19 +48,66 @@ export function usePaymentsData() {
   
   // Update payment status
   const updatePaymentStatusMutation = useMutation({
-    mutationFn: ({ paymentId, status, paidDate }: { 
+    mutationFn: ({ paymentId, status, paidDate, documentUrl }: { 
       paymentId: number; 
       status: PaymentStatus;
       paidDate?: Date;
-    }) => updatePaymentStatus(paymentId, status, paidDate),
+      documentUrl?: string;
+    }) => updatePaymentStatus(paymentId, status, paidDate, documentUrl),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['payments', 'project'] });
       queryClient.invalidateQueries({ queryKey: ['project-payments'] });
       toast.success('Estado de pago actualizado');
     },
     onError: (error) => {
       console.error('Error updating payment status:', error);
       toast.error('Error al actualizar el estado del pago');
+    },
+  });
+  
+  // Generate payment installments
+  const generateInstallmentsMutation = useMutation({
+    mutationFn: ({ 
+      projectId,
+      clientId,
+      planType,
+      implementationParams,
+      recurringParams
+    }: { 
+      projectId: number;
+      clientId: number;
+      planType: string;
+      implementationParams?: {
+        total: number;
+        currency: string;
+        installments: number;
+      };
+      recurringParams?: {
+        amount: number;
+        currency: string;
+        frequency: string;
+        dayOfCharge: number;
+        gracePeriods?: number;
+        discountPeriods?: number;
+        discountPercentage?: number;
+      };
+    }) => generatePaymentInstallments(
+      projectId, 
+      clientId, 
+      planType,
+      implementationParams,
+      recurringParams
+    ),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['payments', 'project', variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-payments'] });
+      toast.success('Cuotas generadas exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error generating installments:', error);
+      toast.error('Error al generar las cuotas de pago');
     },
   });
   
@@ -72,7 +119,32 @@ export function usePaymentsData() {
     getPaymentsByProjectIdQuery,
     addPayment: (payment: Omit<Payment, "id">) => 
       addPaymentMutation.mutate(payment),
-    updatePaymentStatus: (paymentId: number, status: PaymentStatus, paidDate?: Date) => 
-      updatePaymentStatusMutation.mutateAsync({ paymentId, status, paidDate }),
+    updatePaymentStatus: (paymentId: number, status: PaymentStatus, paidDate?: Date, documentUrl?: string) => 
+      updatePaymentStatusMutation.mutateAsync({ paymentId, status, paidDate, documentUrl }),
+    generateInstallments: (
+      projectId: number,
+      clientId: number,
+      planType: string,
+      implementationParams?: {
+        total: number;
+        currency: string;
+        installments: number;
+      },
+      recurringParams?: {
+        amount: number;
+        currency: string;
+        frequency: string;
+        dayOfCharge: number;
+        gracePeriods?: number;
+        discountPeriods?: number;
+        discountPercentage?: number;
+      }
+    ) => generateInstallmentsMutation.mutateAsync({
+      projectId,
+      clientId,
+      planType,
+      implementationParams,
+      recurringParams
+    }),
   };
 }
