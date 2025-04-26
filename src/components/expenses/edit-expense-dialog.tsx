@@ -17,7 +17,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { updateVariableExpense, updateRecurringExpense, VariableExpense, RecurringExpense } from "@/services/expenseService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
-import { EXPENSE_CATEGORIES } from "@/lib/constants";
+import { EXPENSE_CATEGORIES, PAYMENT_METHODS, EXPENSE_FREQUENCIES } from "@/lib/constants";
 
 const expenseSchema = z.object({
   id: z.number(),
@@ -41,17 +41,17 @@ const expenseSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 interface EditExpenseDialogProps {
-  isRecurring: boolean;
-  expense: VariableExpense | RecurringExpense;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  expense: VariableExpense | RecurringExpense;
+  isRecurring?: boolean;
 }
 
 export function EditExpenseDialog({ 
-  isRecurring, 
-  expense, 
   open, 
-  onOpenChange 
+  onOpenChange, 
+  expense,
+  isRecurring = false 
 }: EditExpenseDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -97,7 +97,6 @@ export function EditExpenseDialog({
     defaultValues: mapExpenseToFormValues()
   });
 
-  // Update the form values when the expense changes
   useEffect(() => {
     form.reset(mapExpenseToFormValues());
   }, [expense]);
@@ -180,7 +179,7 @@ export function EditExpenseDialog({
         <DialogHeader>
           <DialogTitle>Editar {isRecurring ? "Gasto Recurrente" : "Gasto"}</DialogTitle>
           <DialogDescription>
-            Modifique los detalles del {isRecurring ? "gasto recurrente" : "gasto"} a continuación.
+            Actualice los detalles del {isRecurring ? "gasto recurrente" : "gasto"} a continuación.
           </DialogDescription>
         </DialogHeader>
 
@@ -294,7 +293,6 @@ export function EditExpenseDialog({
                     <FormLabel>Método de Pago</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
                       value={field.value}
                     >
                       <FormControl>
@@ -303,7 +301,7 @@ export function EditExpenseDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {paymentMethods.map((method) => (
+                        {PAYMENT_METHODS.map((method) => (
                           <SelectItem key={method} value={method}>
                             {method}
                           </SelectItem>
@@ -372,7 +370,6 @@ export function EditExpenseDialog({
                       <FormLabel>Frecuencia</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
                         value={field.value}
                       >
                         <FormControl>
@@ -381,7 +378,7 @@ export function EditExpenseDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {frequencies.map((freq) => (
+                          {EXPENSE_FREQUENCIES.map((freq) => (
                             <SelectItem key={freq.value} value={freq.value}>
                               {freq.label}
                             </SelectItem>

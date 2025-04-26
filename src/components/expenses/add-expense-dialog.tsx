@@ -17,7 +17,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { addVariableExpense, addRecurringExpense } from "@/services/expenseService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
-import { EXPENSE_CATEGORIES } from "@/lib/constants";
+import { EXPENSE_CATEGORIES, PAYMENT_METHODS, EXPENSE_FREQUENCIES } from "@/lib/constants";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "La descripción es requerida"),
@@ -246,7 +246,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {paymentMethods.map((method) => (
+                        {PAYMENT_METHODS.map((method) => (
                           <SelectItem key={method} value={method}>
                             {method}
                           </SelectItem>
@@ -322,7 +322,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {frequencies.map((freq) => (
+                          {EXPENSE_FREQUENCIES.map((freq) => (
                             <SelectItem key={freq.value} value={freq.value}>
                               {freq.label}
                             </SelectItem>
