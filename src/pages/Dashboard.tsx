@@ -124,7 +124,7 @@ const Dashboard = () => {
               <StatsCard
                 title="Gastos"
                 value={formatCurrency(kpis.burnRate.value, "COP")}
-                trend={kpis.burnRate.trend === "up" ? "down" : "up"}
+                trend={kpis.burnRate.trend === "up" ? "down" : (kpis.burnRate.trend === "down" ? "up" : "neutral")}
                 trendValue={`${metrics.monthlyVariation.expense.percentage > 0 ? "+" : ""}${metrics.monthlyVariation.expense.percentage.toFixed(1)}%`}
                 icon={<CreditCard className="h-4 w-4" />}
               />
