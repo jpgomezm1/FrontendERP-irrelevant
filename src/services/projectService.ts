@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Project, Document, ProjectStatus, DocumentType } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
@@ -177,6 +176,28 @@ export async function updateProject(id: number, updatedData: Partial<Project>): 
 
   if (error) {
     console.error('Error updating project:', error);
+    throw error;
+  }
+}
+
+export async function deleteProject(id: number): Promise<void> {
+  const { error: docsError } = await supabase
+    .from('documents')
+    .delete()
+    .eq('projectid', id);
+  
+  if (docsError) {
+    console.error('Error deleting project documents:', docsError);
+    throw docsError;
+  }
+  
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting project:', error);
     throw error;
   }
 }

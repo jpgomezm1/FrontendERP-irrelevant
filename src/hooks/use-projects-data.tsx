@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Project, Document } from '@/types/clients';
-import { getProjects, getProjectById, getProjectsByClientId, addProject, updateProject, addProjectDocument, removeProjectDocument } from '@/services/projectService';
+import { getProjects, getProjectById, getProjectsByClientId, addProject, updateProject, addProjectDocument, removeProjectDocument, deleteProject } from '@/services/projectService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -70,6 +70,19 @@ export function useProjectsData() {
     },
   });
   
+  // Delete project
+  const deleteProjectMutation = useMutation({
+    mutationFn: deleteProject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Proyecto eliminado exitosamente');
+    },
+    onError: (error) => {
+      console.error('Error deleting project:', error);
+      toast.error('Error al eliminar proyecto');
+    },
+  });
+  
   // Add a document to a project
   const addDocumentMutation = useMutation({
     mutationFn: ({ projectId, document }: { 
@@ -110,6 +123,7 @@ export function useProjectsData() {
       addProjectMutation.mutateAsync(project),
     updateProject: (id: number, data: Partial<Project>) => 
       updateProjectMutation.mutate({ id, data }),
+    deleteProject: (id: number) => deleteProjectMutation.mutateAsync(id),
     addDocument: (projectId: number, document: Omit<Document, "id">) => 
       addDocumentMutation.mutate({ projectId, document }),
     removeDocument: (projectId: number, documentId: number) => 

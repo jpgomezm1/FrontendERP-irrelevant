@@ -32,8 +32,10 @@ export function usePaymentsData() {
   // Add a new payment
   const addPaymentMutation = useMutation({
     mutationFn: addPayment,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['payments', 'project', variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: ['payments', 'client', variables.clientId] });
       toast.success('Pago registrado exitosamente');
     },
     onError: (error) => {
@@ -49,8 +51,9 @@ export function usePaymentsData() {
       status: PaymentStatus;
       paidDate?: Date;
     }) => updatePaymentStatus(paymentId, status, paidDate),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
+      queryClient.invalidateQueries({ queryKey: ['project-payments'] });
       toast.success('Estado de pago actualizado');
     },
     onError: (error) => {
@@ -68,6 +71,6 @@ export function usePaymentsData() {
     addPayment: (payment: Omit<Payment, "id">) => 
       addPaymentMutation.mutate(payment),
     updatePaymentStatus: (paymentId: number, status: PaymentStatus, paidDate?: Date) => 
-      updatePaymentStatusMutation.mutate({ paymentId, status, paidDate }),
+      updatePaymentStatusMutation.mutateAsync({ paymentId, status, paidDate }),
   };
 }

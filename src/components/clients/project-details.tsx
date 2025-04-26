@@ -16,7 +16,8 @@ import {
   Plus, 
   CreditCard, 
   Edit,
-  Calendar
+  Calendar,
+  Trash2
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useProjectsData } from "@/hooks/use-projects-data";
@@ -28,6 +29,7 @@ import { ProjectPayments } from "./project-payments";
 import { AddDocumentDialog } from "./add-document-dialog";
 import { EditProjectDialog } from "./edit-project-dialog";
 import { AddPaymentDialog } from "./add-payment-dialog";
+import { DeleteProjectDialog } from "./delete-project-dialog";
 
 interface ProjectDetailsProps {
   projectId: number;
@@ -52,6 +54,7 @@ export function ProjectDetails({
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const isLoading = isLoadingProject || isLoadingClient;
   const hasError = projectError || clientError;
@@ -166,6 +169,21 @@ export function ProjectDetails({
             <CreditCard className="mr-2 h-4 w-4" />
             Ver Finanzas
           </Button>
+          <Button 
+            variant="outline" 
+            className="border-destructive text-destructive hover:bg-destructive/10"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Eliminar
+          </Button>
+          <DeleteProjectDialog
+            projectId={project.id}
+            projectName={project.name}
+            isOpen={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onDeleted={onBack}
+          />
         </div>
       </div>
 

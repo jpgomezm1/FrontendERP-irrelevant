@@ -44,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Currency } from "@/lib/utils";
 import { PaymentStatus } from "@/types/clients";
+import { usePaymentsData } from "@/hooks/use-payments-data";
 
 const paymentFormSchema = z.object({
   amount: z.number().min(1, { message: "El monto debe ser mayor a 0" }),
@@ -77,6 +78,7 @@ export function AddPaymentDialog({
   onPaymentAdded,
 }: AddPaymentDialogProps) {
   const { toast } = useToast();
+  const { addPayment } = usePaymentsData();
   
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
@@ -97,21 +99,40 @@ export function AddPaymentDialog({
   const watchStatus = form.watch("status");
   const watchType = form.watch("type");
   
-  function onSubmit(data: PaymentFormValues) {
-    console.log("Registrando pago:", data);
-    // Aquí iría la lógica para añadir el pago
-    
-    toast({
-      title: "Pago registrado",
-      description: "El pago ha sido registrado correctamente.",
-    });
-    
-    if (onPaymentAdded) {
-      onPaymentAdded();
+  async function onSubmit(data: PaymentFormValues) {
+    try {
+      console.log("Registrando pago:", data);
+      
+      const paymentData = {
+        projectId,
+        clientId,
+        amount: data.amount,
+        currency: data.currency,
+        date: data.date,
+        paidDate: data.status === "Pagado" ? data.paidDate || new Date() : undefined,
+        status: data.status,
+        type: data.type,
+        installmentNumber: data.type === "Implementación" ? data.installmentNumber : undefined,
+        invoiceNumber: data.status === "Pagado" ? data.invoiceNumber : undefined,
+        notes: data.notes || undefined
+      };
+      
+      await addPayment(paymentData);
+      
+      if (onPaymentAdded) {
+        onPaymentAdded();
+      }
+      
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error al registrar el pago:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo registrar el pago",
+        variant: "destructive"
+      });
     }
-    
-    form.reset();
-    onOpenChange(false);
   }
   
   return (
