@@ -29,6 +29,8 @@ export interface CashFlowItem {
   isRecurring?: boolean;
   isScheduled?: boolean;
   client?: string;
+  source?: string;
+  sourceId?: number;
   balance?: number;
   currency: Currency;
 }
@@ -100,6 +102,9 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
 }
 
 export async function getCashFlow(): Promise<CashFlowItem[]> {
+  console.log('Fetching cash flow data from all sources');
+  
+  // 1. Get all incomes from the incomes table
   const { data: incomesData, error: incomesError } = await supabase
     .from('incomes')
     .select('*')
@@ -110,9 +115,35 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     throw incomesError;
   }
 
-  // Get expenses from our new service
-  const causedExpensesData = await getCausedExpenses();
+  // 2. Get all paid project payments 
+  const { data: paidPaymentsData, error: paymentsError } = await supabase
+    .from('payments')
+    .select(`
+      *,
+      projects (name),
+      clients (name)
+    `)
+    .eq('status', 'Pagado')
+    .order('paiddate', { ascending: false });
 
+  if (paymentsError) {
+    console.error('Error fetching paid payments for cash flow:', paymentsError);
+    throw paymentsError;
+  }
+
+  // 3. Get expenses with status "pagado" (only paid expenses)
+  const { data: paidExpensesData, error: expensesError } = await supabase
+    .from('gastos_causados')
+    .select('*')
+    .eq('status', 'pagado')
+    .order('date', { ascending: false });
+
+  if (expensesError) {
+    console.error('Error fetching paid expenses for cash flow:', expensesError);
+    throw expensesError;
+  }
+
+  // Convert manual incomes to cash flow items
   const incomeItems: CashFlowItem[] = (incomesData || []).map(income => ({
     id: income.id,
     date: new Date(income.date),
@@ -122,24 +153,45 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     paymentMethod: income.paymentmethod,
     amount: income.amount,
     client: income.client || undefined,
+    source: 'Manual Income',
+    sourceId: income.id,
     currency: income.currency as Currency,
   }));
 
-  // Convert caused expenses to cash flow items
-  const expenseItems: CashFlowItem[] = causedExpensesData.map(expense => ({
-    id: expense.id,
-    date: expense.date,
+  // Convert paid project payments to cash flow items
+  const paymentItems: CashFlowItem[] = (paidPaymentsData || []).map(payment => ({
+    id: payment.id + 100000, // Add offset to avoid ID collisions
+    date: new Date(payment.paiddate || payment.date), // Use paid date if available
+    description: `Payment for ${payment.projects?.name || 'Project'} - ${payment.type === 'Implementación' ? 
+      `Implementation Fee${payment.installmentnumber ? ` (Installment ${payment.installmentnumber})` : ''}` : 
+      'Recurring Fee'}`,
+    type: 'Ingreso',
+    category: payment.type === 'Implementación' ? 'Ingreso Implementación' : 'Ingreso Recurrente',
+    paymentMethod: 'Transferencia', // Default payment method
+    amount: payment.amount,
+    client: payment.clients?.name || undefined,
+    source: `Project Payment: ${payment.projects?.name || 'Unknown Project'}`,
+    sourceId: payment.id,
+    currency: payment.currency as Currency,
+  }));
+
+  // Convert paid expenses to cash flow items
+  const expenseItems: CashFlowItem[] = (paidExpensesData || []).map(expense => ({
+    id: expense.id + 200000, // Add offset to avoid ID collisions
+    date: new Date(expense.paid_date || expense.date),
     description: expense.description,
     type: 'Gasto',
     category: expense.category,
-    paymentMethod: expense.paymentMethod,
+    paymentMethod: expense.paymentmethod,
     amount: expense.amount,
-    isRecurring: expense.sourceType === 'recurrente',
-    currency: expense.currency,
+    isRecurring: expense.source_type === 'recurrente',
+    source: `Expense: ${expense.source_type === 'recurrente' ? 'Recurring' : 'Variable'}`,
+    sourceId: expense.id,
+    currency: expense.currency as Currency,
   }));
 
-  // Combine and sort
-  const combined = [...incomeItems, ...expenseItems].sort((a, b) => 
+  // Combine all items and sort by date (most recent first)
+  const combined = [...incomeItems, ...paymentItems, ...expenseItems].sort((a, b) => 
     b.date.getTime() - a.date.getTime()
   );
 
@@ -148,7 +200,7 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
   return combined.map(item => {
     balance += item.type === 'Ingreso' ? item.amount : -item.amount;
     return { ...item, balance };
-  }).reverse();
+  });
 }
 
 export async function getMonthlyData() {
@@ -206,7 +258,6 @@ export async function getClientIncomes() {
   return data || [];
 }
 
-// This function is no longer needed as we use getCausedExpenses from expenseService
 export async function getAccruedExpenses(): Promise<CausedExpense[]> {
   return getCausedExpenses();
 }

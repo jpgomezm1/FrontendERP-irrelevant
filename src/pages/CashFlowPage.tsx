@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -25,68 +24,87 @@ const CashFlowPage = () => {
     setAnalysisTimeFrame(value);
   };
 
-  if (isLoadingAnalytics || isLoadingMovements) {
-    return <div>Cargando datos...</div>;
+  if (isLoadingMovements) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
-  // Check if analytics data is available
-  if (!analytics || analytics.length === 0) {
-    return <div>No hay datos disponibles para mostrar. Por favor, agregue movimientos de caja.</div>;
-  }
+  // Calculate financial metrics from movements data
+  const calculateFinancialMetrics = () => {
+    if (!movements || movements.length === 0) {
+      return {
+        totalIncome: 0,
+        totalExpenses: 0,
+        currentBalance: 0,
+        averageMonthlyIncome: 0,
+        averageMonthlyExpenses: 0,
+        runway: 0,
+        breakEvenDate: new Date()
+      };
+    }
 
-  const monthlyData = analytics?.map(item => ({
-    name: `${item.month} ${item.year}`,
-    ingresos: item.ingresos,
-    gastos: item.gastos,
-    balance: item.balance
-  })) || [];
-
-  const categoryExpenses = analytics?.map(item => ({
-    name: item.category,
-    value: item.category_amount
-  })) || [];
-
-  const clientIncome = analytics?.map(item => ({
-    name: item.client,
-    value: item.client_amount
-  })) || [];
-
-  // Calculate totals for metrics
-  const currentMonth = monthlyData[0] || { ingresos: 0, gastos: 0, balance: 0 };
-  const averages = {
-    income: monthlyData.reduce((sum, item) => sum + item.ingresos, 0) / (monthlyData.length || 1),
-    expenses: monthlyData.reduce((sum, item) => sum + item.gastos, 0) / (monthlyData.length || 1)
+    const incomes = movements.filter(m => m.type === 'Ingreso');
+    const expenses = movements.filter(m => m.type === 'Gasto');
+    
+    // Group by month for average calculations
+    const monthlyIncomes = new Map();
+    const monthlyExpenses = new Map();
+    
+    incomes.forEach(income => {
+      const monthKey = `${income.date.getFullYear()}-${income.date.getMonth()}`;
+      const current = monthlyIncomes.get(monthKey) || 0;
+      monthlyIncomes.set(monthKey, current + income.amount);
+    });
+    
+    expenses.forEach(expense => {
+      const monthKey = `${expense.date.getFullYear()}-${expense.date.getMonth()}`;
+      const current = monthlyExpenses.get(monthKey) || 0;
+      monthlyExpenses.set(monthKey, current + expense.amount);
+    });
+    
+    const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
+    const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
+    const currentBalance = totalIncome - totalExpenses;
+    
+    const averageMonthlyIncome = monthlyIncomes.size > 0 
+      ? Array.from(monthlyIncomes.values()).reduce((sum, val) => sum + val, 0) / monthlyIncomes.size
+      : 0;
+      
+    const averageMonthlyExpenses = monthlyExpenses.size > 0
+      ? Array.from(monthlyExpenses.values()).reduce((sum, val) => sum + val, 0) / monthlyExpenses.size
+      : 0;
+    
+    // Calculate runway (how many months until cash runs out)
+    const monthlyNet = averageMonthlyIncome - averageMonthlyExpenses;
+    const runway = monthlyNet >= 0 ? Infinity : Math.abs(currentBalance / monthlyNet);
+    
+    // Calculate break-even date
+    const breakEvenDate = new Date();
+    if (runway !== Infinity) {
+      breakEvenDate.setMonth(breakEvenDate.getMonth() + Math.floor(runway));
+    } else {
+      breakEvenDate.setFullYear(breakEvenDate.getFullYear() + 100); // Effectively "never"
+    }
+    
+    return {
+      totalIncome,
+      totalExpenses,
+      currentBalance,
+      averageMonthlyIncome,
+      averageMonthlyExpenses,
+      runway: isFinite(runway) ? runway : 999,
+      breakEvenDate
+    };
   };
 
-  // Calculate runway and break-even date
-  const runway = averages.expenses > 0 ? currentMonth.balance / (averages.expenses > averages.income ? averages.expenses - averages.income : 1) : 0;
-  const breakEvenDate = new Date();
-  breakEvenDate.setMonth(breakEvenDate.getMonth() + Math.floor(runway));
+  const metrics = calculateFinancialMetrics();
 
   const handleExportAnalysis = () => {
     console.log("Exporting financial analysis...");
     // Implementation for generating PDF or Excel
-  };
-
-  // Create a complete metrics object that includes all required properties
-  const dashboardMetrics = {
-    burnRate: averages.expenses,
-    mrr: averages.income,
-    mrrProjected: averages.income * 1.1, // Projected MRR (10% growth target)
-    topClientPercentage: clientIncome.length > 0 ? (clientIncome[0].value / currentMonth.ingresos) * 100 : 0,
-    monthlyVariation: {
-      income: { 
-        value: monthlyData.length > 1 ? monthlyData[0].ingresos - monthlyData[1].ingresos : 0, 
-        percentage: monthlyData.length > 1 ? ((monthlyData[0].ingresos / monthlyData[1].ingresos) - 1) * 100 : 0 
-      },
-      expense: { 
-        value: monthlyData.length > 1 ? monthlyData[0].gastos - monthlyData[1].gastos : 0, 
-        percentage: monthlyData.length > 1 ? ((monthlyData[0].gastos / monthlyData[1].gastos) - 1) * 100 : 0
-      }
-    },
-    structuralExpenses: categoryExpenses[0]?.value || 0,
-    avoidableExpenses: categoryExpenses.slice(1).reduce((sum, item) => sum + item.value, 0) * 0.3, // Assuming 30% of non-primary expenses are avoidable
-    ytdProfit: monthlyData.reduce((sum, item) => sum + item.balance, 0),
   };
 
   return (
@@ -97,16 +115,16 @@ const CashFlowPage = () => {
       />
 
       <FinancialMetrics
-        totalIncome={currentMonth.ingresos}
-        totalExpenses={currentMonth.gastos}
-        currentBalance={currentMonth.balance}
-        averageMonthlyIncome={averages.income}
-        averageMonthlyExpenses={averages.expenses}
-        runway={runway}
-        breakEvenDate={breakEvenDate}
+        totalIncome={metrics.totalIncome}
+        totalExpenses={metrics.totalExpenses}
+        currentBalance={metrics.currentBalance}
+        averageMonthlyIncome={metrics.averageMonthlyIncome}
+        averageMonthlyExpenses={metrics.averageMonthlyExpenses}
+        runway={metrics.runway}
+        breakEvenDate={metrics.breakEvenDate}
       />
 
-      <Tabs defaultValue="dashboard" className="mt-6">
+      <Tabs defaultValue="movimientos" className="mt-6">
         <div className="flex justify-between items-center mb-2">
           <TabsList>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -122,56 +140,117 @@ const CashFlowPage = () => {
           </Button>
         </div>
 
-        <TabsContent value="dashboard">
-          <FinancialDashboard 
-            metrics={dashboardMetrics}
-            monthlyData={monthlyData}
-            clientData={clientIncome}
-            expenseData={categoryExpenses}
-            expenseHeatMap={[]} // This could be implemented in a future iteration
-            onTimeFrameChange={handleTimeFrameChange}
-            timeFrame={analysisTimeFrame}
-          />
-        </TabsContent>
-
         <TabsContent value="movimientos">
           <MovementsTab data={movements || []} />
         </TabsContent>
 
+        <TabsContent value="dashboard">
+          {analytics && (
+            <FinancialDashboard 
+              metrics={{
+                burnRate: metrics.averageMonthlyExpenses,
+                mrr: metrics.averageMonthlyIncome,
+                mrrProjected: metrics.averageMonthlyIncome * 1.1, // 10% growth target
+                topClientPercentage: analytics[0]?.client_amount / metrics.totalIncome * 100 || 0,
+                monthlyVariation: {
+                  income: { 
+                    value: 0, 
+                    percentage: 0
+                  },
+                  expense: { 
+                    value: 0, 
+                    percentage: 0
+                  }
+                },
+                structuralExpenses: analytics[0]?.category_amount || 0,
+                avoidableExpenses: 0,
+                ytdProfit: metrics.currentBalance,
+              }}
+              monthlyData={analytics?.map(item => ({
+                name: `${item.month} ${item.year}`,
+                ingresos: item.ingresos,
+                gastos: item.gastos,
+                balance: item.balance
+              })) || []}
+              clientData={analytics?.map(item => ({
+                name: item.client,
+                value: item.client_amount
+              })) || []}
+              expenseData={analytics?.map(item => ({
+                name: item.category,
+                value: item.category_amount
+              })) || []}
+              expenseHeatMap={[]}
+              onTimeFrameChange={handleTimeFrameChange}
+              timeFrame={analysisTimeFrame}
+            />
+          )}
+        </TabsContent>
+
         <TabsContent value="analisis">
-          <AnalysisCharts
-            monthlyData={monthlyData}
-            categoryExpenses={categoryExpenses}
-            clientIncome={clientIncome}
-          />
+          {analytics && (
+            <AnalysisCharts
+              monthlyData={analytics?.map(item => ({
+                name: `${item.month} ${item.year}`,
+                ingresos: item.ingresos,
+                gastos: item.gastos,
+                balance: item.balance
+              })) || []}
+              categoryExpenses={analytics?.map(item => ({
+                name: item.category,
+                value: item.category_amount
+              })) || []}
+              clientIncome={analytics?.map(item => ({
+                name: item.client,
+                value: item.client_amount
+              })) || []}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="proyecciones">
-          <FinancialProjections
-            currentData={monthlyData[0]}
-            projectionData={generateProjections(monthlyData)}
-            metrics={{
-              burnRate: averages.expenses,
-              mrr: averages.income,
-              structuralExpenses: categoryExpenses[0]?.value || 0,
-              ytdProfit: monthlyData.reduce((sum, item) => sum + item.balance, 0)
-            }}
-          />
+          {analytics && (
+            <FinancialProjections
+              currentData={analytics[0] ? {
+                name: `${analytics[0].month} ${analytics[0].year}`,
+                ingresos: analytics[0].ingresos,
+                gastos: analytics[0].gastos,
+                balance: analytics[0].balance
+              } : { name: 'Current', ingresos: 0, gastos: 0, balance: 0 }}
+              projectionData={generateProjections(analytics?.map(item => ({
+                name: `${item.month} ${item.year}`,
+                ingresos: item.ingresos,
+                gastos: item.gastos,
+                balance: item.balance
+              })) || [])}
+              metrics={{
+                burnRate: metrics.averageMonthlyExpenses,
+                mrr: metrics.averageMonthlyIncome,
+                structuralExpenses: analytics[0]?.category_amount || 0,
+                ytdProfit: metrics.currentBalance
+              }}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="clientes">
-          <ClientAnalytics
-            clientProfitability={generateClientProfitability(clientIncome)}
-            growingClients={[]}
-            decliningClients={[]}
-            mrrChanges={{
-              newMrr: 0,
-              churn: 0,
-              netMrr: 0
-            }}
-            timeFrame={analysisTimeFrame}
-            onTimeFrameChange={handleTimeFrameChange}
-          />
+          {analytics && (
+            <ClientAnalytics
+              clientProfitability={generateClientProfitability(analytics?.map(item => ({
+                name: item.client,
+                value: item.client_amount
+              })) || [])}
+              growingClients={[]}
+              decliningClients={[]}
+              mrrChanges={{
+                newMrr: 0,
+                churn: 0,
+                netMrr: 0
+              }}
+              timeFrame={analysisTimeFrame}
+              onTimeFrameChange={handleTimeFrameChange}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

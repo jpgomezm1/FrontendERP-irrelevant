@@ -54,13 +54,20 @@ export const cashFlowColumns = [
         }
       >
         {row.original.type === "Ingreso" ? "+" : "-"}
-        {formatCurrency(row.original.amount)}
+        {formatCurrency(row.original.amount, row.original.currency)}
       </span>
+    ),
+  },
+  {
+    accessorKey: "source",
+    header: "Fuente",
+    cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground">{row.original.source || "N/A"}</span>
     ),
   },
   {
     accessorKey: "balance",
     header: "Saldo",
-    cell: ({ row }) => formatCurrency(row.original.balance),
+    cell: ({ row }) => formatCurrency(row.original.balance || 0, row.original.currency),
   },
 ];
