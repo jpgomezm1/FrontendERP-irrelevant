@@ -28,7 +28,7 @@ export const CurrencyInput = React.forwardRef<
   ...props 
 }, ref) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Handle either currency format - remove all non-digit characters except decimal point
+    // Remove all non-digit characters except decimal point
     const rawValue = e.target.value.replace(/[^\d.]/g, "");
     
     // Handle decimal precision based on currency
@@ -53,7 +53,7 @@ export const CurrencyInput = React.forwardRef<
     }
   };
 
-  // Format for display based on selected currency, without any upper limit restrictions
+  // Format for display based on selected currency, without any restrictions on the number size
   const displayValue = value !== undefined && value !== null
     ? new Intl.NumberFormat(CURRENCIES[currency].locale, {
         minimumFractionDigits: CURRENCIES[currency].decimalPlaces,
