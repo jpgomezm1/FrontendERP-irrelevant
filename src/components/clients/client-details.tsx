@@ -20,11 +20,11 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useClientsData } from "@/hooks/use-clients-data";
-import { DocumentsList } from "./documents-list";
+import { DocumentsList } from "@/components/documents/documents-list"; // Updated import
 import { ClientProjects } from "./client-projects";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { AddDocumentDialog } from "./add-document-dialog";
+import { DocumentUploadDialog } from "@/components/documents/document-upload-dialog"; // New import
 import { EditClientDialog } from "./edit-client-dialog";
 
 interface ClientDetailsProps {
@@ -41,9 +41,13 @@ export function ClientDetails({
   onProjectSelect 
 }: ClientDetailsProps) {
   const { getClientByIdQuery } = useClientsData();
-  const { data: client, isLoading, error } = getClientByIdQuery(clientId);
+  const { data: client, isLoading, error, refetch } = getClientByIdQuery(clientId);
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const handleDocumentAdded = () => {
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -163,22 +167,25 @@ export function ClientDetails({
                   Documentos administrativos del cliente
                 </CardDescription>
               </div>
-              <AddDocumentDialog 
-                clientId={client.id}
+              <DocumentUploadDialog
+                entityType="client"
+                entityId={client.id}
                 open={documentDialogOpen}
                 onOpenChange={setDocumentDialogOpen}
+                onSuccess={handleDocumentAdded}
               >
                 <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Añadir Documento
                 </Button>
-              </AddDocumentDialog>
+              </DocumentUploadDialog>
             </CardHeader>
             <CardContent>
               <DocumentsList 
                 documents={client.documents || []} 
                 entityType="client"
                 entityId={client.id}
+                onDeleted={handleDocumentAdded}
               />
             </CardContent>
           </Card>

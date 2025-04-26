@@ -20,15 +20,19 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
     setIsUploading(true);
     
     try {
+      // Choose the right bucket based on entity type
       const bucketId = entityType === "client" ? "client-documents" : "project-documents";
+      // Create a path that follows the folder structure: clients/{clientId}/{filename} or projects/{projectId}/{filename}
       const filePath = `${entityType}s/${entityId}/${file.name}`;
       
+      // Upload the actual file to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucketId)
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
+      // Get the public URL for the uploaded file
       const { data: urlData } = await supabase.storage
         .from(bucketId)
         .getPublicUrl(filePath);
@@ -47,6 +51,7 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
         [`${entityType}id`]: entityId
       };
 
+      // Save the document metadata to the database
       const { data: docData, error: docError } = await supabase
         .from("documents")
         .insert([documentToInsert])
@@ -79,6 +84,7 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
   const deleteDocument = async (documentId: number, fileUrl: string) => {
     try {
       const bucketId = entityType === "client" ? "client-documents" : "project-documents";
+      // Extract the file path from the URL by removing the bucket part
       const filePath = fileUrl.split(`${bucketId}/`)[1];
 
       // Delete file from storage

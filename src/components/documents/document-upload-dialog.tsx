@@ -37,9 +37,7 @@ const formSchema = z.object({
     "Factura",
     "Otro"
   ] as const),
-  file: z.any().refine((file) => file instanceof File, {
-    message: "El archivo es requerido",
-  }),
+  file: z.instanceof(File, { message: "El archivo es requerido" })
 });
 
 interface DocumentUploadDialogProps {
@@ -62,14 +60,22 @@ export function DocumentUploadDialog({
   const { isUploading, uploadDocument } = useDocumentUpload({ entityType, entityId });
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      type: "Otro" as DocumentType
+    }
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const result = await uploadDocument(values.file, values.type as DocumentType, values.name);
-    if (result) {
-      form.reset();
-      onOpenChange(false);
-      if (onSuccess) onSuccess();
+    try {
+      const result = await uploadDocument(values.file, values.type, values.name);
+      if (result) {
+        form.reset();
+        onOpenChange(false);
+        if (onSuccess) onSuccess();
+      }
+    } catch (error) {
+      console.error("Error in document upload:", error);
     }
   };
 
@@ -129,15 +135,14 @@ export function DocumentUploadDialog({
             <FormField
               control={form.control}
               name="file"
-              render={({ field: { onChange, value, ...rest } }) => (
+              render={({ field }) => (
                 <FormItem>
                   <FormLabel>Archivo</FormLabel>
                   <FormControl>
                     <FileUpload
-                      onFileSelect={(file) => onChange(file)}
+                      onFileSelect={(file) => field.onChange(file)}
                       acceptedFileTypes=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                       maxFileSizeMB={10}
-                      {...rest}
                     />
                   </FormControl>
                   <FormMessage />
