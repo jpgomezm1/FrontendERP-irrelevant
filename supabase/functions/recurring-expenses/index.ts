@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -70,7 +71,7 @@ Deno.serve(async (req) => {
         );
         
         if (!alreadyExists) {
-          // Insert the new caused expense
+          // Insert the new caused expense with the original expense amount (not multiplied)
           const { data: newCaused, error: insertError } = await supabaseClient
             .from('gastos_causados')
             .insert({
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
               source_id: expense.id,
               date: dateString,
               description: expense.description,
-              amount: expense.amount,
+              amount: expense.amount, // Use the original amount as configured, not multiplied
               category: expense.category,
               paymentmethod: expense.paymentmethod,
               currency: expense.currency,
