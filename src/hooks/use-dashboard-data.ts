@@ -35,30 +35,35 @@ export const useDashboardData = () => {
     }
   });
 
-  // Fetch expense categories
+  // Fetch expense categories from gastos_causados
   const { data: expenseData = [], isLoading: isLoadingExpenses } = useQuery({
     queryKey: ['expense-categories'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_expense_by_category');
+      const { data, error } = await supabase
+        .from('gastos_causados')
+        .select('category, amount')
+        .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        .lte('date', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString());
+
       if (error) throw error;
-      return data || [];
+
+      // Group by category and sum amounts
+      const categories = data.reduce((acc: { [key: string]: number }, curr) => {
+        if (!acc[curr.category]) {
+          acc[curr.category] = 0;
+        }
+        acc[curr.category] += Number(curr.amount);
+        return acc;
+      }, {});
+
+      return Object.entries(categories).map(([category, total]) => ({
+        category,
+        total
+      }));
     }
   });
 
-  // Fetch active clients count
-  const { data: activeClientsCount = 0, isLoading: isLoadingActiveClients } = useQuery({
-    queryKey: ['active-clients'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact' })
-        .eq('status', 'active');
-      if (error) throw error;
-      return count || 0;
-    }
-  });
-
-  // Calculate metrics
+  // Calculate metrics using gastos_causados for expenses
   const currentMonth = monthlyData[0] || { total_income: 0, total_expense: 0 };
   const previousMonth = monthlyData[1] || { total_income: 0, total_expense: 0 };
 
@@ -81,7 +86,7 @@ export const useDashboardData = () => {
         percentage: calculateVariation(currentMonth.total_expense, previousMonth.total_expense)
       }
     },
-    activeClients: activeClientsCount
+    activeClients: clientData.length
   };
 
   return {
@@ -89,6 +94,6 @@ export const useDashboardData = () => {
     monthlyData,
     clientData,
     expenseData,
-    isLoading: isLoadingMonthly || isLoadingClients || isLoadingExpenses || isLoadingActiveClients
+    isLoading: isLoadingMonthly || isLoadingClients || isLoadingExpenses
   };
 };

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
@@ -149,14 +148,33 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
 
 export async function getMonthlyData() {
   const { data, error } = await supabase
-    .rpc('get_monthly_summary');
+    .from('gastos_causados')
+    .select('date, amount')
+    .order('date', { ascending: false });
 
   if (error) {
     console.error('Error fetching monthly data:', error);
     throw error;
   }
 
-  return data || [];
+  // Group by month and calculate totals
+  const monthlyTotals = data.reduce((acc: any, expense) => {
+    const date = new Date(expense.date);
+    const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+    
+    if (!acc[monthKey]) {
+      acc[monthKey] = {
+        month: date.toLocaleString('default', { month: 'long' }),
+        year: date.getFullYear(),
+        total_expense: 0
+      };
+    }
+    
+    acc[monthKey].total_expense += Number(expense.amount);
+    return acc;
+  }, {});
+
+  return Object.values(monthlyTotals);
 }
 
 export async function getCategoryExpenses() {
