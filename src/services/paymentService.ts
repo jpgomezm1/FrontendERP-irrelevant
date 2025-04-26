@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Payment, PaymentStatus } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
@@ -182,10 +183,10 @@ export async function updatePaymentStatus(
     if (status === 'Pagado') {
       console.log('Creating income record for payment:', payment);
       
-      // Create income record
+      // Create income record with the required paymentmethod field
       const { error: incomeError } = await supabase
         .from('incomes')
-        .insert([{
+        .insert({
           description: `Payment for Project ${payment.projects?.name} - ${payment.type === 'Implementación' ? 
             `Implementation Fee${payment.installmentnumber ? ` (Installment ${payment.installmentnumber})` : ''}` : 
             'Recurring Fee'}`,
@@ -194,9 +195,10 @@ export async function updatePaymentStatus(
           type: 'Project Payment',
           client: payment.projects?.clients?.name,
           currency: payment.currency,
+          paymentmethod: 'Transferencia', // Default payment method
           receipt: documentUrl,
           notes: `Automatic income record created from project payment #${payment.id}`
-        }]);
+        });
       
       if (incomeError) {
         console.error('Error creating income record:', incomeError);
