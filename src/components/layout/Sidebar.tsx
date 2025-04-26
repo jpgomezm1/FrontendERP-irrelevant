@@ -1,4 +1,3 @@
-
 import React, { Dispatch, SetStateAction } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -9,11 +8,11 @@ import {
   Users,
   TrendingUp,
   BarChart4,
-  X,
-  LogOut
+  X
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "../ui/button";
+import { LogoutDialog } from "../auth/LogoutDialog";
 
 interface SidebarProps {
   open: boolean;
@@ -83,10 +82,7 @@ export function Sidebar({ open, setOpen }: SidebarProps) {
         </SidebarLink>
       </nav>
       <div className="mt-auto p-4 border-t border-sidebar-border">
-        <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white hover:bg-irrelevant-800">
-          <LogOut className="mr-2 h-5 w-5" />
-          Cerrar Sesión
-        </Button>
+        <LogoutDialog />
       </div>
     </aside>
   );
