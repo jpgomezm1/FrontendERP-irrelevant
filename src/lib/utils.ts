@@ -32,9 +32,13 @@ export function convertCurrency(
 ): number {
   if (fromCurrency === toCurrency) return amount;
   
-  let amountInUSD = fromCurrency === "USD" ? amount : amount / 4000;
+  if (fromCurrency === "USD" && toCurrency === "COP") {
+    return amount * 4000;
+  } else if (fromCurrency === "COP" && toCurrency === "USD") {
+    return amount / 4000;
+  }
   
-  return toCurrency === "USD" ? amountInUSD : amountInUSD * 4000;
+  return amount;
 }
 
 export function getCurrencySymbol(currency: Currency = "COP"): string {

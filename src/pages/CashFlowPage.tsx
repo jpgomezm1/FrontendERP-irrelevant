@@ -44,7 +44,7 @@ const CashFlowPage = () => {
     <div>
       <PageHeader
         title="Flujo de Caja"
-        description="Control, seguimiento y análisis financiero para decisiones estratégicas"
+        description="Control, seguimiento y análisis financiero en COP para decisiones estratégicas"
       />
 
       <div className="flex justify-between items-center mb-6">

@@ -72,15 +72,15 @@ export function DashboardTab({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ingresos Totales
+              Ingresos Totales (COP)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalIncome)}
+              {formatCurrency(totalIncome, "COP")}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Promedio mensual: {formatCurrency(avgIncome)}
+              Promedio mensual: {formatCurrency(avgIncome, "COP")}
             </p>
           </CardContent>
         </Card>
@@ -88,15 +88,15 @@ export function DashboardTab({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Gastos Totales
+              Gastos Totales (COP)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalExpense)}
+              {formatCurrency(totalExpense, "COP")}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Promedio mensual: {formatCurrency(avgExpense)}
+              Promedio mensual: {formatCurrency(avgExpense, "COP")}
             </p>
           </CardContent>
         </Card>
@@ -104,12 +104,12 @@ export function DashboardTab({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Balance Actual
+              Balance Actual (COP)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${currentBalance >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(currentBalance)}
+              {formatCurrency(currentBalance, "COP")}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {currentBalance >= 0
@@ -152,7 +152,7 @@ export function DashboardTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Evolución Reciente</CardTitle>
+            <CardTitle>Evolución Reciente (COP)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -163,8 +163,8 @@ export function DashboardTab({
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <XAxis dataKey="name" />
-                    <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
                     <Legend />
                     <Bar dataKey="ingresos" name="Ingresos" fill="#4ade80" />
                     <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
@@ -181,7 +181,7 @@ export function DashboardTab({
 
         <Card>
           <CardHeader>
-            <CardTitle>Ingresos vs Gastos</CardTitle>
+            <CardTitle>Ingresos vs Gastos (COP)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -207,7 +207,7 @@ export function DashboardTab({
                         />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -223,7 +223,7 @@ export function DashboardTab({
       {/* Monthly Averages */}
       <Card>
         <CardHeader>
-          <CardTitle>Promedios Mensuales</CardTitle>
+          <CardTitle>Promedios Mensuales (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[200px]">
@@ -234,8 +234,8 @@ export function DashboardTab({
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <XAxis dataKey="name" />
-                  <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
                   <Legend />
                   <Bar dataKey="ingresos" name="Ingresos Promedio" fill="#4ade80" />
                   <Bar dataKey="gastos" name="Gastos Promedio" fill="#f87171" />

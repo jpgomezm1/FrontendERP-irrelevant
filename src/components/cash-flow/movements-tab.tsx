@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -25,26 +24,18 @@ export function MovementsTab({ data }: MovementsTabProps) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  // Get current date for filtering
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Calculate the total balance (current cash)
   const currentBalance = data.length > 0 ? data[0].balance || 0 : 0;
 
-  // Get unique categories for filtering
   const categories = Array.from(new Set(data.map(item => item.category))).sort();
 
   const filteredData = data.filter((item) => {
     return (
-      // Type filter
       (typeFilter === "all" || item.type === typeFilter) &&
-      
-      // Category filter
       (categoryFilter === "all" || item.category === categoryFilter) &&
-      
-      // Date filter
       (dateFilter === "all" ||
         (dateFilter === "today" && item.date >= today) ||
         (dateFilter === "thisMonth" && item.date >= firstDayOfMonth) ||
@@ -55,8 +46,7 @@ export function MovementsTab({ data }: MovementsTabProps) {
   });
 
   const handleExportData = () => {
-    // Create CSV content
-    const headers = ["Date", "Description", "Type", "Category", "Payment Method", "Amount", "Balance"];
+    const headers = ["Date", "Description", "Type", "Category", "Payment Method", "Amount (COP)", "Original Amount", "Original Currency", "Balance"];
     const rows = filteredData.map(item => [
       item.date.toLocaleDateString(),
       item.description,
@@ -64,12 +54,13 @@ export function MovementsTab({ data }: MovementsTabProps) {
       item.category,
       item.paymentMethod,
       item.amount.toString(),
+      item.originalAmount?.toString() || item.amount.toString(),
+      item.originalCurrency || 'COP',
       item.balance?.toString() || "0"
     ]);
     
     const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
     
-    // Create and download the file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -85,14 +76,13 @@ export function MovementsTab({ data }: MovementsTabProps) {
       <CardHeader>
         <CardTitle>Movimientos de Caja</CardTitle>
         <CardDescription>
-          Registro detallado de ingresos y gastos
+          Registro detallado de ingresos y gastos (COP)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Cash Balance Display */}
         <div className="bg-muted p-6 rounded-lg mb-6">
           <div className="text-sm text-muted-foreground mb-1">Saldo Actual de Caja</div>
-          <div className="text-3xl font-bold">{formatCurrency(currentBalance)}</div>
+          <div className="text-3xl font-bold">{formatCurrency(currentBalance, "COP")}</div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">

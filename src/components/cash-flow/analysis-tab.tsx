@@ -54,7 +54,7 @@ export function AnalysisTab({ monthlyData, isLoading }: AnalysisTabProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Análisis Mensual</CardTitle>
+          <CardTitle>Análisis Mensual (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
@@ -65,8 +65,8 @@ export function AnalysisTab({ monthlyData, isLoading }: AnalysisTabProps) {
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
                 <Legend />
                 <Bar dataKey="ingresos" name="Ingresos" fill="#4ade80" />
                 <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
@@ -78,7 +78,7 @@ export function AnalysisTab({ monthlyData, isLoading }: AnalysisTabProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Detalle Mensual</CardTitle>
+          <CardTitle>Detalle Mensual (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -96,17 +96,17 @@ export function AnalysisTab({ monthlyData, isLoading }: AnalysisTabProps) {
                 <TableRow key={index}>
                   <TableCell className="font-medium">{month.name}</TableCell>
                   <TableCell className="text-green-600">
-                    {formatCurrency(month.ingresos)}
+                    {formatCurrency(month.ingresos, "COP")}
                   </TableCell>
                   <TableCell className="text-red-600">
-                    {formatCurrency(month.gastos)}
+                    {formatCurrency(month.gastos, "COP")}
                   </TableCell>
                   <TableCell
                     className={
                       month.balance >= 0 ? "text-green-600" : "text-red-600"
                     }
                   >
-                    {formatCurrency(month.balance)}
+                    {formatCurrency(month.balance, "COP")}
                   </TableCell>
                   <TableCell>
                     <span

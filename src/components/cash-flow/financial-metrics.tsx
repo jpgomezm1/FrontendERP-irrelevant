@@ -33,19 +33,19 @@ export function FinancialMetrics({
     <div className="grid gap-4 md:grid-cols-4">
       <StatsCard
         title="Ingresos Totales"
-        value={formatCurrency(totalIncome)}
+        value={formatCurrency(totalIncome, "COP")}
         icon={<ArrowDown className="h-4 w-4 text-green-500" />}
         className="bg-green-50"
       />
       <StatsCard
         title="Gastos Totales"
-        value={formatCurrency(totalExpenses)}
+        value={formatCurrency(totalExpenses, "COP")}
         icon={<ArrowUp className="h-4 w-4 text-red-500" />}
         className="bg-red-50"
       />
       <StatsCard
-        title="Saldo Actual"
-        value={formatCurrency(currentBalance)}
+        title="Saldo Actual (COP)"
+        value={formatCurrency(currentBalance, "COP")}
         icon={<Wallet className="h-4 w-4" />}
         className={currentBalance >= 0 ? "bg-blue-50" : "bg-amber-50"}
       />
@@ -58,14 +58,14 @@ export function FinancialMetrics({
       />
       <StatsCard
         title="Ingreso Mensual Promedio"
-        value={formatCurrency(averageMonthlyIncome)}
+        value={formatCurrency(averageMonthlyIncome, "COP")}
         icon={<TrendingUp className="h-4 w-4 text-green-500" />}
         description="Últimos 6 meses"
         className="bg-green-50"
       />
       <StatsCard
         title="Gasto Mensual Promedio"
-        value={formatCurrency(averageMonthlyExpenses)}
+        value={formatCurrency(averageMonthlyExpenses, "COP")}
         icon={<TrendingDown className="h-4 w-4 text-red-500" />}
         description="Últimos 6 meses"
         className="bg-red-50"

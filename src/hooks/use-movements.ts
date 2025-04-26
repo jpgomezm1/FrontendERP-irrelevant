@@ -1,6 +1,6 @@
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCashFlow } from "@/services/financeService";
+import { convertCurrency } from "@/lib/utils";
 
 export interface MovementsFilter {
   startDate?: Date;
@@ -15,7 +15,6 @@ export const useMovements = (filters?: MovementsFilter) => {
   const query = useQuery({
     queryKey: ['cash-flow-movements', filters],
     queryFn: () => getCashFlow(filters),
-    // Refetch when any of these data sources change
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
   
@@ -23,24 +22,35 @@ export const useMovements = (filters?: MovementsFilter) => {
     queryClient.invalidateQueries({ queryKey: ['cash-flow-movements'] });
   };
 
-  // Calculate aggregated metrics
-  const totalIncome = query.data?.filter(item => item.type === 'Ingreso')
+  // Convert all amounts to COP and calculate aggregated metrics
+  const convertedData = query.data?.map(item => ({
+    ...item,
+    amount: item.currency === 'USD' ? 
+      convertCurrency(item.amount, 'USD', 'COP') : 
+      item.amount,
+    // Keep original currency for reference, but all calculations will use the converted amount
+    originalCurrency: item.currency,
+    originalAmount: item.amount,
+    currency: 'COP' // Standardize to COP
+  }));
+
+  const totalIncome = convertedData?.filter(item => item.type === 'Ingreso')
     .reduce((sum, item) => sum + item.amount, 0) || 0;
     
-  const totalExpense = query.data?.filter(item => item.type === 'Gasto')
+  const totalExpense = convertedData?.filter(item => item.type === 'Gasto')
     .reduce((sum, item) => sum + item.amount, 0) || 0;
     
   const currentBalance = totalIncome - totalExpense;
 
   // Calculate monthly averages for last 6 months
   const calculateMonthlyAverages = () => {
-    if (!query.data?.length) return { avgIncome: 0, avgExpense: 0 };
+    if (!convertedData?.length) return { avgIncome: 0, avgExpense: 0 };
     
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
     // Group by month
-    const monthlyData = query.data
+    const monthlyData = convertedData
       .filter(item => item.date >= sixMonthsAgo)
       .reduce((acc, item) => {
         const monthKey = `${item.date.getFullYear()}-${item.date.getMonth()}`;
@@ -75,11 +85,11 @@ export const useMovements = (filters?: MovementsFilter) => {
   // Calculate runway (in months) based on current balance and average monthly expense
   const runway = avgExpense > 0 ? currentBalance / avgExpense : 999;
 
-  // Get client breakdown
+  // Get client breakdown (with all amounts in COP)
   const clientBreakdown = () => {
-    if (!query.data?.length) return [];
+    if (!convertedData?.length) return [];
     
-    const result = query.data
+    const result = convertedData
       .filter(item => item.type === 'Ingreso' && item.client)
       .reduce((acc, item) => {
         const client = item.client || 'Unknown';
@@ -105,9 +115,9 @@ export const useMovements = (filters?: MovementsFilter) => {
     }));
   };
   
-  // Get monthly data for charts
+  // Get monthly data for charts (with all amounts in COP)
   const getMonthlyData = () => {
-    if (!query.data?.length) return [];
+    if (!convertedData?.length) return [];
     
     // Create a map of months with default values
     const monthlyMap: Record<string, { 
@@ -140,8 +150,8 @@ export const useMovements = (filters?: MovementsFilter) => {
       };
     }
     
-    // Populate with actual data
-    query.data.forEach(item => {
+    // Populate with actual data (all in COP)
+    convertedData?.forEach(item => {
       const year = item.date.getFullYear();
       const month = item.date.getMonth();
       const monthKey = `${year}-${month}`;
@@ -170,6 +180,7 @@ export const useMovements = (filters?: MovementsFilter) => {
 
   return {
     ...query,
+    data: convertedData,
     refreshCashFlow,
     metrics: {
       totalIncome,

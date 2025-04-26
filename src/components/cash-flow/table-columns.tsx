@@ -47,16 +47,28 @@ export const cashFlowColumns = [
   {
     accessorKey: "amount",
     header: "Monto",
-    cell: ({ row }) => (
-      <span
-        className={
-          row.original.type === "Ingreso" ? "text-green-600" : "text-red-600"
-        }
-      >
-        {row.original.type === "Ingreso" ? "+" : "-"}
-        {formatCurrency(row.original.amount, row.original.currency)}
-      </span>
-    ),
+    cell: ({ row }) => {
+      // Always display in COP, note if it was converted from USD
+      const wasConverted = row.original.originalCurrency === 'USD';
+      
+      return (
+        <div>
+          <span
+            className={
+              row.original.type === "Ingreso" ? "text-green-600" : "text-red-600"
+            }
+          >
+            {row.original.type === "Ingreso" ? "+" : "-"}
+            {formatCurrency(row.original.amount, "COP")}
+          </span>
+          {wasConverted && (
+            <div className="text-xs text-muted-foreground mt-1">
+              (Convertido de {formatCurrency(row.original.originalAmount, "USD")})
+            </div>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "source",
@@ -68,6 +80,6 @@ export const cashFlowColumns = [
   {
     accessorKey: "balance",
     header: "Saldo",
-    cell: ({ row }) => formatCurrency(row.original.balance || 0, row.original.currency),
+    cell: ({ row }) => formatCurrency(row.original.balance || 0, "COP"),
   },
 ];

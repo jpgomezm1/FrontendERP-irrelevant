@@ -73,7 +73,7 @@ export function ClientsTab({ clientBreakdown, totalIncome, isLoading }: ClientsT
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Distribución de Ingresos por Cliente</CardTitle>
+          <CardTitle>Distribución de Ingresos por Cliente (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
@@ -101,7 +101,7 @@ export function ClientsTab({ clientBreakdown, totalIncome, isLoading }: ClientsT
                 </Pie>
                 <Tooltip
                   formatter={(value, name, props) => [
-                    formatCurrency(Number(value)),
+                    formatCurrency(Number(value), "COP"),
                     name,
                   ]}
                 />
@@ -114,7 +114,7 @@ export function ClientsTab({ clientBreakdown, totalIncome, isLoading }: ClientsT
 
       <Card>
         <CardHeader>
-          <CardTitle>Detalle de Ingresos por Cliente</CardTitle>
+          <CardTitle>Detalle de Ingresos por Cliente (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -131,9 +131,9 @@ export function ClientsTab({ clientBreakdown, totalIncome, isLoading }: ClientsT
               {clientBreakdown.map((client, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>{formatCurrency(client.total)}</TableCell>
+                  <TableCell>{formatCurrency(client.total, "COP")}</TableCell>
                   <TableCell>{client.count}</TableCell>
-                  <TableCell>{formatCurrency(client.average)}</TableCell>
+                  <TableCell>{formatCurrency(client.average, "COP")}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <div className="w-full bg-gray-200 rounded-full h-2.5 mr-2 max-w-[100px]">

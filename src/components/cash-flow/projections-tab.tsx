@@ -110,7 +110,7 @@ export function ProjectionsTab({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Proyección de Flujo de Caja (6 meses)</CardTitle>
+          <CardTitle>Proyección de Flujo de Caja - 6 meses (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
@@ -121,8 +121,8 @@ export function ProjectionsTab({
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
                 <Legend />
                 <Line
                   type="monotone"
@@ -157,7 +157,7 @@ export function ProjectionsTab({
           <div className="mt-4 text-sm text-muted-foreground">
             <p>
               * Las proyecciones se basan en el promedio de ingresos y gastos de los últimos 6 meses.
-              Los valores futuros son estimados y pueden variar.
+              Los valores futuros son estimados y pueden variar. Todos los montos están expresados en COP.
             </p>
           </div>
         </CardContent>
@@ -165,7 +165,7 @@ export function ProjectionsTab({
 
       <Card>
         <CardHeader>
-          <CardTitle>Detalle de Proyección</CardTitle>
+          <CardTitle>Detalle de Proyección (COP)</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -183,17 +183,17 @@ export function ProjectionsTab({
                 <TableRow key={index}>
                   <TableCell className="font-medium">{month.name}</TableCell>
                   <TableCell className="text-green-600">
-                    {formatCurrency(month.ingresos)}
+                    {formatCurrency(month.ingresos, "COP")}
                   </TableCell>
                   <TableCell className="text-red-600">
-                    {formatCurrency(month.gastos)}
+                    {formatCurrency(month.gastos, "COP")}
                   </TableCell>
                   <TableCell
                     className={
                       month.balance >= 0 ? "text-green-600" : "text-red-600"
                     }
                   >
-                    {formatCurrency(month.balance)}
+                    {formatCurrency(month.balance, "COP")}
                   </TableCell>
                   <TableCell>
                     <span
