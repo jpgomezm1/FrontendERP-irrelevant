@@ -26,6 +26,7 @@ import { useDocumentUpload } from "@/hooks/use-document-upload";
 import { DocumentType } from "@/types/clients";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -67,17 +68,41 @@ export function DocumentUploadDialog({
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!values.file) {
+      toast.error("Se requiere un archivo");
+      return;
+    }
+    
+    if (values.file.size === 0) {
+      toast.error("El archivo está vacío");
+      return;
+    }
+    
     try {
+      console.log("Uploading document:", values);
       const result = await uploadDocument(values.file, values.type, values.name);
+      
       if (result) {
+        console.log("Document uploaded successfully:", result);
         form.reset();
         onOpenChange(false);
         if (onSuccess) onSuccess();
+      } else {
+        console.error("Upload returned null result");
+        toast.error("Error al subir el documento, por favor intente nuevamente");
       }
     } catch (error) {
       console.error("Error in document upload:", error);
+      toast.error("Error al subir el documento");
     }
   };
+
+  // Reset form when dialog closes
+  React.useEffect(() => {
+    if (!open) {
+      form.reset();
+    }
+  }, [open, form]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,6 +168,7 @@ export function DocumentUploadDialog({
                       onFileSelect={(file) => field.onChange(file)}
                       acceptedFileTypes=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
                       maxFileSizeMB={10}
+                      selectedFile={field.value}
                     />
                   </FormControl>
                   <FormMessage />

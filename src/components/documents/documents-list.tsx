@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useDocumentUpload } from "@/hooks/use-document-upload";
+import { toast } from "sonner";
 
 interface DocumentsListProps {
   documents: Document[];
@@ -32,6 +33,7 @@ export function DocumentsList({
 }: DocumentsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [documentToDelete, setDocumentToDelete] = React.useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const { deleteDocument } = useDocumentUpload({ entityType, entityId });
 
   const handleDelete = (document: Document) => {
@@ -42,12 +44,33 @@ export function DocumentsList({
   const confirmDelete = async () => {
     if (!documentToDelete) return;
     
-    const success = await deleteDocument(documentToDelete.id, documentToDelete.url);
-    if (success && onDeleted) {
-      onDeleted();
+    setIsDeleting(true);
+    try {
+      console.log(`Deleting document: ${documentToDelete.id}, URL: ${documentToDelete.url}`);
+      const success = await deleteDocument(documentToDelete.id, documentToDelete.url);
+      
+      if (success && onDeleted) {
+        onDeleted();
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast.error("Error al eliminar documento");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
     }
-    setDeleteDialogOpen(false);
-    setDocumentToDelete(null);
+  };
+
+  const getDocumentBadgeVariant = (type: string) => {
+    switch(type) {
+      case "RUT": return "default";
+      case "Cámara de Comercio": return "secondary";
+      case "NDA": return "destructive";
+      case "Contrato": return "warning";
+      case "Factura": return "success";
+      default: return "outline";
+    }
   };
 
   if (documents.length === 0) {
@@ -72,7 +95,7 @@ export function DocumentsList({
             <div>
               <p className="font-medium">{doc.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={doc.type === "RUT" ? "default" : "outline"}>
+                <Badge variant={getDocumentBadgeVariant(doc.type)}>
                   {doc.type}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
@@ -90,7 +113,7 @@ export function DocumentsList({
             </Button>
             <Button 
               size="sm" 
-              variant="ghost" 
+              variant="ghost"
               onClick={() => handleDelete(doc)}
             >
               <Trash2 className="h-4 w-4 text-destructive" />
@@ -109,9 +132,12 @@ export function DocumentsList({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
-              Eliminar
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

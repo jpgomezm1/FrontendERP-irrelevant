@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -20,11 +19,11 @@ import {
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { useClientsData } from "@/hooks/use-clients-data";
-import { DocumentsList } from "@/components/documents/documents-list"; // Updated import
+import { DocumentsList } from "@/components/documents/documents-list";
 import { ClientProjects } from "./client-projects";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { DocumentUploadDialog } from "@/components/documents/document-upload-dialog"; // New import
+import { DocumentUploadDialog } from "@/components/documents/document-upload-dialog";
 import { EditClientDialog } from "./edit-client-dialog";
 
 interface ClientDetailsProps {
@@ -45,8 +44,9 @@ export function ClientDetails({
   const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const handleDocumentAdded = () => {
-    refetch();
+  const handleDocumentAdded = async () => {
+    console.log("Document added, refreshing client data");
+    await refetch();
   };
 
   if (isLoading) {

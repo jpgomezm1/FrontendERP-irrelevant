@@ -22,22 +22,45 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
     try {
       // Choose the right bucket based on entity type
       const bucketId = entityType === "client" ? "client-documents" : "project-documents";
-      // Create a path that follows the folder structure: clients/{clientId}/{filename} or projects/{projectId}/{filename}
-      const filePath = `${entityType}s/${entityId}/${file.name}`;
+      
+      // Create a unique file path to prevent overwriting
+      // Format: {entityType}s/{entityId}/{timestamp}-{filename}
+      const timestamp = new Date().getTime();
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `${entityType}s/${entityId}/${timestamp}-${safeName}`;
+      
+      console.log(`Uploading file to bucket: ${bucketId}, path: ${filePath}`);
       
       // Upload the actual file to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucketId)
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false // Do not overwrite existing files
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        throw new Error(`Error al subir archivo: ${uploadError.message}`);
+      }
+
+      if (!uploadData) {
+        throw new Error("No se pudo cargar el archivo, respuesta vacía");
+      }
+
+      console.log("Upload successful:", uploadData);
 
       // Get the public URL for the uploaded file
       const { data: urlData } = await supabase.storage
         .from(bucketId)
         .getPublicUrl(filePath);
 
-      if (!urlData?.publicUrl) throw new Error("Could not get public URL");
+      if (!urlData?.publicUrl) {
+        console.error("Could not get public URL");
+        throw new Error("No se pudo obtener URL pública");
+      }
+
+      console.log("File public URL:", urlData.publicUrl);
 
       // Format the current date as ISO string and then extract just the date part
       const uploadDateStr = new Date().toISOString().split('T')[0];
@@ -58,8 +81,12 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
         .select()
         .single();
 
-      if (docError) throw docError;
+      if (docError) {
+        console.error("Database document insert error:", docError);
+        throw new Error(`Error al guardar documento en base de datos: ${docError.message}`);
+      }
       
+      console.log("Document record created:", docData);
       toast.success("Documento subido exitosamente");
       
       // Convert the returned Supabase data to our Document type
@@ -74,39 +101,54 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
       return document;
     } catch (error: any) {
       console.error("Error uploading document:", error);
-      toast.error("Error al subir documento");
+      toast.error(`Error al subir documento: ${error.message || error}`);
       return null;
     } finally {
       setIsUploading(false);
     }
   };
 
-  const deleteDocument = async (documentId: number, fileUrl: string) => {
+  const deleteDocument = async (documentId: number, fileUrl: string): Promise<boolean> => {
     try {
+      // Get bucket ID
       const bucketId = entityType === "client" ? "client-documents" : "project-documents";
-      // Extract the file path from the URL by removing the bucket part
-      const filePath = fileUrl.split(`${bucketId}/`)[1];
+      
+      // Extract the file path from the URL
+      // The URL format is typically: https://<project-ref>.supabase.co/storage/v1/object/public/<bucket>/<path>
+      const urlParts = fileUrl.split(`/storage/v1/object/public/${bucketId}/`);
+      if (urlParts.length < 2) {
+        throw new Error("No se pudo extraer la ruta del archivo");
+      }
+      
+      const filePath = urlParts[1];
+      console.log(`Deleting file from bucket: ${bucketId}, path: ${filePath}`);
 
       // Delete file from storage
       const { error: storageError } = await supabase.storage
         .from(bucketId)
         .remove([filePath]);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.error("Storage deletion error:", storageError);
+        throw new Error(`Error al eliminar archivo: ${storageError.message}`);
+      }
 
-      // Delete document record
+      // Delete document record from database
       const { error: dbError } = await supabase
         .from("documents")
         .delete()
         .eq("id", documentId);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Database document delete error:", dbError);
+        throw new Error(`Error al eliminar registro de documento: ${dbError.message}`);
+      }
 
       toast.success("Documento eliminado exitosamente");
       return true;
     } catch (error: any) {
       console.error("Error deleting document:", error);
-      toast.error("Error al eliminar documento");
+      toast.error(`Error al eliminar documento: ${error.message || error}`);
       return false;
     }
   };
