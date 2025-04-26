@@ -142,6 +142,8 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
       throw new Error('No se recibieron datos del servidor al crear el proyecto');
     }
 
+    console.log("Project created successfully:", data);
+
     return {
       id: data.id,
       clientId: data.clientid,
@@ -166,52 +168,62 @@ export async function addProject(project: Omit<Project, 'id' | 'documents' | 'pa
 }
 
 export async function updateProject(id: number, updatedData: Partial<Project>): Promise<void> {
-  const payload: Partial<DbProject> = {
-    clientid: updatedData.clientId,
-    name: updatedData.name,
-    description: updatedData.description,
-    status: updatedData.status,
-    notes: updatedData.notes
-  };
-  
-  if (updatedData.startDate) {
-    payload.startdate = updatedData.startDate.toISOString().split('T')[0];
-  }
-  
-  if (updatedData.endDate) {
-    payload.enddate = updatedData.endDate.toISOString().split('T')[0];
-  }
-  
-  const { error } = await supabase
-    .from('projects')
-    .update(payload)
-    .eq('id', id);
+  try {
+    const payload: Partial<DbProject> = {
+      clientid: updatedData.clientId,
+      name: updatedData.name,
+      description: updatedData.description,
+      status: updatedData.status,
+      notes: updatedData.notes
+    };
+    
+    if (updatedData.startDate) {
+      payload.startdate = updatedData.startDate.toISOString().split('T')[0];
+    }
+    
+    if (updatedData.endDate) {
+      payload.enddate = updatedData.endDate.toISOString().split('T')[0];
+    }
+    
+    const { error } = await supabase
+      .from('projects')
+      .update(payload)
+      .eq('id', id);
 
-  if (error) {
-    console.error('Error updating project:', error);
-    throw error;
+    if (error) {
+      console.error('Error updating project:', error);
+      throw new Error(`Error al actualizar proyecto: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('Error in updateProject:', error);
+    throw new Error(error.message || 'Error al actualizar el proyecto');
   }
 }
 
 export async function deleteProject(id: number): Promise<void> {
-  const { error: docsError } = await supabase
-    .from('documents')
-    .delete()
-    .eq('projectid', id);
-  
-  if (docsError) {
-    console.error('Error deleting project documents:', docsError);
-    throw docsError;
-  }
-  
-  const { error } = await supabase
-    .from('projects')
-    .delete()
-    .eq('id', id);
+  try {
+    const { error: docsError } = await supabase
+      .from('documents')
+      .delete()
+      .eq('projectid', id);
+    
+    if (docsError) {
+      console.error('Error deleting project documents:', docsError);
+      throw new Error(`Error al eliminar documentos del proyecto: ${docsError.message}`);
+    }
+    
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id);
 
-  if (error) {
-    console.error('Error deleting project:', error);
-    throw error;
+    if (error) {
+      console.error('Error deleting project:', error);
+      throw new Error(`Error al eliminar proyecto: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('Error in deleteProject:', error);
+    throw new Error(error.message || 'Error al eliminar el proyecto');
   }
 }
 
@@ -219,42 +231,52 @@ export async function addProjectDocument(
   projectId: number, 
   document: Omit<Document, 'id'>
 ): Promise<Document> {
-  const documentToInsert = {
-    name: document.name,
-    type: document.type,
-    url: document.url,
-    uploaddate: document.uploadDate.toISOString().split('T')[0],
-    projectid: projectId
-  };
+  try {
+    const documentToInsert = {
+      name: document.name,
+      type: document.type,
+      url: document.url,
+      uploaddate: document.uploadDate.toISOString().split('T')[0],
+      projectid: projectId
+    };
 
-  const { data, error } = await supabase
-    .from('documents')
-    .insert([documentToInsert])
-    .select()
-    .single();
+    const { data, error } = await supabase
+      .from('documents')
+      .insert([documentToInsert])
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error adding project document:', error);
-    throw error;
+    if (error) {
+      console.error('Error adding project document:', error);
+      throw new Error(`Error al agregar documento: ${error.message}`);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type as DocumentType,
+      url: data.url,
+      uploadDate: new Date(data.uploaddate)
+    };
+  } catch (error: any) {
+    console.error('Error in addProjectDocument:', error);
+    throw new Error(error.message || 'Error al agregar documento');
   }
-
-  return {
-    id: data.id,
-    name: data.name,
-    type: data.type as DocumentType,
-    url: data.url,
-    uploadDate: new Date(data.uploaddate)
-  };
 }
 
 export async function removeProjectDocument(documentId: number): Promise<void> {
-  const { error } = await supabase
-    .from('documents')
-    .delete()
-    .eq('id', documentId);
+  try {
+    const { error } = await supabase
+      .from('documents')
+      .delete()
+      .eq('id', documentId);
 
-  if (error) {
-    console.error('Error removing project document:', error);
-    throw error;
+    if (error) {
+      console.error('Error removing project document:', error);
+      throw new Error(`Error al eliminar documento: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('Error in removeProjectDocument:', error);
+    throw new Error(error.message || 'Error al eliminar documento');
   }
 }
