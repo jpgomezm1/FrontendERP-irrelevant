@@ -8,15 +8,19 @@ import { AddIncomeDialog } from "@/components/income/add-income-dialog";
 import { Plus } from "lucide-react";
 import { useIncomeList } from "@/hooks/use-income-list";
 import { Toaster } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const IncomePage = () => {
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const { refreshIncomes } = useIncomeList();
+  const queryClient = useQueryClient();
 
   const handleOpenChange = (isOpen: boolean) => {
-    // When dialog is closed, refresh incomes list
+    // When dialog is closed, refresh incomes list and analytics
     if (!isOpen) {
       refreshIncomes();
+      // Also invalidate the analytics queries to refresh that data
+      queryClient.invalidateQueries({ queryKey: ['income-analytics'] });
     }
     setIncomeModalOpen(isOpen);
   };
