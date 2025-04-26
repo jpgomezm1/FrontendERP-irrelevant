@@ -14,6 +14,16 @@ export function useProjectsData() {
     queryFn: getProjects,
   });
   
+  // Use effect to handle errors
+  useEffect(() => {
+    if (error) {
+      console.error('Error fetching projects:', error);
+      toast.error('No se pudieron cargar los proyectos', {
+        description: 'Verifique su conexión o intente nuevamente'
+      });
+    }
+  }, [error]);
+  
   // Get a project by ID
   const getProjectByIdQuery = (id: number) => {
     return useQuery({
@@ -94,8 +104,8 @@ export function useProjectsData() {
     error,
     getProjectByIdQuery,
     getProjectsByClientIdQuery,
-    addProject: (project: Omit<Project, "id" | "documents">) => 
-      addProjectMutation.mutate(project),
+    addProject: (project: Omit<Project, "id" | "documents" | "payments" | "paymentPlan">) => 
+      addProjectMutation.mutateAsync(project),
     updateProject: (id: number, data: Partial<Project>) => 
       updateProjectMutation.mutate({ id, data }),
     addDocument: (projectId: number, document: Omit<Document, "id">) => 

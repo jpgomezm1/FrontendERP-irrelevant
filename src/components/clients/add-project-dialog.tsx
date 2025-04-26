@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { Currency } from "@/lib/utils";
 import { ProjectStatus, PaymentFrequency, PlanType } from "@/types/clients";
 import { useClientsData } from "@/hooks/use-clients-data";
+import { useProjectsData } from "@/hooks/use-projects-data";
 
 const projectFormSchema = z.object({
   clientId: z.number({
@@ -98,6 +99,7 @@ export function AddProjectDialog({
   onProjectAdded,
 }: AddProjectDialogProps) {
   const { clients } = useClientsData();
+  const { addProject } = useProjectsData();
   
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -127,16 +129,33 @@ export function AddProjectDialog({
   const showImplementationFee = ["Fee único", "Fee por cuotas", "Mixto"].includes(watchPlanType);
   const showRecurringFee = ["Suscripción periódica", "Mixto"].includes(watchPlanType);
 
-  function onSubmit(data: ProjectFormValues) {
+  async function onSubmit(data: ProjectFormValues) {
     console.log("Añadiendo proyecto:", data);
-    // Aquí iría la lógica para agregar el proyecto
     
-    if (onProjectAdded) {
-      onProjectAdded();
+    try {
+      // Prepare project data based on form values
+      const projectToAdd = {
+        clientId: data.clientId,
+        name: data.name,
+        description: data.description,
+        status: data.status as ProjectStatus,
+        startDate: data.startDate,
+        endDate: data.endDate || undefined,
+        notes: data.notes,
+      };
+      
+      // Add the project to the database
+      await addProject(projectToAdd);
+      
+      if (onProjectAdded) {
+        onProjectAdded();
+      }
+      
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error saving project:", error);
     }
-    
-    form.reset();
-    onOpenChange(false);
   }
   
   return (
