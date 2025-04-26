@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Client } from '@/types/clients';
 import { getClients, getClientById, addClient, updateClient, addDocument, removeDocument } from '@/services/clientService';
@@ -8,10 +7,20 @@ import { toast } from 'sonner';
 export function useClientsData() {
   const queryClient = useQueryClient();
   
-  // Fetch all clients
-  const { data: clients = [], isLoading, error } = useQuery({
+  // Fetch all clients with enhanced error logging
+  const { 
+    data: clients = [], 
+    isLoading, 
+    error 
+  } = useQuery({
     queryKey: ['clients'],
     queryFn: getClients,
+    onError: (error) => {
+      console.error('Failed to fetch clients:', error);
+      toast.error('No se pudieron cargar los clientes', {
+        description: 'Verifique su conexión o intente nuevamente'
+      });
+    }
   });
   
   // Get a single client by ID

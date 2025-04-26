@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Client, Document, ClientStatus, DocumentType } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
@@ -16,20 +15,29 @@ export async function getClients(): Promise<Client[]> {
     throw error;
   }
 
-  // Convert string dates to Date objects and map database fields to Client type
-  return (data || []).map(client => ({
-    id: client.id,
-    name: client.name,
-    contactName: client.contactname || undefined,
-    email: client.email,
-    phone: client.phone,
-    address: client.address || undefined,
-    taxId: client.taxid || undefined,
-    startDate: new Date(client.startdate),
-    status: client.status as ClientStatus,
-    notes: client.notes || undefined,
-    documents: [],
-  }));
+  console.log('Raw clients data:', data); // Debug log
+
+  // Robust mapping with error handling
+  return (data || []).map(client => {
+    try {
+      return {
+        id: client.id,
+        name: client.name || 'Sin Nombre',
+        contactName: client.contactname || undefined,
+        email: client.email || '',
+        phone: client.phone || '',
+        address: client.address || undefined,
+        taxId: client.taxid || undefined,
+        startDate: client.startdate ? new Date(client.startdate) : new Date(),
+        status: (client.status || 'Activo') as ClientStatus,
+        notes: client.notes || undefined,
+        documents: [],
+      };
+    } catch (mapError) {
+      console.error('Error mapping client:', mapError, client);
+      return null;
+    }
+  }).filter(Boolean) as Client[];
 }
 
 export async function getClientById(id: number): Promise<Client | null> {
