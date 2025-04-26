@@ -35,12 +35,14 @@ interface ProjectDetailsProps {
   projectId: number;
   onBack: () => void;
   onViewFinancials: () => void;
+  onClientSelect?: (clientId: number) => void;
 }
 
 export function ProjectDetails({ 
   projectId, 
   onBack,
-  onViewFinancials 
+  onViewFinancials,
+  onClientSelect
 }: ProjectDetailsProps) {
   const { getProjectByIdQuery } = useProjectsData();
   const { data: project, isLoading: isLoadingProject, error: projectError } = getProjectByIdQuery(projectId);
@@ -192,7 +194,17 @@ export function ProjectDetails({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-muted-foreground mb-1">
-                Cliente: {client.name}
+                {onClientSelect ? (
+                  <Button 
+                    variant="link" 
+                    className="h-auto p-0"
+                    onClick={() => onClientSelect(client.id)}
+                  >
+                    Cliente: {client.name}
+                  </Button>
+                ) : (
+                  <>Cliente: {client.name}</>
+                )}
               </div>
               <CardTitle className="text-2xl">{project.name}</CardTitle>
               <CardDescription>
@@ -271,10 +283,6 @@ export function ProjectDetails({
                     Registrar Pago
                   </Button>
                 </AddPaymentDialog>
-                <Button variant="outline" size="sm">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Generar Cuotas
-                </Button>
               </div>
             </CardHeader>
             <CardContent>

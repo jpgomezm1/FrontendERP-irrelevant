@@ -31,12 +31,14 @@ interface ClientDetailsProps {
   clientId: number;
   onBack: () => void;
   onViewFinancials: () => void;
+  onProjectSelect: (projectId: number) => void;
 }
 
 export function ClientDetails({ 
   clientId, 
   onBack,
-  onViewFinancials 
+  onViewFinancials,
+  onProjectSelect 
 }: ClientDetailsProps) {
   const { getClientByIdQuery } = useClientsData();
   const { data: client, isLoading, error } = getClientByIdQuery(clientId);
@@ -146,7 +148,10 @@ export function ClientDetails({
         </TabsList>
 
         <TabsContent value="projects" className="mt-4">
-          <ClientProjects clientId={client.id} />
+          <ClientProjects 
+            clientId={client.id} 
+            onProjectSelect={onProjectSelect}
+          />
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">

@@ -47,6 +47,7 @@ const ClientsPage = () => {
   const handleProjectSelect = (projectId: number) => {
     setSelectedProjectId(projectId);
     setViewFinancials(false);
+    setActiveTab("proyectos");
   };
 
   const handleBackToList = () => {
@@ -57,6 +58,7 @@ const ClientsPage = () => {
 
   const handleViewFinancials = () => {
     setViewFinancials(true);
+    setActiveTab("financiero");
   };
 
   return (
@@ -106,6 +108,7 @@ const ClientsPage = () => {
               clientId={selectedClientId} 
               onBack={handleBackToList}
               onViewFinancials={handleViewFinancials}
+              onProjectSelect={handleProjectSelect}
             />
           ) : (
             <ClientsList onClientSelect={handleClientSelect} />
@@ -119,6 +122,7 @@ const ClientsPage = () => {
               projectId={selectedProjectId} 
               onBack={handleBackToList}
               onViewFinancials={handleViewFinancials}
+              onClientSelect={handleClientSelect}
             />
           ) : (
             <ProjectsList onProjectSelect={handleProjectSelect} />

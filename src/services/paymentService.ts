@@ -257,6 +257,7 @@ export async function generatePaymentInstallments(
         amount, 
         currency, 
         frequency, 
+        dayOfCharge,
         gracePeriods = 0,
         discountPeriods = 0,
         discountPercentage = 0
