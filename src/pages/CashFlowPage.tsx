@@ -20,6 +20,11 @@ const CashFlowPage = () => {
   const { data: analytics, isLoading: isLoadingAnalytics } = useCashFlowAnalytics();
   const { data: movements, isLoading: isLoadingMovements } = useMovements();
 
+  // Create a handler function that correctly converts the string to TimePeriod
+  const handleTimeFrameChange = (value: TimePeriod) => {
+    setAnalysisTimeFrame(value);
+  };
+
   if (isLoadingAnalytics || isLoadingMovements) {
     return <div>Cargando datos...</div>;
   }
@@ -124,7 +129,7 @@ const CashFlowPage = () => {
             clientData={clientIncome}
             expenseData={categoryExpenses}
             expenseHeatMap={[]} // This could be implemented in a future iteration
-            onTimeFrameChange={setAnalysisTimeFrame}
+            onTimeFrameChange={handleTimeFrameChange}
             timeFrame={analysisTimeFrame}
           />
         </TabsContent>
@@ -165,7 +170,7 @@ const CashFlowPage = () => {
               netMrr: 0
             }}
             timeFrame={analysisTimeFrame}
-            onTimeFrameChange={setAnalysisTimeFrame}
+            onTimeFrameChange={handleTimeFrameChange}
           />
         </TabsContent>
       </Tabs>
