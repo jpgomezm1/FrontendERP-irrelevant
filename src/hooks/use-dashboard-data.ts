@@ -1,7 +1,6 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
 import { useState } from "react";
 
 export interface DashboardMetrics {
@@ -93,10 +92,10 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         
       if (incomesError) throw incomesError;
       
-      // Get expense data
+      // Get expense data from gastos_causados instead of expenses table
       const { data: expensesData, error: expensesError } = await supabase
         .from('gastos_causados')
-        .select('date, amount')
+        .select('date, amount, currency')
         .order('date', { ascending: false });
         
       if (expensesError) throw expensesError;
@@ -121,7 +120,7 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         monthlyTotals[monthKey].total_income += Number(income.amount);
       });
       
-      // Process expenses
+      // Process expenses with currency conversion to COP
       expensesData.forEach(expense => {
         const date = new Date(expense.date);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
@@ -135,7 +134,12 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
           };
         }
         
-        monthlyTotals[monthKey].total_expense += Number(expense.amount);
+        // Convert all expenses to COP for consistent calculation
+        const amountInCOP = expense.currency === "USD" 
+          ? convertCurrency(Number(expense.amount), "USD", "COP") 
+          : Number(expense.amount);
+        
+        monthlyTotals[monthKey].total_expense += amountInCOP;
       });
       
       return Object.values(monthlyTotals)
@@ -181,18 +185,24 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('gastos_causados')
-        .select('category, amount')
+        .select('category, amount, currency')
         .gte('date', formatDate(startDate))
         .lte('date', formatDate(endDate));
 
       if (error) throw error;
 
-      // Group by category and sum amounts
+      // Group by category and sum amounts with currency conversion to COP
       const categories = data.reduce((acc: { [key: string]: number }, curr) => {
         if (!acc[curr.category]) {
           acc[curr.category] = 0;
         }
-        acc[curr.category] += Number(curr.amount);
+        
+        // Convert all expenses to COP for consistent calculation
+        const amountInCOP = curr.currency === "USD" 
+          ? convertCurrency(Number(curr.amount), "USD", "COP") 
+          : Number(curr.amount);
+          
+        acc[curr.category] += amountInCOP;
         return acc;
       }, {});
 
@@ -218,17 +228,24 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         
       if (incomeError) throw incomeError;
       
-      // Get expense total
+      // Get expense total from gastos_causados with currency conversion
       const { data: expenseData, error: expenseError } = await supabase
         .from('gastos_causados')
-        .select('amount')
+        .select('amount, currency')
         .gte('date', formatDate(startDate))
         .lte('date', formatDate(endDate));
         
       if (expenseError) throw expenseError;
       
       const incomeTotal = incomeData.reduce((sum, item) => sum + Number(item.amount), 0);
-      const expenseTotal = expenseData.reduce((sum, item) => sum + Number(item.amount), 0);
+      
+      // Calculate expense total with currency conversion to COP
+      const expenseTotal = expenseData.reduce((sum, item) => {
+        const amountInCOP = item.currency === "USD" 
+          ? convertCurrency(Number(item.amount), "USD", "COP") 
+          : Number(item.amount);
+        return sum + amountInCOP;
+      }, 0);
       
       return { incomeTotal, expenseTotal };
     }
@@ -247,17 +264,24 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         
       if (incomeError) throw incomeError;
       
-      // Get expense total for previous period
+      // Get expense total for previous period with currency conversion
       const { data: expenseData, error: expenseError } = await supabase
         .from('gastos_causados')
-        .select('amount')
+        .select('amount, currency')
         .gte('date', formatDate(prevStartDate))
         .lte('date', formatDate(prevEndDate));
         
       if (expenseError) throw expenseError;
       
       const incomeTotal = incomeData.reduce((sum, item) => sum + Number(item.amount), 0);
-      const expenseTotal = expenseData.reduce((sum, item) => sum + Number(item.amount), 0);
+      
+      // Calculate expense total with currency conversion to COP
+      const expenseTotal = expenseData.reduce((sum, item) => {
+        const amountInCOP = item.currency === "USD" 
+          ? convertCurrency(Number(item.amount), "USD", "COP") 
+          : Number(item.amount);
+        return sum + amountInCOP;
+      }, 0);
       
       return { incomeTotal, expenseTotal };
     }
@@ -269,7 +293,7 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
     return ((current - previous) / previous) * 100;
   };
 
-  // Calculate burn rate (average monthly expenses)
+  // Calculate burn rate (average monthly expenses) from gastos_causados
   const { data: burnRateData, isLoading: isLoadingBurnRate } = useQuery({
     queryKey: ['burn-rate'],
     queryFn: async () => {
@@ -277,14 +301,15 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       
+      // Fetch from gastos_causados with currency information
       const { data, error } = await supabase
         .from('gastos_causados')
-        .select('date, amount')
+        .select('date, amount, currency')
         .gte('date', formatDate(threeMonthsAgo));
         
       if (error) throw error;
       
-      // Group by month and calculate monthly totals
+      // Group by month and calculate monthly totals with currency conversion to COP
       const monthlyExpenses: Record<string, number> = {};
       data.forEach(expense => {
         const date = new Date(expense.date);
@@ -294,7 +319,12 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
           monthlyExpenses[monthKey] = 0;
         }
         
-        monthlyExpenses[monthKey] += Number(expense.amount);
+        // Convert all expenses to COP for consistent calculation
+        const amountInCOP = expense.currency === "USD" 
+          ? convertCurrency(Number(expense.amount), "USD", "COP") 
+          : Number(expense.amount);
+        
+        monthlyExpenses[monthKey] += amountInCOP;
       });
       
       // Calculate average monthly expense (burn rate)

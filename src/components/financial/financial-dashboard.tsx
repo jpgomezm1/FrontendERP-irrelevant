@@ -50,10 +50,10 @@ export function FinancialDashboard({
 }: FinancialDashboardProps) {
   const [kpiView, setKpiView] = useState<"basic" | "advanced">("basic");
   
-  // Calcular runway basado en burn rate
+  // Calculate runway based on burn rate
   const runway = metrics.burnRate > 0 
     ? metrics.mrr >= metrics.burnRate 
-      ? "∞" // Runway infinito si MRR > burn rate
+      ? "∞" // Infinite runway if MRR > burn rate
       : Number((metrics.mrr / metrics.burnRate).toFixed(1))
     : "∞";
         
@@ -102,7 +102,7 @@ export function FinancialDashboard({
           <div className="grid gap-4 md:grid-cols-4">
             <KpiCard 
               title="Burn Rate Mensual" 
-              value={formatCurrency(metrics.burnRate)} 
+              value={formatCurrency(metrics.burnRate, "COP")} 
               icon={<TrendingDown />}
               description="Gasto promedio mensual"
               status="neutral"
@@ -110,7 +110,7 @@ export function FinancialDashboard({
             
             <KpiCard 
               title="MRR Actual" 
-              value={formatCurrency(metrics.mrr)} 
+              value={formatCurrency(metrics.mrr, "COP")} 
               icon={<TrendingUp />}
               description={`${mrrPerformance === "positive" ? "+" : ""}${((metrics.mrr / metrics.mrrProjected - 1) * 100).toFixed(1)}% vs proyectado`}
               status={mrrPerformance}
@@ -126,7 +126,7 @@ export function FinancialDashboard({
             
             <KpiCard 
               title="Variación Mensual" 
-              value={formatCurrency(metrics.monthlyVariation.income.value)} 
+              value={formatCurrency(metrics.monthlyVariation.income.value, "COP")} 
               icon={metrics.monthlyVariation.income.percentage > 0 ? <TrendingUp /> : <TrendingDown />}
               description={`${metrics.monthlyVariation.income.percentage > 0 ? "+" : ""}${metrics.monthlyVariation.income.percentage.toFixed(1)}% vs período anterior`}
               status={variationStatus}
@@ -138,7 +138,7 @@ export function FinancialDashboard({
           <div className="grid gap-4 md:grid-cols-4">
             <KpiCard 
               title="Utilidad YTD" 
-              value={formatCurrency(metrics.ytdProfit)} 
+              value={formatCurrency(metrics.ytdProfit, "COP")} 
               icon={<Wallet />}
               description="Acumulado año a la fecha"
               status="neutral"
@@ -154,7 +154,7 @@ export function FinancialDashboard({
             
             <KpiCard 
               title="Gastos Estructurales" 
-              value={formatCurrency(metrics.structuralExpenses)} 
+              value={formatCurrency(metrics.structuralExpenses, "COP")} 
               icon={<DollarSign />}
               description={`${metrics.burnRate > 0 ? ((metrics.structuralExpenses / metrics.burnRate) * 100).toFixed(0) : 0}% del gasto total`}
               status="neutral"
@@ -162,7 +162,7 @@ export function FinancialDashboard({
             
             <KpiCard 
               title="Gastos Evitables" 
-              value={formatCurrency(metrics.avoidableExpenses)} 
+              value={formatCurrency(metrics.avoidableExpenses, "COP")} 
               icon={<DollarSign />}
               description={`${metrics.burnRate > 0 ? ((metrics.avoidableExpenses / metrics.burnRate) * 100).toFixed(0) : 0}% del gasto total`}
               status="neutral"

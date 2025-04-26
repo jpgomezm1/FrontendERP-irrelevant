@@ -47,14 +47,14 @@ const Dashboard = () => {
         />
         <StatsCard
           title="Gastos este mes"
-          value={formatCurrency(metrics.currentMonthExpense)}
+          value={formatCurrency(metrics.currentMonthExpense, "COP")}
           trend={metrics.monthlyVariation.expense.percentage > 0 ? "down" : "up"}
           trendValue={`${metrics.monthlyVariation.expense.percentage.toFixed(1)}%`}
           icon={<CreditCard className="h-4 w-4" />}
         />
         <StatsCard
           title="Saldo en caja"
-          value={formatCurrency(metrics.cashBalance)}
+          value={formatCurrency(metrics.cashBalance, "COP")}
           trend={metrics.cashBalance > 0 ? "up" : "down"}
           trendValue={`${((metrics.cashBalance / (metrics.currentMonthIncome || 1)) * 100).toFixed(1)}%`}
           icon={<TrendingUp className="h-4 w-4" />}
