@@ -13,9 +13,10 @@ import { useCashFlowAnalytics } from "@/hooks/use-cash-flow-analytics";
 import { useMovements } from "@/hooks/use-movements";
 import { MovementsTab } from "@/components/cash-flow/movements-tab";
 import { generateProjections, generateClientProfitability } from "@/utils/financial-utils";
+import { TimePeriod } from "@/hooks/use-dashboard-data";
 
 const CashFlowPage = () => {
-  const [analysisTimeFrame, setAnalysisTimeFrame] = useState("month");
+  const [analysisTimeFrame, setAnalysisTimeFrame] = useState<TimePeriod>("month");
   const { data: analytics, isLoading: isLoadingAnalytics } = useCashFlowAnalytics();
   const { data: movements, isLoading: isLoadingMovements } = useMovements();
 
