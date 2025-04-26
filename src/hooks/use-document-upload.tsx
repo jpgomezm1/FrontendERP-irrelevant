@@ -35,27 +35,38 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
 
       if (!urlData?.publicUrl) throw new Error("Could not get public URL");
 
-      const document = {
+      // Format the current date as ISO string and then extract just the date part
+      const uploadDateStr = new Date().toISOString().split('T')[0];
+
+      // Create document record with proper field names matching Supabase schema
+      const documentToInsert = {
         name,
         type,
         url: urlData.publicUrl,
-        uploadDate: new Date()
+        uploaddate: uploadDateStr,
+        [`${entityType}id`]: entityId
       };
 
-      const tableName = entityType === "client" ? "documents" : "documents";
       const { data: docData, error: docError } = await supabase
-        .from(tableName)
-        .insert([{
-          ...document,
-          [`${entityType}id`]: entityId
-        }])
+        .from("documents")
+        .insert([documentToInsert])
         .select()
         .single();
 
       if (docError) throw docError;
       
       toast.success("Documento subido exitosamente");
-      return docData;
+      
+      // Convert the returned Supabase data to our Document type
+      const document: Document = {
+        id: docData.id,
+        name: docData.name,
+        type: docData.type as DocumentType,
+        url: docData.url,
+        uploadDate: new Date(docData.uploaddate)
+      };
+      
+      return document;
     } catch (error: any) {
       console.error("Error uploading document:", error);
       toast.error("Error al subir documento");
