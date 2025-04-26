@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Payment, PaymentStatus } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
@@ -161,26 +160,75 @@ export async function updatePaymentStatus(
   paidDate?: Date,
   documentUrl?: string
 ): Promise<boolean> {
-  const updateData: any = { 
-    status,
-    paiddate: paidDate?.toISOString().split('T')[0] || null
-  };
-  
-  if (documentUrl) {
-    updateData.document_url = documentUrl;
-  }
-  
-  const { error } = await supabase
-    .from('payments')
-    .update(updateData)
-    .eq('id', paymentId);
+  try {
+    console.log('Updating payment status:', { paymentId, status, paidDate, documentUrl });
+    
+    // Start by getting the payment details to create the income record
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        projects (name, clients (name))
+      `)
+      .eq('id', paymentId)
+      .single();
+    
+    if (paymentError) {
+      console.error('Error fetching payment details:', paymentError);
+      throw paymentError;
+    }
 
-  if (error) {
-    console.error('Error updating payment status:', error);
+    // Only proceed with income creation if status is changing to "Pagado"
+    if (status === 'Pagado') {
+      console.log('Creating income record for payment:', payment);
+      
+      // Create income record
+      const { error: incomeError } = await supabase
+        .from('incomes')
+        .insert([{
+          description: `Payment for Project ${payment.projects?.name} - ${payment.type === 'Implementación' ? 
+            `Implementation Fee${payment.installmentnumber ? ` (Installment ${payment.installmentnumber})` : ''}` : 
+            'Recurring Fee'}`,
+          date: paidDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+          amount: payment.amount,
+          type: 'Project Payment',
+          client: payment.projects?.clients?.name,
+          currency: payment.currency,
+          receipt: documentUrl,
+          notes: `Automatic income record created from project payment #${payment.id}`
+        }]);
+      
+      if (incomeError) {
+        console.error('Error creating income record:', incomeError);
+        throw incomeError;
+      }
+    }
+    
+    // Update payment status
+    const updateData: any = { 
+      status,
+      paiddate: paidDate?.toISOString().split('T')[0] || null
+    };
+    
+    if (documentUrl) {
+      updateData.document_url = documentUrl;
+    }
+    
+    const { error: updateError } = await supabase
+      .from('payments')
+      .update(updateData)
+      .eq('id', paymentId);
+
+    if (updateError) {
+      console.error('Error updating payment status:', updateError);
+      throw updateError;
+    }
+
+    return true;
+  } catch (error: any) {
+    console.error('Error in updatePaymentStatus:', error);
     throw error;
   }
-
-  return true;
 }
 
 // Helper function to generate payment installments for a project

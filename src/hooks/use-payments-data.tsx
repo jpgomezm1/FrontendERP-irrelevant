@@ -54,10 +54,12 @@ export function usePaymentsData() {
       paidDate?: Date;
       documentUrl?: string;
     }) => updatePaymentStatus(paymentId, status, paidDate, documentUrl),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
+      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['payments'] });
-      queryClient.invalidateQueries({ queryKey: ['payments', 'project'] });
       queryClient.invalidateQueries({ queryKey: ['project-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['income-list'] }); // Add this line
+      queryClient.invalidateQueries({ queryKey: ['income-analytics'] }); // Add this line
       toast.success('Estado de pago actualizado');
     },
     onError: (error) => {
