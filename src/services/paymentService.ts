@@ -182,6 +182,11 @@ export async function updatePaymentStatus(
     // Only proceed with income creation if status is changing to "Pagado"
     if (status === 'Pagado') {
       console.log('Creating income record for payment:', payment);
+
+      // Determine the income type based on payment type
+      const incomeType = payment.type === 'Implementación' 
+        ? 'Ingreso Implementación'
+        : 'Ingreso Recurrente';
       
       // Create income record with the required paymentmethod field
       const { error: incomeError } = await supabase
@@ -192,7 +197,7 @@ export async function updatePaymentStatus(
             'Recurring Fee'}`,
           date: paidDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
           amount: payment.amount,
-          type: 'Project Payment',
+          type: incomeType,
           client: payment.projects?.clients?.name,
           currency: payment.currency,
           paymentmethod: 'Transferencia', // Default payment method
