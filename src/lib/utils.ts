@@ -185,3 +185,33 @@ export function generatePaymentDates(startDate: Date, frequency: string, count: 
   
   return dates;
 }
+
+export enum AccountStatus {
+  UpToDate = "Up to date",
+  SlightlyOverdue = "Slightly overdue",
+  SeriouslyOverdue = "Seriously overdue"
+}
+
+export function calculateAccountStatus(payments: Payment[]): AccountStatus {
+  const today = new Date();
+  let maxOverdueDays = 0;
+
+  // Only consider unpaid payments
+  const unpaidPayments = payments.filter(payment => payment.status === "Pendiente" || payment.status === "Vencido");
+  
+  for (const payment of unpaidPayments) {
+    const dueDate = new Date(payment.date);
+    if (dueDate < today) { // Payment is overdue
+      const overdueDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      maxOverdueDays = Math.max(maxOverdueDays, overdueDays);
+    }
+  }
+
+  if (maxOverdueDays === 0) {
+    return AccountStatus.UpToDate;
+  }
+  if (maxOverdueDays < 15) {
+    return AccountStatus.SlightlyOverdue;
+  }
+  return AccountStatus.SeriouslyOverdue;
+}
