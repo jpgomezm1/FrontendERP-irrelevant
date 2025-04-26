@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
 import { getCausedExpenses, CausedExpense } from '@/services/expenseService';
+import { MovementsFilter } from '@/hooks/use-movements';
 
 type DbIncome = Database['public']['Tables']['incomes']['Row'];
 
@@ -101,8 +102,8 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   };
 }
 
-export async function getCashFlow(): Promise<CashFlowItem[]> {
-  console.log('Fetching cash flow data from all sources');
+export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowItem[]> {
+  console.log('Fetching cash flow data with filters:', filters);
   
   // 1. Get all incomes from the incomes table
   const { data: incomesData, error: incomesError } = await supabase
@@ -190,10 +191,32 @@ export async function getCashFlow(): Promise<CashFlowItem[]> {
     currency: expense.currency as Currency,
   }));
 
-  // Combine all items and sort by date (most recent first)
-  const combined = [...incomeItems, ...paymentItems, ...expenseItems].sort((a, b) => 
-    b.date.getTime() - a.date.getTime()
-  );
+  // Combine all items
+  let combined = [...incomeItems, ...paymentItems, ...expenseItems];
+  
+  // Apply filters if provided
+  if (filters) {
+    if (filters.startDate) {
+      combined = combined.filter(item => item.date >= filters.startDate);
+    }
+    
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999); // End of the day
+      combined = combined.filter(item => item.date <= endDate);
+    }
+    
+    if (filters.type && filters.type !== 'all') {
+      combined = combined.filter(item => item.type === filters.type);
+    }
+    
+    if (filters.category && filters.category !== 'all') {
+      combined = combined.filter(item => item.category === filters.category);
+    }
+  }
+  
+  // Sort by date (most recent first)
+  combined.sort((a, b) => b.date.getTime() - a.date.getTime());
 
   // Calculate running balance
   let balance = 0;
