@@ -11,6 +11,7 @@ import {
   Area, AreaChart
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { TimePeriod } from "@/hooks/use-dashboard-data";
 
 type MetricsData = {
   burnRate: number;
@@ -32,8 +33,8 @@ interface FinancialDashboardProps {
   clientData: any[];
   expenseData: any[];
   expenseHeatMap: any[];
-  onTimeFrameChange: (value: string) => void;
-  timeFrame: string;
+  onTimeFrameChange: (value: TimePeriod) => void;
+  timeFrame: TimePeriod;
 }
 
 const COLORS = ['#4ade80', '#f87171', '#60a5fa', '#fbbf24', '#a78bfa', '#fb923c'];
@@ -50,16 +51,26 @@ export function FinancialDashboard({
   const [kpiView, setKpiView] = useState<"basic" | "advanced">("basic");
   
   // Calcular runway basado en burn rate
-  const runway = metrics.mrr > metrics.burnRate 
-    ? "∞" // Runway infinito si MRR > burn rate
-    : (metrics.mrr < 0 
-        ? 0 
-        : Number((metrics.mrr / metrics.burnRate).toFixed(1)));
+  const runway = metrics.burnRate > 0 
+    ? metrics.mrr >= metrics.burnRate 
+      ? "∞" // Runway infinito si MRR > burn rate
+      : Number((metrics.mrr / metrics.burnRate).toFixed(1))
+    : "∞";
         
   // Calcular el estado de los KPIs
   const mrrPerformance = metrics.mrr >= metrics.mrrProjected ? "positive" : "negative";
   const variationStatus = metrics.monthlyVariation.income.percentage > 0 ? "positive" : "negative";
   const runwayStatus = typeof runway === 'string' || runway > 6 ? "positive" : runway > 3 ? "warning" : "negative";
+
+  // Translated time frame labels
+  const timeFrameLabels = {
+    'month': 'Este Mes',
+    'prev-month': 'Mes Anterior',
+    'quarter': 'Este Trimestre',
+    'prev-quarter': 'Trimestre Anterior',
+    'ytd': 'Año a la Fecha (YTD)',
+    'year': 'Este Año'
+  };
   
   return (
     <div className="space-y-6">
@@ -71,15 +82,17 @@ export function FinancialDashboard({
           </TabsList>
         </Tabs>
         
-        <Select value={timeFrame} onValueChange={onTimeFrameChange}>
+        <Select value={timeFrame} onValueChange={(value) => onTimeFrameChange(value as TimePeriod)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="month">Este Mes</SelectItem>
-            <SelectItem value="quarter">Este Trimestre</SelectItem>
-            <SelectItem value="ytd">Año a la Fecha (YTD)</SelectItem>
-            <SelectItem value="year">Este Año</SelectItem>
+            <SelectItem value="month">{timeFrameLabels.month}</SelectItem>
+            <SelectItem value="prev-month">{timeFrameLabels['prev-month']}</SelectItem>
+            <SelectItem value="quarter">{timeFrameLabels.quarter}</SelectItem>
+            <SelectItem value="prev-quarter">{timeFrameLabels['prev-quarter']}</SelectItem>
+            <SelectItem value="ytd">{timeFrameLabels.ytd}</SelectItem>
+            <SelectItem value="year">{timeFrameLabels.year}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -115,7 +128,7 @@ export function FinancialDashboard({
               title="Variación Mensual" 
               value={formatCurrency(metrics.monthlyVariation.income.value)} 
               icon={metrics.monthlyVariation.income.percentage > 0 ? <TrendingUp /> : <TrendingDown />}
-              description={`${metrics.monthlyVariation.income.percentage > 0 ? "+" : ""}${metrics.monthlyVariation.income.percentage.toFixed(1)}% vs mes anterior`}
+              description={`${metrics.monthlyVariation.income.percentage > 0 ? "+" : ""}${metrics.monthlyVariation.income.percentage.toFixed(1)}% vs período anterior`}
               status={variationStatus}
             />
           </div>
@@ -143,7 +156,7 @@ export function FinancialDashboard({
               title="Gastos Estructurales" 
               value={formatCurrency(metrics.structuralExpenses)} 
               icon={<DollarSign />}
-              description={`${((metrics.structuralExpenses / metrics.burnRate) * 100).toFixed(0)}% del gasto total`}
+              description={`${metrics.burnRate > 0 ? ((metrics.structuralExpenses / metrics.burnRate) * 100).toFixed(0) : 0}% del gasto total`}
               status="neutral"
             />
             
@@ -151,7 +164,7 @@ export function FinancialDashboard({
               title="Gastos Evitables" 
               value={formatCurrency(metrics.avoidableExpenses)} 
               icon={<DollarSign />}
-              description={`${((metrics.avoidableExpenses / metrics.burnRate) * 100).toFixed(0)}% del gasto total`}
+              description={`${metrics.burnRate > 0 ? ((metrics.avoidableExpenses / metrics.burnRate) * 100).toFixed(0) : 0}% del gasto total`}
               status="neutral"
             />
           </div>
@@ -168,12 +181,12 @@ export function FinancialDashboard({
             <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={monthlyData}
+                  data={monthlyData.slice(0, 6)} // Limit to 6 months for better visualization
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="name" />
-                  <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
+                  <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
                   <Tooltip 
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
@@ -225,42 +238,54 @@ export function FinancialDashboard({
               </TabsList>
               
               <TabsContent value="expenses" className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenseData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {expenseData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                {expenseData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={expenseData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {expenseData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No hay datos de gastos para mostrar
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="income" className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={clientData.sort((a, b) => b.value - a.value)}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis type="number" tickFormatter={(value) => `$${value / 1000000}M`} />
-                    <YAxis type="category" dataKey="name" width={80} />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Bar dataKey="value" name="Ingresos" fill="#4ade80" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {clientData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={clientData.sort((a, b) => b.value - a.value)}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis type="number" tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                      <YAxis type="category" dataKey="name" width={80} />
+                      <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                      <Bar dataKey="value" name="Ingresos" fill="#4ade80" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No hay datos de ingresos para mostrar
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -276,49 +301,55 @@ export function FinancialDashboard({
         </CardHeader>
         <CardContent>
           <div className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={monthlyData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <defs>
-                  <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4ade80" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#4ade80" stopOpacity={0.1} />
-                  </linearGradient>
-                  <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f87171" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#f87171" stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    formatCurrency(Number(value)), 
-                    name === "ingresos" ? "Ingresos" : "Gastos"
-                  ]}
-                />
-                <Legend />
-                <Area
-                  type="monotone"
-                  dataKey="ingresos"
-                  name="Ingresos"
-                  stroke="#4ade80"
-                  fillOpacity={1}
-                  fill="url(#colorIngresos)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="gastos"
-                  name="Gastos"
-                  stroke="#f87171"
-                  fillOpacity={1}
-                  fill="url(#colorGastos)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {monthlyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={monthlyData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4ade80" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#4ade80" stopOpacity={0.1} />
+                    </linearGradient>
+                    <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f87171" stopOpacity={0.8} />
+                      <stop offset="95%" stopColor="#f87171" stopOpacity={0.1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="name" />
+                  <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      formatCurrency(Number(value)), 
+                      name === "ingresos" ? "Ingresos" : "Gastos"
+                    ]}
+                  />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="ingresos"
+                    name="Ingresos"
+                    stroke="#4ade80"
+                    fillOpacity={1}
+                    fill="url(#colorIngresos)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="gastos"
+                    name="Gastos"
+                    stroke="#f87171"
+                    fillOpacity={1}
+                    fill="url(#colorGastos)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No hay datos suficientes para mostrar la evolución
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

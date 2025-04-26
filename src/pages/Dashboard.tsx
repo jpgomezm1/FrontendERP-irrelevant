@@ -1,19 +1,20 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatsCard } from "@/components/ui/stats-card";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { CircleDollarSign, CreditCard, TrendingUp, Users } from "lucide-react";
-import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useDashboardData, TimePeriod } from "@/hooks/use-dashboard-data";
 import { FinancialDashboard } from "@/components/financial/financial-dashboard";
 
 const Dashboard = () => {
-  const { metrics, monthlyData, clientData, expenseData, isLoading } = useDashboardData();
+  const [timeFrame, setTimeFrame] = useState<TimePeriod>('month');
+  const { metrics, monthlyData, clientData, expenseData, isLoading } = useDashboardData(timeFrame);
 
   // Calculate financial metrics for FinancialDashboard
   const financialMetrics = {
-    burnRate: metrics.currentMonthExpense,
+    burnRate: metrics.burnRate,
     mrr: metrics.currentMonthIncome,
     mrrProjected: metrics.currentMonthIncome * 1.1, // 10% growth target
     topClientPercentage: clientData[0] ? (clientData[0].total / metrics.currentMonthIncome) * 100 : 0,
@@ -25,9 +26,8 @@ const Dashboard = () => {
     ytdProfit: monthlyData.reduce((acc, month) => acc + (month.total_income - month.total_expense), 0)
   };
 
-  const handleTimeFrameChange = (timeFrame: string) => {
-    // This could be implemented in the future to fetch data for different time frames
-    console.log("Time frame changed:", timeFrame);
+  const handleTimeFrameChange = (newTimeFrame: TimePeriod) => {
+    setTimeFrame(newTimeFrame);
   };
 
   return (
@@ -56,7 +56,7 @@ const Dashboard = () => {
           title="Saldo en caja"
           value={formatCurrency(metrics.cashBalance)}
           trend={metrics.cashBalance > 0 ? "up" : "down"}
-          trendValue={`${((metrics.cashBalance / metrics.currentMonthIncome) * 100).toFixed(1)}%`}
+          trendValue={`${((metrics.cashBalance / (metrics.currentMonthIncome || 1)) * 100).toFixed(1)}%`}
           icon={<TrendingUp className="h-4 w-4" />}
         />
         <StatsCard
@@ -86,7 +86,7 @@ const Dashboard = () => {
         }))}
         expenseHeatMap={[]} // This could be implemented later if needed
         onTimeFrameChange={handleTimeFrameChange}
-        timeFrame="month"
+        timeFrame={timeFrame}
       />
     </div>
   );
