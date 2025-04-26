@@ -214,7 +214,7 @@ export function AccruedExpenses() {
       header: "Monto",
       cell: ({ row }: { row: any }) => {
         const expense = row.original;
-        
+        // Direct display of the amount from the database record without any calculations
         // If viewing in original currency
         if (viewCurrency === expense.currency) {
           return formatCurrency(expense.amount, expense.currency);
