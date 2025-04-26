@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,8 @@ import { es } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { addIncome } from "@/services/financeService";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const incomeFormSchema = z.object({
   type: z.string({
@@ -61,6 +64,8 @@ const incomeFormSchema = z.object({
 
 export function AddIncomeDialog({ open, onOpenChange, trigger }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const form = useForm<z.infer<typeof incomeFormSchema>>({
     resolver: zodResolver(incomeFormSchema),
     defaultValues: {
@@ -74,15 +79,43 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
       notes: "",
     },
   });
+  
+  const addIncomeMutation = useMutation({
+    mutationFn: addIncome,
+    onSuccess: () => {
+      toast({
+        title: "Ingreso registrado",
+        description: "El ingreso ha sido registrado correctamente",
+      });
+      // Invalidate the incomes query to trigger a refetch
+      queryClient.invalidateQueries({ queryKey: ['incomes'] });
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error("Error al registrar ingreso:", error);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al registrar el ingreso",
+        variant: "destructive",
+      });
+    }
+  });
 
   const onSubmit = (data: z.infer<typeof incomeFormSchema>) => {
-    console.log("Nuevo ingreso:", data);
-    toast({
-      title: "Ingreso registrado",
-      description: "El ingreso ha sido registrado correctamente",
+    console.log("Enviando datos de ingreso:", data);
+    
+    addIncomeMutation.mutate({
+      description: data.description,
+      date: data.date,
+      amount: data.amount,
+      type: data.type,
+      client: data.client || undefined,
+      paymentMethod: data.paymentMethod,
+      receipt: data.receipt || undefined,
+      notes: data.notes || undefined,
+      currency: data.currency
     });
-    form.reset();
-    onOpenChange(false);
   };
 
   const incomeTypes = [

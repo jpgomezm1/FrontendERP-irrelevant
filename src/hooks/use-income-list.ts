@@ -1,11 +1,22 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getIncomes } from "@/services/financeService";
 import type { Income } from "@/services/financeService";
 
 export function useIncomeList() {
-  return useQuery({
+  const queryClient = useQueryClient();
+  
+  const query = useQuery({
     queryKey: ['incomes'],
     queryFn: getIncomes,
   });
+  
+  const refreshIncomes = () => {
+    queryClient.invalidateQueries({ queryKey: ['incomes'] });
+  };
+  
+  return {
+    ...query,
+    refreshIncomes,
+  };
 }

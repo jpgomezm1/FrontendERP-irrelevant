@@ -10,14 +10,20 @@ import {
 } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, RefreshCcw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
 import { useIncomeList } from "@/hooks/use-income-list";
+import { toast } from "sonner";
 
 export function IncomeList() {
   const [displayCurrency, setDisplayCurrency] = useState<Currency>("COP");
-  const { data: incomes = [], isLoading } = useIncomeList();
+  const { data: incomes = [], isLoading, isError, refreshIncomes } = useIncomeList();
+
+  const handleRefresh = () => {
+    refreshIncomes();
+    toast.info("Actualizando lista de ingresos...");
+  };
 
   const incomeColumns = [
     {
@@ -105,20 +111,38 @@ export function IncomeList() {
             Control y seguimiento de todos los ingresos
           </CardDescription>
         </div>
-        <Select value={displayCurrency} onValueChange={(value: Currency) => setDisplayCurrency(value)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Moneda de visualización" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="COP">Pesos Colombianos (COP)</SelectItem>
-            <SelectItem value="USD">Dólares (USD)</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRefresh}
+          >
+            <RefreshCcw className="h-4 w-4 mr-2" />
+            Actualizar
+          </Button>
+          <Select value={displayCurrency} onValueChange={(value: Currency) => setDisplayCurrency(value)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Moneda de visualización" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="COP">Pesos Colombianos (COP)</SelectItem>
+              <SelectItem value="USD">Dólares (USD)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <p className="text-destructive mb-2">Error al cargar los ingresos</p>
+            <Button onClick={handleRefresh} variant="outline" size="sm">
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Reintentar
+            </Button>
           </div>
         ) : (
           <DataTable

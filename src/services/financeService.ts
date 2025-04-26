@@ -34,6 +34,7 @@ export interface CashFlowItem {
 }
 
 export async function getIncomes(): Promise<Income[]> {
+  console.log('Fetching incomes from database');
   const { data, error } = await supabase
     .from('incomes')
     .select('*')
@@ -44,6 +45,7 @@ export async function getIncomes(): Promise<Income[]> {
     throw error;
   }
 
+  console.log('Fetched incomes:', data);
   return data.map(income => ({
     id: income.id,
     description: income.description,
@@ -59,6 +61,8 @@ export async function getIncomes(): Promise<Income[]> {
 }
 
 export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
+  console.log('Adding income to database:', income);
+  
   const { data, error } = await supabase
     .from('incomes')
     .insert([{
@@ -80,6 +84,7 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
     throw error;
   }
 
+  console.log('Income added successfully:', data);
   return {
     id: data.id,
     description: data.description,
