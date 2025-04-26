@@ -15,31 +15,69 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { useDocumentUpload } from "@/hooks/use-document-upload";
+import { toast } from "sonner";
 
 interface DocumentsListProps {
   documents: Document[];
   entityType: "client" | "project";
   entityId: number;
+  onDeleted?: () => void;
 }
 
 export function DocumentsList({ 
   documents, 
   entityType,
-  entityId 
+  entityId,
+  onDeleted
 }: DocumentsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { deleteDocument } = useDocumentUpload({ entityType, entityId });
 
   const handleDelete = (document: Document) => {
     setDocumentToDelete(document);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    // Aquí iría la lógica para eliminar el documento
-    console.log(`Eliminando documento ${documentToDelete?.id}`);
-    setDeleteDialogOpen(false);
-    setDocumentToDelete(null);
+  const confirmDelete = async () => {
+    if (!documentToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      console.log(`Deleting document: ${documentToDelete.id}, URL: ${documentToDelete.url}`);
+      const success = await deleteDocument(documentToDelete.id, documentToDelete.url);
+      
+      if (success && onDeleted) {
+        onDeleted();
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast.error("Error al eliminar documento");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+    }
+  };
+
+  const handleDownload = (url: string, documentName: string) => {
+    try {
+      // Verify that the URL is valid
+      if (!url) {
+        toast.error("Error: URL del documento no válida");
+        return;
+      }
+
+      console.log("Opening document URL:", url);
+      
+      // Open the URL in a new tab
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error("Error opening document:", error);
+      toast.error("Error al abrir el documento");
+    }
   };
 
   const getDocumentBadgeColor = (type: string) => {
@@ -75,7 +113,7 @@ export function DocumentsList({
             <div>
               <p className="font-medium">{doc.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className={getDocumentBadgeColor(doc.type)}>
+                <Badge variant={getDocumentBadgeColor(doc.type)}>
                   {doc.type}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
@@ -85,11 +123,13 @@ export function DocumentsList({
             </div>
           </div>
           <div className="flex space-x-2">
-            <Button size="sm" variant="ghost" asChild>
-              <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                <Download className="h-4 w-4 mr-1" />
-                Descargar
-              </a>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => handleDownload(doc.url, doc.name)}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Descargar
             </Button>
             <Button 
               size="sm" 
@@ -112,9 +152,12 @@ export function DocumentsList({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
-              Eliminar
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

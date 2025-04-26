@@ -120,7 +120,7 @@ export function useDocumentUpload({ entityType, entityId }: UseDocumentUploadPro
         throw new Error("No se pudo extraer la ruta del archivo");
       }
       
-      const filePath = urlParts[1];
+      const filePath = decodeURIComponent(urlParts[1]);
       console.log(`Deleting file from bucket: ${bucketId}, path: ${filePath}`);
 
       // Delete file from storage
