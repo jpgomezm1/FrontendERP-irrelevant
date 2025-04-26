@@ -11,6 +11,11 @@ interface FileUploadProps {
   className?: string;
   buttonText?: string;
   selectedFile?: File | null;
+  // Add the new props needed by the project-payments component
+  value?: string;
+  onChange?: (value: string) => void;
+  bucket?: string;
+  accept?: string;
 }
 
 export function FileUpload({
@@ -20,27 +25,36 @@ export function FileUpload({
   className,
   buttonText = "Seleccionar archivo",
   selectedFile = null,
+  // Handle the new props with default values
+  value,
+  onChange,
+  bucket,
+  accept,
 }: FileUploadProps) {
   const [file, setFile] = useState<File | null>(selectedFile);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Use the accept prop if provided, otherwise use acceptedFileTypes
+  const fileTypes = accept || acceptedFileTypes;
 
   const handleFileSelect = useCallback(
     (selectedFile: File | null) => {
       if (!selectedFile) {
         setFile(null);
         onFileSelect(null);
+        if (onChange) onChange("");
         return;
       }
 
       // Check file type
       const fileExtension = `.${selectedFile.name.split(".").pop()?.toLowerCase()}`;
-      const isValidType = acceptedFileTypes
+      const isValidType = fileTypes
         .split(",")
         .some(type => type.trim() === fileExtension || type.trim() === selectedFile.type);
 
       if (!isValidType) {
-        setError(`Tipo de archivo no permitido. Use: ${acceptedFileTypes}`);
+        setError(`Tipo de archivo no permitido. Use: ${fileTypes}`);
         return;
       }
 
@@ -54,8 +68,16 @@ export function FileUpload({
       setError(null);
       setFile(selectedFile);
       onFileSelect(selectedFile);
+      
+      // For compatibility with the new onChange prop
+      if (onChange) {
+        // Simulate uploading a file and getting a URL back
+        // In a real implementation, this would need to handle actual file upload
+        const mockFileUrl = URL.createObjectURL(selectedFile);
+        onChange(mockFileUrl);
+      }
     },
-    [acceptedFileTypes, maxFileSizeMB, onFileSelect]
+    [fileTypes, maxFileSizeMB, onFileSelect, onChange]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -89,31 +111,36 @@ export function FileUpload({
   const removeFile = () => {
     setFile(null);
     onFileSelect(null);
+    if (onChange) onChange("");
   };
 
   return (
     <div className={className}>
       <div
         className={cn(
-          "file-upload-area",
-          isDragging && "dragging",
+          "file-upload-area border-2 border-dashed border-muted-foreground/25 rounded-md p-4",
+          isDragging && "bg-muted/50 border-primary",
           className
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {file ? (
+        {(file || value) ? (
           <div className="flex flex-col items-center justify-center gap-2">
             <div className="flex items-center justify-between w-full bg-secondary rounded p-2">
-              <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+              <span className="text-sm truncate max-w-[200px]">
+                {file ? file.name : value ? value.split('/').pop() : 'Archivo seleccionado'}
+              </span>
               <Button variant="ghost" size="sm" onClick={removeFile}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="text-xs text-muted-foreground">
-              {(file.size / 1024 / 1024).toFixed(2)} MB
-            </div>
+            {file && (
+              <div className="text-xs text-muted-foreground">
+                {(file.size / 1024 / 1024).toFixed(2)} MB
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2">
@@ -122,7 +149,7 @@ export function FileUpload({
               Arrastre y suelte, o haga clic para seleccionar
             </p>
             <p className="text-xs text-muted-foreground">
-              Archivos permitidos: {acceptedFileTypes.replace(/\./g, "")}
+              Archivos permitidos: {fileTypes.replace(/\./g, "")}
             </p>
             <p className="text-xs text-muted-foreground">
               Tamaño máximo: {maxFileSizeMB}MB
@@ -139,7 +166,7 @@ export function FileUpload({
           type="file"
           className="sr-only"
           onChange={handleInputChange}
-          accept={acceptedFileTypes}
+          accept={fileTypes}
         />
       </div>
       {error && <p className="text-sm text-destructive mt-1">{error}</p>}

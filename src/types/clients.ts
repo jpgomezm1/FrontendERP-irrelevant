@@ -48,6 +48,9 @@ export type PaymentMethod =
   | "Daviplata"
   | "Otro";
 
+// Re-export Currency from utils to avoid the import error
+export { Currency };
+
 // Interface para documentos
 export interface Document {
   id: number;
