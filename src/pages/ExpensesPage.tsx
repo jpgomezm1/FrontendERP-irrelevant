@@ -20,7 +20,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 const ExpensesPage = () => {
   const [timeFrame, setTimeFrame] = useState<"month" | "quarter" | "year">("month");
   const [viewCurrency, setViewCurrency] = useState<Currency>("COP");
-  const { variableExpenses, recurringExpenses, expenseSummary, isLoading } = useExpensesData(timeFrame);
+  const { variableExpenses, recurringExpenses, expenseSummary, isLoading } = useExpensesData(timeFrame, viewCurrency);
   const [selectedVariableExpense, setSelectedVariableExpense] = useState<VariableExpense | null>(null);
   const [selectedRecurringExpense, setSelectedRecurringExpense] = useState<RecurringExpense | null>(null);
   const [isEditVariableOpen, setIsEditVariableOpen] = useState(false);
