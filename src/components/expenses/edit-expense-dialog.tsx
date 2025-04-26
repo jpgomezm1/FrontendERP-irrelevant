@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,6 +17,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { updateVariableExpense, updateRecurringExpense, VariableExpense, RecurringExpense } from "@/services/expenseService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
+import { EXPENSE_CATEGORIES } from "@/lib/constants";
 
 const expenseSchema = z.object({
   id: z.number(),
@@ -153,19 +153,6 @@ export function EditExpenseDialog({
       });
     }
   };
-
-  const categories = [
-    "Arriendo", 
-    "Alimentación", 
-    "Entretenimiento", 
-    "Marketing", 
-    "Nómina", 
-    "Servicios", 
-    "Software", 
-    "Tecnología", 
-    "Transporte", 
-    "Otros"
-  ];
 
   const paymentMethods = [
     "Efectivo", 
@@ -346,7 +333,7 @@ export function EditExpenseDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map((category) => (
+                      {EXPENSE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>

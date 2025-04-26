@@ -17,6 +17,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { addVariableExpense, addRecurringExpense } from "@/services/expenseService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
+import { EXPENSE_CATEGORIES } from "@/lib/constants";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "La descripción es requerida"),
@@ -111,39 +112,6 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
       });
     }
   };
-
-  const categories = [
-    "Arriendo", 
-    "Alimentación", 
-    "Entretenimiento", 
-    "Marketing", 
-    "Nómina", 
-    "Servicios", 
-    "Software", 
-    "Tecnología", 
-    "Transporte", 
-    "Otros"
-  ];
-
-  const paymentMethods = [
-    "Efectivo", 
-    "Tarjeta de Crédito", 
-    "Tarjeta de Débito", 
-    "Transferencia", 
-    "PayPal", 
-    "Nequi", 
-    "Daviplata"
-  ];
-
-  const frequencies = [
-    { value: "weekly", label: "Semanal" },
-    { value: "biweekly", label: "Quincenal" },
-    { value: "monthly", label: "Mensual" },
-    { value: "bimonthly", label: "Bimensual" },
-    { value: "quarterly", label: "Trimestral" },
-    { value: "semiannual", label: "Semestral" },
-    { value: "annual", label: "Anual" },
-  ];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -307,7 +275,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map((category) => (
+                      {EXPENSE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
