@@ -1,17 +1,23 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency, convertCurrency, Currency } from "@/lib/utils";
+import { standardizeCurrency } from "@/utils/financial-calculations";
 import { useState } from "react";
 
 export interface DashboardMetrics {
   currentMonthIncome: number;
   currentMonthExpense: number;
+  previousMonthIncome: number;
+  previousMonthExpense: number;
   cashBalance: number;
   monthlyVariation: {
     income: { value: number; percentage: number };
     expense: { value: number; percentage: number };
   };
   activeClients: number;
+  previousActiveClients: number;
+  activeProjects: number;
   burnRate: number;
 }
 
@@ -87,7 +93,7 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
       // Get income data
       const { data: incomesData, error: incomesError } = await supabase
         .from('incomes')
-        .select('date, amount')
+        .select('date, amount, currency, type')
         .order('date', { ascending: false });
         
       if (incomesError) throw incomesError;
@@ -95,7 +101,8 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
       // Get expense data from gastos_causados instead of expenses table
       const { data: expensesData, error: expensesError } = await supabase
         .from('gastos_causados')
-        .select('date, amount, currency')
+        .select('date, amount, currency, status')
+        .eq('status', 'pagado') // Only consider paid expenses
         .order('date', { ascending: false });
         
       if (expensesError) throw expensesError;
@@ -103,22 +110,31 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
       // Group by month and combine data
       const monthlyTotals: Record<string, any> = {};
       
-      // Process incomes
-      incomesData.forEach(income => {
-        const date = new Date(income.date);
-        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-        
-        if (!monthlyTotals[monthKey]) {
-          monthlyTotals[monthKey] = {
-            month: date.toLocaleString('default', { month: 'long' }),
-            year: date.getFullYear(),
-            total_income: 0,
-            total_expense: 0
-          };
-        }
-        
-        monthlyTotals[monthKey].total_income += Number(income.amount);
-      });
+      // Process incomes - filter out partner contributions and convert currencies
+      incomesData
+        .filter(income => income.type !== 'Aporte de socio') // Exclude partner contributions
+        .forEach(income => {
+          const date = new Date(income.date);
+          const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+          
+          if (!monthlyTotals[monthKey]) {
+            monthlyTotals[monthKey] = {
+              month: date.toLocaleString('default', { month: 'long' }),
+              year: date.getFullYear(),
+              total_income: 0,
+              total_expense: 0
+            };
+          }
+          
+          // Convert all incomes to COP for consistent calculation
+          const amountInCOP = standardizeCurrency(
+            Number(income.amount), 
+            income.currency as Currency,
+            "COP"
+          );
+          
+          monthlyTotals[monthKey].total_income += amountInCOP;
+        });
       
       // Process expenses with currency conversion to COP
       expensesData.forEach(expense => {
@@ -135,9 +151,11 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         }
         
         // Convert all expenses to COP for consistent calculation
-        const amountInCOP = expense.currency === "USD" 
-          ? convertCurrency(Number(expense.amount), "USD", "COP") 
-          : Number(expense.amount);
+        const amountInCOP = standardizeCurrency(
+          Number(expense.amount),
+          expense.currency as Currency,
+          "COP"
+        );
         
         monthlyTotals[monthKey].total_expense += amountInCOP;
       });
@@ -151,41 +169,66 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
     }
   });
 
-  // Fetch client data
+  // Fetch client data with currency standardization
   const { data: clientData = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['client-income', period],
     queryFn: async () => {
+      // Get only operational incomes, exclude partner contributions
       const { data, error } = await supabase
         .from('incomes')
-        .select('client, amount')
+        .select('client, amount, currency, type')
+        .neq('type', 'Aporte de socio') // Exclude partner contributions
         .gte('date', formatDate(startDate))
         .lte('date', formatDate(endDate));
         
       if (error) throw error;
       
-      // Group by client and sum amounts
+      // Group by client and sum amounts with currency conversion to COP
       const clientTotals: Record<string, number> = {};
       data.forEach(income => {
         const client = income.client || 'Sin Cliente';
         if (!clientTotals[client]) {
           clientTotals[client] = 0;
         }
-        clientTotals[client] += Number(income.amount);
+        
+        // Convert all amounts to COP
+        const amountInCOP = standardizeCurrency(
+          Number(income.amount),
+          income.currency as Currency,
+          "COP"
+        );
+        
+        clientTotals[client] += amountInCOP;
       });
       
       return Object.entries(clientTotals)
-        .map(([client, total]) => ({ client, total }))
-        .sort((a, b) => b.total - a.total);
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
     }
   });
 
-  // Fetch expense categories from gastos_causados
+  // Count active projects
+  const { data: activeProjectsCount = 0, isLoading: isLoadingProjects } = useQuery({
+    queryKey: ['active-projects'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'Activo');
+        
+      if (error) throw error;
+      return count || 0;
+    }
+  });
+
+  // Fetch expense categories with currency standardization
   const { data: expenseData = [], isLoading: isLoadingExpenses } = useQuery({
     queryKey: ['expense-categories', period],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('gastos_causados')
-        .select('category, amount, currency')
+        .select('category, amount, currency, status')
+        .eq('status', 'pagado') // Only consider paid expenses
         .gte('date', formatDate(startDate))
         .lte('date', formatDate(endDate));
 
@@ -198,9 +241,11 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         }
         
         // Convert all expenses to COP for consistent calculation
-        const amountInCOP = curr.currency === "USD" 
-          ? convertCurrency(Number(curr.amount), "USD", "COP") 
-          : Number(curr.amount);
+        const amountInCOP = standardizeCurrency(
+          Number(curr.amount),
+          curr.currency as Currency,
+          "COP"
+        );
           
         acc[curr.category] += amountInCOP;
         return acc;
@@ -215,14 +260,15 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
     }
   });
 
-  // Get current period expense and income totals
+  // Get current period expense and income totals with currency standardization
   const { data: currentPeriodTotals, isLoading: isLoadingCurrentPeriod } = useQuery({
     queryKey: ['current-period-totals', period],
     queryFn: async () => {
-      // Get income total
+      // Get operational income total (exclude partner contributions)
       const { data: incomeData, error: incomeError } = await supabase
         .from('incomes')
-        .select('amount')
+        .select('amount, currency, type')
+        .neq('type', 'Aporte de socio')
         .gte('date', formatDate(startDate))
         .lte('date', formatDate(endDate));
         
@@ -231,19 +277,30 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
       // Get expense total from gastos_causados with currency conversion
       const { data: expenseData, error: expenseError } = await supabase
         .from('gastos_causados')
-        .select('amount, currency')
+        .select('amount, currency, status')
+        .eq('status', 'pagado') // Only consider paid expenses
         .gte('date', formatDate(startDate))
         .lte('date', formatDate(endDate));
         
       if (expenseError) throw expenseError;
       
-      const incomeTotal = incomeData.reduce((sum, item) => sum + Number(item.amount), 0);
+      // Calculate income total with currency conversion to COP
+      const incomeTotal = incomeData.reduce((sum, item) => {
+        const amountInCOP = standardizeCurrency(
+          Number(item.amount),
+          item.currency as Currency,
+          "COP"
+        );
+        return sum + amountInCOP;
+      }, 0);
       
       // Calculate expense total with currency conversion to COP
       const expenseTotal = expenseData.reduce((sum, item) => {
-        const amountInCOP = item.currency === "USD" 
-          ? convertCurrency(Number(item.amount), "USD", "COP") 
-          : Number(item.amount);
+        const amountInCOP = standardizeCurrency(
+          Number(item.amount),
+          item.currency as Currency,
+          "COP"
+        );
         return sum + amountInCOP;
       }, 0);
       
@@ -255,10 +312,11 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
   const { data: previousPeriodTotals, isLoading: isLoadingPreviousPeriod } = useQuery({
     queryKey: ['previous-period-totals', period],
     queryFn: async () => {
-      // Get income total for previous period
+      // Get operational income total for previous period (exclude partner contributions)
       const { data: incomeData, error: incomeError } = await supabase
         .from('incomes')
-        .select('amount')
+        .select('amount, currency, type')
+        .neq('type', 'Aporte de socio')
         .gte('date', formatDate(prevStartDate))
         .lte('date', formatDate(prevEndDate));
         
@@ -267,19 +325,30 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
       // Get expense total for previous period with currency conversion
       const { data: expenseData, error: expenseError } = await supabase
         .from('gastos_causados')
-        .select('amount, currency')
+        .select('amount, currency, status')
+        .eq('status', 'pagado') // Only consider paid expenses
         .gte('date', formatDate(prevStartDate))
         .lte('date', formatDate(prevEndDate));
         
       if (expenseError) throw expenseError;
       
-      const incomeTotal = incomeData.reduce((sum, item) => sum + Number(item.amount), 0);
+      // Calculate income total with currency conversion to COP
+      const incomeTotal = incomeData.reduce((sum, item) => {
+        const amountInCOP = standardizeCurrency(
+          Number(item.amount),
+          item.currency as Currency,
+          "COP"
+        );
+        return sum + amountInCOP;
+      }, 0);
       
       // Calculate expense total with currency conversion to COP
       const expenseTotal = expenseData.reduce((sum, item) => {
-        const amountInCOP = item.currency === "USD" 
-          ? convertCurrency(Number(item.amount), "USD", "COP") 
-          : Number(item.amount);
+        const amountInCOP = standardizeCurrency(
+          Number(item.amount),
+          item.currency as Currency,
+          "COP"
+        );
         return sum + amountInCOP;
       }, 0);
       
@@ -287,25 +356,56 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
     }
   });
 
-  // Calculate variation percentage
-  const calculateVariation = (current: number, previous: number) => {
-    if (previous === 0) return 0;
-    return ((current - previous) / previous) * 100;
-  };
+  // Get active clients count for current and previous periods
+  const { data: clientsData, isLoading: isLoadingClientsData } = useQuery({
+    queryKey: ['active-clients', period],
+    queryFn: async () => {
+      // Current period active clients
+      const { data: currentClientsData, error: currentClientsError } = await supabase
+        .from('incomes')
+        .select('client')
+        .gte('date', formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))) // Last 30 days
+        .order('client');
+        
+      if (currentClientsError) throw currentClientsError;
+      
+      // Previous period active clients
+      const { data: previousClientsData, error: previousClientsError } = await supabase
+        .from('incomes')
+        .select('client')
+        .gte('date', formatDate(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)))
+        .lt('date', formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)))
+        .order('client');
+        
+      if (previousClientsError) throw previousClientsError;
+      
+      // Count unique clients
+      const currentActiveClients = new Set(
+        currentClientsData.map(item => item.client).filter(Boolean)
+      ).size;
+      
+      const previousActiveClients = new Set(
+        previousClientsData.map(item => item.client).filter(Boolean)
+      ).size;
+      
+      return { currentActiveClients, previousActiveClients };
+    }
+  });
 
   // Calculate burn rate (average monthly expenses) from gastos_causados
   const { data: burnRateData, isLoading: isLoadingBurnRate } = useQuery({
     queryKey: ['burn-rate'],
     queryFn: async () => {
-      // Get expenses for last 3 months for burn rate calculation
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      // Get expenses for last 6 months for burn rate calculation
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       
       // Fetch from gastos_causados with currency information
       const { data, error } = await supabase
         .from('gastos_causados')
-        .select('date, amount, currency')
-        .gte('date', formatDate(threeMonthsAgo));
+        .select('date, amount, currency, status')
+        .eq('status', 'pagado') // Only consider paid expenses
+        .gte('date', formatDate(sixMonthsAgo));
         
       if (error) throw error;
       
@@ -320,9 +420,11 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         }
         
         // Convert all expenses to COP for consistent calculation
-        const amountInCOP = expense.currency === "USD" 
-          ? convertCurrency(Number(expense.amount), "USD", "COP") 
-          : Number(expense.amount);
+        const amountInCOP = standardizeCurrency(
+          Number(expense.amount),
+          expense.currency as Currency,
+          "COP"
+        );
         
         monthlyExpenses[monthKey] += amountInCOP;
       });
@@ -337,10 +439,18 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
     }
   });
 
+  // Calculate variation percentage
+  const calculateVariation = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  };
+
   // Build final metrics object based on all the data
   const metrics: DashboardMetrics = {
     currentMonthIncome: currentPeriodTotals?.incomeTotal || 0,
     currentMonthExpense: currentPeriodTotals?.expenseTotal || 0,
+    previousMonthIncome: previousPeriodTotals?.incomeTotal || 0,
+    previousMonthExpense: previousPeriodTotals?.expenseTotal || 0,
     cashBalance: (currentPeriodTotals?.incomeTotal || 0) - (currentPeriodTotals?.expenseTotal || 0),
     burnRate: burnRateData || 0,
     monthlyVariation: {
@@ -359,7 +469,9 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
         )
       }
     },
-    activeClients: clientData.length
+    activeClients: clientsData?.currentActiveClients || 0,
+    previousActiveClients: clientsData?.previousActiveClients || 0,
+    activeProjects: activeProjectsCount
   };
 
   return {
@@ -373,6 +485,8 @@ export const useDashboardData = (period: TimePeriod = 'month') => {
                isLoadingExpenses || 
                isLoadingCurrentPeriod ||
                isLoadingPreviousPeriod ||
-               isLoadingBurnRate
+               isLoadingBurnRate ||
+               isLoadingProjects ||
+               isLoadingClientsData
   };
 };
