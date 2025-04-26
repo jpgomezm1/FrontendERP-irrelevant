@@ -48,8 +48,8 @@ const Dashboard = () => {
     isLoading 
   } = useDashboardData(timeFrame);
   
-  // Filter out partner contributions for operational income
-  const operationalIncome = metrics.currentMonthIncome * 0.85; // Example approximation, should be filtered in the hook
+  // Explicitly exclude partner contributions for operational income
+  const operationalIncome = metrics.currentMonthIncome;
   
   // Calculate better financial KPIs
   const financialKPIsOptions = {
@@ -58,7 +58,7 @@ const Dashboard = () => {
     operationalIncome: operationalIncome,
     previousIncome: metrics.previousMonthIncome,
     previousExpense: metrics.previousMonthExpense,
-    previousOperationalIncome: metrics.previousMonthIncome * 0.85, // Example approximation
+    previousOperationalIncome: metrics.previousMonthIncome,
     cashBalance: metrics.cashBalance,
     burnRate: metrics.burnRate,
     marketingExpense: expenseData.find(cat => cat.category === 'Marketing')?.total || 0,
@@ -137,7 +137,7 @@ const Dashboard = () => {
               />
               <StatsCard
                 title="Runway"
-                value={`${kpis.runway.value === Infinity ? "∞" : kpis.runway.value.toFixed(1)} meses`}
+                value={`${kpis.runway.value === Infinity || isNaN(kpis.runway.value) ? "∞" : kpis.runway.value.toFixed(1)} meses`}
                 trend={kpis.runway.trend}
                 trendValue={kpis.runway.value > 6 ? "Saludable" : "Requiere atención"}
                 icon={<ChartLine className="h-4 w-4" />}
@@ -154,21 +154,27 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={chartData} 
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" />
-                        <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
-                        <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
-                        <Legend />
-                        <Bar dataKey="ingresos" name="Ingresos" fill="#4ade80" />
-                        <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
-                        <Line type="monotone" dataKey="balance" name="Balance" stroke="#60a5fa" strokeWidth={2} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {chartData && chartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={chartData} 
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="name" />
+                          <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
+                          <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
+                          <Legend />
+                          <Bar dataKey="ingresos" name="Ingresos" fill="#4ade80" />
+                          <Bar dataKey="gastos" name="Gastos" fill="#f87171" />
+                          <Line type="monotone" dataKey="balance" name="Balance" stroke="#60a5fa" strokeWidth={2} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No hay datos suficientes para mostrar
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -181,31 +187,37 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={chartData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <defs>
-                          <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.1} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis dataKey="name" />
-                        <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
-                        <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
-                        <Area 
-                          type="monotone" 
-                          dataKey="balance" 
-                          name="Saldo Acumulado" 
-                          stroke="#60a5fa" 
-                          fillOpacity={1}
-                          fill="url(#colorBalance)"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    {chartData && chartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={chartData}
+                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                        >
+                          <defs>
+                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.1} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="name" />
+                          <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
+                          <Tooltip formatter={(value) => formatCurrency(Number(value), "COP")} />
+                          <Area 
+                            type="monotone" 
+                            dataKey="balance" 
+                            name="Saldo Acumulado" 
+                            stroke="#60a5fa" 
+                            fillOpacity={1}
+                            fill="url(#colorBalance)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No hay datos suficientes para mostrar
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -221,7 +233,7 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    {clientData.length > 0 ? (
+                    {clientData && clientData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <RechartsPieChart>
                           <Pie
@@ -243,8 +255,8 @@ const Dashboard = () => {
                         </RechartsPieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No hay datos suficientes para mostrar</p>
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No hay datos suficientes para mostrar
                       </div>
                     )}
                   </div>
@@ -259,7 +271,7 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
-                    {expenseData.length > 0 ? (
+                    {expenseData && expenseData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <RechartsPieChart>
                           <Pie
@@ -281,8 +293,8 @@ const Dashboard = () => {
                         </RechartsPieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No hay datos suficientes para mostrar</p>
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No hay datos suficientes para mostrar
                       </div>
                     )}
                   </div>
@@ -366,7 +378,7 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* Income Breakdown */}
+            {/* Income Statement */}
             <Card>
               <CardHeader>
                 <CardTitle>Estado de Resultados Simplificado</CardTitle>
@@ -376,7 +388,7 @@ const Dashboard = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4 py-2 border-b">
                     <span className="font-medium">Ingresos Operacionales</span>
-                    <span className="text-right">{formatCurrency(metrics.currentMonthIncome, "COP")}</span>
+                    <span className="text-right">{formatCurrency(operationalIncome, "COP")}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 py-2 border-b">
                     <span className="font-medium">Gastos Totales</span>
@@ -384,8 +396,8 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4 py-2 border-b">
                     <span className="font-medium">Utilidad Bruta</span>
-                    <span className={`text-right ${metrics.currentMonthIncome - metrics.currentMonthExpense >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {formatCurrency(metrics.currentMonthIncome - metrics.currentMonthExpense, "COP")}
+                    <span className={`text-right ${operationalIncome - metrics.currentMonthExpense >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      {formatCurrency(operationalIncome - metrics.currentMonthExpense, "COP")}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 py-2 border-b">
@@ -394,8 +406,8 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4 py-2 font-bold">
                     <span>Utilidad Neta</span>
-                    <span className={`text-right ${metrics.currentMonthIncome - metrics.currentMonthExpense >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {formatCurrency(metrics.currentMonthIncome - metrics.currentMonthExpense, "COP")}
+                    <span className={`text-right ${operationalIncome - metrics.currentMonthExpense >= 0 ? "text-green-600" : "text-red-600"}`}>
+                      {formatCurrency(operationalIncome - metrics.currentMonthExpense, "COP")}
                     </span>
                   </div>
                 </div>
@@ -419,21 +431,21 @@ const Dashboard = () => {
               <StatsCard
                 title="Proyectos Activos"
                 value={kpis.activeProjects.value.toString()}
-                trend="neutral"
+                trend={kpis.activeProjects.trend}
                 trendValue=""
                 icon={<Briefcase className="h-4 w-4" />}
               />
               <StatsCard
                 title="Proyectos por Cliente"
                 value={kpis.projectsPerClient.value.toFixed(1)}
-                trend="neutral"
+                trend={kpis.projectsPerClient.trend}
                 trendValue=""
                 icon={<Briefcase className="h-4 w-4" />}
               />
               <StatsCard
                 title="Ticket Promedio"
                 value={formatCurrency(kpis.averageTicket.value, "COP")}
-                trend="neutral"
+                trend={kpis.averageTicket.trend}
                 trendValue="Por cliente activo"
                 icon={<CircleDollarSign className="h-4 w-4" />}
               />
@@ -447,7 +459,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
-                  {clientData.length > 0 ? (
+                  {clientData && clientData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={clientData.sort((a, b) => b.value - a.value)}
@@ -462,8 +474,8 @@ const Dashboard = () => {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground">No hay datos de clientes para mostrar</p>
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No hay datos de clientes para mostrar
                     </div>
                   )}
                 </div>
@@ -484,15 +496,21 @@ const Dashboard = () => {
                     <div className="text-right">Ingresos</div>
                   </div>
 
-                  {clientData.slice(0, 5).map((client, i) => (
-                    <div key={i} className="grid grid-cols-3 p-3 border-t">
-                      <div className="truncate">{client.name}</div>
-                      <div className="text-center">
-                        {Math.round(kpis.projectsPerClient.value)} {/* Simplified example */}
+                  {clientData && clientData.length > 0 ? (
+                    clientData.slice(0, 5).map((client, i) => (
+                      <div key={i} className="grid grid-cols-3 p-3 border-t">
+                        <div className="truncate">{client.name}</div>
+                        <div className="text-center">
+                          {Math.round(kpis.projectsPerClient.value)} {/* Simplified example */}
+                        </div>
+                        <div className="text-right">{formatCurrency(client.value, "COP")}</div>
                       </div>
-                      <div className="text-right">{formatCurrency(client.value, "COP")}</div>
+                    ))
+                  ) : (
+                    <div className="p-3 text-center text-muted-foreground">
+                      No hay datos de clientes para mostrar
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>

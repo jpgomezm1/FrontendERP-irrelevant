@@ -53,10 +53,10 @@ export const useFinancialKPIs = (options: FinancialKPIsOptions, viewCurrency: Cu
   } = options;
 
   const kpis = useMemo(() => {
-    // Calculate net income (profit margin)
-    const netIncome = totalIncome - totalExpense;
-    const previousNetIncome = (previousIncome !== undefined && previousExpense !== undefined) 
-      ? previousIncome - previousExpense 
+    // Calculate net income (profit margin) based on operational income only
+    const netIncome = operationalIncome - totalExpense;
+    const previousNetIncome = (previousOperationalIncome !== undefined && previousExpense !== undefined) 
+      ? previousOperationalIncome - previousExpense 
       : undefined;
     
     // Calculate profit margin percentage based on operational income
@@ -95,7 +95,7 @@ export const useFinancialKPIs = (options: FinancialKPIsOptions, viewCurrency: Cu
       : Infinity;
 
     // Calculate burn rate trend
-    const burnRateTrend = previousExpense !== undefined
+    const burnRateTrend: 'up' | 'down' | 'neutral' = previousExpense !== undefined
       ? burnRate > previousExpense ? 'up' : burnRate < previousExpense ? 'down' : 'neutral'
       : 'neutral';
       
@@ -115,15 +115,15 @@ export const useFinancialKPIs = (options: FinancialKPIsOptions, viewCurrency: Cu
         value: mrr,
         unit: viewCurrency,
         trend: previousOperationalIncome !== undefined 
-          ? mrr > previousOperationalIncome ? 'up' : 'down' 
-          : 'neutral',
+          ? mrr > previousOperationalIncome ? 'up' : mrr < previousOperationalIncome ? 'down' : 'neutral' 
+          : 'neutral' as 'up' | 'down' | 'neutral',
         description: 'Ingresos Mensuales Recurrentes'
       },
       arr: {
         label: 'ARR',
         value: arr,
         unit: viewCurrency,
-        trend: 'neutral',  // We don't track ARR variation directly
+        trend: 'neutral' as 'up' | 'down' | 'neutral',
         description: 'Ingresos Anuales Recurrentes'
       },
       profitMargin: {
@@ -133,7 +133,7 @@ export const useFinancialKPIs = (options: FinancialKPIsOptions, viewCurrency: Cu
         trend: profitMarginTrend,
         trendValue: previousProfitMargin !== undefined ? profitMargin - previousProfitMargin : undefined,
         previousValue: previousProfitMargin,
-        description: 'Utilidad / Ingresos Totales'
+        description: 'Utilidad / Ingresos Operacionales'
       },
       activeClients: {
         label: 'Clientes Activos',
@@ -147,14 +147,14 @@ export const useFinancialKPIs = (options: FinancialKPIsOptions, viewCurrency: Cu
         label: 'Proyectos Activos',
         value: activeProjects,
         unit: 'proyectos',
-        trend: 'neutral', // We don't track project variation directly
+        trend: 'neutral' as 'up' | 'down' | 'neutral',
         description: 'Proyectos con estado activo'
       },
       projectsPerClient: {
         label: 'Proyectos por Cliente',
         value: projectsPerClient,
         unit: 'x',
-        trend: 'neutral', // We don't track this variation directly
+        trend: 'neutral' as 'up' | 'down' | 'neutral',
         description: 'Proyectos Activos / Clientes Activos'
       },
       marketingROI: marketingROI !== null ? {
@@ -168,14 +168,14 @@ export const useFinancialKPIs = (options: FinancialKPIsOptions, viewCurrency: Cu
         label: 'Ticket Promedio',
         value: averageTicket,
         unit: viewCurrency,
-        trend: 'neutral', // We don't track ticket variation directly
+        trend: 'neutral' as 'up' | 'down' | 'neutral',
         description: 'Ingreso Promedio por Cliente'
       },
       ltv: {
         label: 'Lifetime Value (LTV)',
         value: ltv,
         unit: viewCurrency,
-        trend: 'neutral', // We don't track LTV variation directly
+        trend: 'neutral' as 'up' | 'down' | 'neutral',
         description: 'Valor de vida del cliente'
       },
       cashBalance: {
