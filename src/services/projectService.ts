@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Project, Document, ProjectStatus, DocumentType } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
@@ -112,44 +113,56 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
 }
 
 export async function addProject(project: Omit<Project, 'id' | 'documents' | 'payments' | 'paymentPlan'>): Promise<Project> {
-  const payload = {
-    clientid: project.clientId,
-    name: project.name,
-    description: project.description,
-    startdate: project.startDate.toISOString().split('T')[0],
-    enddate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
-    status: project.status,
-    notes: project.notes
-  };
-  
-  const { data, error } = await supabase
-    .from('projects')
-    .insert([payload])
-    .select()
-    .single();
+  try {
+    // Ensure numeric values are properly parsed
+    const payload = {
+      clientid: project.clientId,
+      name: project.name,
+      description: project.description,
+      startdate: project.startDate.toISOString().split('T')[0],
+      enddate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+      status: project.status,
+      notes: project.notes
+    };
+    
+    console.log("Sending project data to Supabase:", payload);
+    
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([payload])
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error adding project:', error);
-    throw error;
-  }
-
-  return {
-    id: data.id,
-    clientId: data.clientid,
-    name: data.name,
-    description: data.description,
-    startDate: new Date(data.startdate),
-    endDate: data.enddate ? new Date(data.enddate) : undefined,
-    status: data.status as ProjectStatus,
-    notes: data.notes || undefined,
-    documents: [],
-    payments: [],
-    paymentPlan: {
-      id: 0, // Default placeholder
-      projectId: data.id,
-      type: "Fee único" // Default placeholder
+    if (error) {
+      console.error('Error adding project:', error);
+      throw new Error(`Error al agregar proyecto: ${error.message}`);
     }
-  };
+
+    if (!data) {
+      throw new Error('No se recibieron datos del servidor al crear el proyecto');
+    }
+
+    return {
+      id: data.id,
+      clientId: data.clientid,
+      name: data.name,
+      description: data.description,
+      startDate: new Date(data.startdate),
+      endDate: data.enddate ? new Date(data.enddate) : undefined,
+      status: data.status as ProjectStatus,
+      notes: data.notes || undefined,
+      documents: [],
+      payments: [],
+      paymentPlan: {
+        id: 0, // Default placeholder
+        projectId: data.id,
+        type: "Fee único" // Default placeholder
+      }
+    };
+  } catch (error: any) {
+    console.error('Error in addProject:', error);
+    throw new Error(error.message || 'Error al guardar el proyecto');
+  }
 }
 
 export async function updateProject(id: number, updatedData: Partial<Project>): Promise<void> {

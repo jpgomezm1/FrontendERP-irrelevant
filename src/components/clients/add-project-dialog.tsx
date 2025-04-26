@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -100,6 +100,7 @@ export function AddProjectDialog({
 }: AddProjectDialogProps) {
   const { clients } = useClientsData();
   const { addProject } = useProjectsData();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -130,9 +131,12 @@ export function AddProjectDialog({
   const showRecurringFee = ["Suscripción periódica", "Mixto"].includes(watchPlanType);
 
   async function onSubmit(data: ProjectFormValues) {
-    console.log("Añadiendo proyecto:", data);
+    if (isSubmitting) return;
     
     try {
+      setIsSubmitting(true);
+      console.log("Datos del proyecto a guardar:", data);
+      
       // Prepare project data based on form values
       const projectToAdd = {
         clientId: data.clientId,
@@ -143,6 +147,8 @@ export function AddProjectDialog({
         endDate: data.endDate || undefined,
         notes: data.notes,
       };
+      
+      console.log("Proyecto procesado para guardar:", projectToAdd);
       
       // Add the project to the database
       await addProject(projectToAdd);
@@ -155,6 +161,8 @@ export function AddProjectDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving project:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   }
   
@@ -178,7 +186,7 @@ export function AddProjectDialog({
                 <FormItem>
                   <FormLabel className="form-required">Cliente</FormLabel>
                   <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                    onValueChange={(value) => field.onChange(Number(value))} 
                     defaultValue={field.value ? field.value.toString() : undefined}
                     disabled={!!defaultClientId}
                   >
@@ -630,10 +638,20 @@ export function AddProjectDialog({
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar'
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

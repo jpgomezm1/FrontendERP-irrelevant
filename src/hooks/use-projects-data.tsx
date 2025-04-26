@@ -45,13 +45,20 @@ export function useProjectsData() {
   // Add a new project
   const addProjectMutation = useMutation({
     mutationFn: addProject,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      if (variables.clientId) {
+        queryClient.invalidateQueries({ queryKey: ['projects', variables.clientId] });
+      }
       toast.success('Proyecto agregado exitosamente');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error adding project:', error);
-      toast.error('Error al agregar proyecto');
+      // Provide more detailed error message when possible
+      const errorMessage = error?.message || 'Error al agregar proyecto';
+      toast.error(errorMessage, {
+        description: 'Verifique los datos ingresados e intente nuevamente'
+      });
     },
   });
   
