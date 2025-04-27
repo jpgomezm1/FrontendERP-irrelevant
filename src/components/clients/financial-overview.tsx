@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -17,7 +16,7 @@ import { usePaymentsData } from "@/hooks/use-payments-data";
 import { useClientsData } from "@/hooks/use-clients-data";
 import { useProjectsData } from "@/hooks/use-projects-data";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, PieChart } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -131,6 +130,16 @@ export function FinancialOverview({
       header: "Estado",
       cell: ({ row }) => {
         const status = row.original.status;
+        let badgeClass = "";
+        
+        if (status === "Pagado") {
+          badgeClass = "bg-green-900/30 text-green-300 border-green-800/30";
+        } else if (status === "Pendiente") {
+          badgeClass = "bg-amber-900/30 text-amber-300 border-amber-800/30";
+        } else {
+          badgeClass = "bg-red-900/30 text-red-300 border-red-800/30";
+        }
+        
         return (
           <Badge 
             variant={
@@ -138,6 +147,7 @@ export function FinancialOverview({
               status === "Pendiente" ? "warning" : 
               "destructive"
             }
+            className={badgeClass}
           >
             {status}
           </Badge>
@@ -162,7 +172,7 @@ export function FinancialOverview({
         
         if (status === "Pagado" && invoiceUrl) {
           return (
-            <Button variant="ghost" size="sm" asChild>
+            <Button variant="ghost" size="sm" asChild className="text-purple-400 hover:text-purple-300 hover:bg-purple-900/20">
               <a href={invoiceUrl} target="_blank" rel="noopener noreferrer">
                 <FileText className="h-4 w-4 mr-1" />
                 Ver
@@ -197,15 +207,15 @@ export function FinancialOverview({
   }
 
   return (
-    <Card>
+    <Card className="bg-[#1e1756]/10 border-purple-800/20 text-white shadow-md">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardTitle className="text-white">{title}</CardTitle>
+            <CardDescription className="text-slate-300">{description}</CardDescription>
           </div>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
+          <Button variant="outline" className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]">
+            <Download className="h-4 w-4 mr-2 text-purple-400" />
             Exportar Excel
           </Button>
         </div>
@@ -213,13 +223,13 @@ export function FinancialOverview({
       <CardContent>
         {isLoadingPayments ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
           </div>
         ) : (
-          <Tabs defaultValue="pagos" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="pagos">Pagos</TabsTrigger>
-              <TabsTrigger value="resumen">Resumen</TabsTrigger>
+          <Tabs defaultValue="pagos" className="space-y-4 text-white">
+            <TabsList className="bg-[#0f0b2a] border border-purple-800/30">
+              <TabsTrigger value="pagos" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white">Pagos</TabsTrigger>
+              <TabsTrigger value="resumen" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white">Resumen</TabsTrigger>
             </TabsList>
             
             <div className="flex flex-col sm:flex-row justify-between gap-4 mt-4">
@@ -233,10 +243,10 @@ export function FinancialOverview({
                   value={statusFilter}
                   onValueChange={setStatusFilter}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[180px] bg-[#0f0b2a] border-purple-800/30 text-white">
                     <SelectValue placeholder="Filtrar por estado" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                     <SelectItem value="todos">Todos los estados</SelectItem>
                     <SelectItem value="Pagado">Pagados</SelectItem>
                     <SelectItem value="Pendiente">Pendientes</SelectItem>
@@ -257,85 +267,104 @@ export function FinancialOverview({
             
             <TabsContent value="resumen">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Card>
+                <Card className="bg-[#0f0b2a]/80 border-purple-800/30 text-white">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">Total Facturado</CardTitle>
+                    <CardTitle className="text-lg text-white">Total Facturado</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
+                    <div className="text-2xl font-bold text-white">
                       {formatCurrency(totalGeneral, "COP")}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-slate-300 mt-1">
                       Periodo: {dateRange?.from && formatDate(dateRange.from)} - {dateRange?.to && formatDate(dateRange.to)}
                     </p>
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="bg-[#0f0b2a]/80 border-purple-800/30 text-white">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-green-600">Pagado</CardTitle>
+                    <CardTitle className="text-lg text-green-400">Pagado</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
+                    <div className="text-2xl font-bold text-green-400">
                       {formatCurrency(totalPaid, "COP")}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {((totalPaid / totalGeneral) * 100).toFixed(1)}% del total
+                    <p className="text-xs text-slate-300 mt-1">
+                      {totalGeneral > 0 ? ((totalPaid / totalGeneral) * 100).toFixed(1) : "0"}% del total
                     </p>
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="bg-[#0f0b2a]/80 border-purple-800/30 text-white">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-amber-600">Pendiente</CardTitle>
+                    <CardTitle className="text-lg text-amber-400">Pendiente</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-amber-600">
+                    <div className="text-2xl font-bold text-amber-400">
                       {formatCurrency(totalPending, "COP")}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {((totalPending / totalGeneral) * 100).toFixed(1)}% del total
+                    <p className="text-xs text-slate-300 mt-1">
+                      {totalGeneral > 0 ? ((totalPending / totalGeneral) * 100).toFixed(1) : "0"}% del total
                     </p>
                   </CardContent>
                 </Card>
                 
-                <Card>
+                <Card className="bg-[#0f0b2a]/80 border-purple-800/30 text-white">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-red-600">Vencido</CardTitle>
+                    <CardTitle className="text-lg text-red-400">Vencido</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-2xl font-bold text-red-400">
                       {formatCurrency(totalOverdue, "COP")}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {((totalOverdue / totalGeneral) * 100).toFixed(1)}% del total
+                    <p className="text-xs text-slate-300 mt-1">
+                      {totalGeneral > 0 ? ((totalOverdue / totalGeneral) * 100).toFixed(1) : "0"}% del total
                     </p>
                   </CardContent>
                 </Card>
               </div>
               
-              <Card>
+              <Card className="bg-[#0f0b2a]/80 border-purple-800/30 text-white">
                 <CardContent className="p-6">
-                  <h3 className="text-lg font-medium mb-4">Distribución de Pagos</h3>
+                  <h3 className="text-lg font-medium mb-4 text-white flex items-center">
+                    <PieChart className="h-5 w-5 mr-2 text-purple-400" />
+                    Distribución de Pagos
+                  </h3>
                   <div className="flex items-center">
-                    <div className="w-full bg-gray-200 rounded-full h-4">
-                      <div className="h-4 rounded-l-full bg-green-500" style={{ 
-                        width: `${(totalPaid / totalGeneral) * 100}%` 
-                      }}></div>
+                    <div className="w-full bg-[#1a1542] rounded-full h-4">
+                      {totalGeneral > 0 && (
+                        <>
+                          <div className="h-4 rounded-l-full bg-green-500" style={{ 
+                            width: `${(totalPaid / totalGeneral) * 100}%` 
+                          }}></div>
+                          {totalPending > 0 && (
+                            <div className="h-4 bg-amber-500" style={{ 
+                              width: `${(totalPending / totalGeneral) * 100}%`,
+                              marginLeft: `${(totalPaid / totalGeneral) * 100}%`
+                            }}></div>
+                          )}
+                          {totalOverdue > 0 && (
+                            <div className="h-4 rounded-r-full bg-red-500" style={{ 
+                              width: `${(totalOverdue / totalGeneral) * 100}%`,
+                              marginLeft: `${((totalPaid + totalPending) / totalGeneral) * 100}%`
+                            }}></div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex justify-between mt-2 text-sm">
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
-                      <span>Pagado: {((totalPaid / totalGeneral) * 100).toFixed(1)}%</span>
+                      <span className="text-green-300">Pagado: {totalGeneral > 0 ? ((totalPaid / totalGeneral) * 100).toFixed(1) : "0"}%</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-amber-500 rounded mr-1"></div>
-                      <span>Pendiente: {((totalPending / totalGeneral) * 100).toFixed(1)}%</span>
+                      <span className="text-amber-300">Pendiente: {totalGeneral > 0 ? ((totalPending / totalGeneral) * 100).toFixed(1) : "0"}%</span>
                     </div>
                     <div className="flex items-center">
                       <div className="w-3 h-3 bg-red-500 rounded mr-1"></div>
-                      <span>Vencido: {((totalOverdue / totalGeneral) * 100).toFixed(1)}%</span>
+                      <span className="text-red-300">Vencido: {totalGeneral > 0 ? ((totalOverdue / totalGeneral) * 100).toFixed(1) : "0"}%</span>
                     </div>
                   </div>
                 </CardContent>

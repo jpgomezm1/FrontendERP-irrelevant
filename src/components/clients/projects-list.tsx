@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import {
   Card,
@@ -56,10 +55,21 @@ export function ProjectsList({ clientId, onProjectSelect }: ProjectsListProps) {
   };
 
   const getStatusBadge = (status: AccountStatus) => {
+    let badgeClass = "";
+    
+    if (status === AccountStatus.UpToDate) {
+      badgeClass = "bg-green-900/30 text-green-300 border-green-800/30";
+    } else if (status === AccountStatus.SlightlyOverdue) {
+      badgeClass = "bg-amber-900/30 text-amber-300 border-amber-800/30";
+    } else {
+      badgeClass = "bg-red-900/30 text-red-300 border-red-800/30";
+    }
+    
     const variant = status === AccountStatus.UpToDate ? "success" :
                    status === AccountStatus.SlightlyOverdue ? "warning" : "destructive";
+                   
     return (
-      <Badge variant={variant} className="flex gap-1 items-center">
+      <Badge variant={variant} className={`flex gap-1 items-center ${badgeClass}`}>
         {getStatusIcon(status)}
         {status}
       </Badge>
@@ -69,27 +79,27 @@ export function ProjectsList({ clientId, onProjectSelect }: ProjectsListProps) {
   if (isLoadingData) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
       </div>
     );
   }
 
   if (error || !displayedProjects) {
-    return <div>Error al cargar los proyectos</div>;
+    return <div className="text-white">Error al cargar los proyectos</div>;
   }
 
   if (displayedProjects.length === 0) {
-    return <div className="text-center py-6 text-muted-foreground">No hay proyectos registrados</div>;
+    return <div className="text-center py-6 text-slate-300">No hay proyectos registrados</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="w-[200px]">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger>
+          <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
             <SelectValue placeholder="Filtrar por estado" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value={AccountStatus.UpToDate}>Al día</SelectItem>
             <SelectItem value={AccountStatus.SlightlyOverdue}>Levemente vencido</SelectItem>
@@ -102,7 +112,7 @@ export function ProjectsList({ clientId, onProjectSelect }: ProjectsListProps) {
         {filteredProjects.map((project) => (
           <Card 
             key={project.id}
-            className="cursor-pointer hover:border-primary transition-all"
+            className="cursor-pointer hover:border-purple-500 transition-all bg-[#1e1756] border-purple-800/30 text-white"
             onClick={() => onProjectSelect(project.id)}
           >
             <CardContent className="p-4">
@@ -115,28 +125,33 @@ export function ProjectsList({ clientId, onProjectSelect }: ProjectsListProps) {
                     project.status === "Finalizado" ? "default" :
                     "destructive"
                   }
-                  className="whitespace-nowrap ml-auto"
+                  className={`whitespace-nowrap ml-auto ${
+                    project.status === "Activo" ? "bg-green-900/30 text-green-300 border-green-800/30" : 
+                    project.status === "Pausado" ? "bg-amber-900/30 text-amber-300 border-amber-800/30" : 
+                    project.status === "Finalizado" ? "bg-purple-900/30 text-purple-300 border-purple-800/30" :
+                    "bg-red-900/30 text-red-300 border-red-800/30"
+                  }`}
                 >
                   {project.status}
                 </Badge>
               </div>
               
-              <div className="text-sm text-muted-foreground mb-3">
+              <div className="text-sm text-purple-300 mb-3">
                 {project.clientName || "Cliente Desconocido"}
               </div>
               
-              <div className="text-sm line-clamp-2 mb-3">
+              <div className="text-sm line-clamp-2 mb-3 text-slate-300">
                 {project.description}
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <div className="text-muted-foreground">Inicio</div>
-                  <div>{formatDate(project.startDate)}</div>
+                  <div className="text-purple-300">Inicio</div>
+                  <div className="text-slate-300">{formatDate(project.startDate)}</div>
                 </div>
                 <div>
-                  <div className="text-muted-foreground">Valor Total</div>
-                  <div className="font-semibold">
+                  <div className="text-purple-300">Valor Total</div>
+                  <div className="font-semibold text-white">
                     {project.totalValue > 0 
                       ? formatCurrency(project.totalValue, "COP") 
                       : "-"}
@@ -144,8 +159,8 @@ export function ProjectsList({ clientId, onProjectSelect }: ProjectsListProps) {
                 </div>
               </div>
 
-              <div className="mt-3 pt-3 border-t">
-                <div className="text-muted-foreground text-sm mb-1">Estado de Cuenta</div>
+              <div className="mt-3 pt-3 border-t border-purple-800/30">
+                <div className="text-purple-300 text-sm mb-1">Estado de Cuenta</div>
                 {getStatusBadge(project.accountStatus)}
               </div>
             </CardContent>

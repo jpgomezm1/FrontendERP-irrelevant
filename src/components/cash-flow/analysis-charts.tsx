@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -34,23 +33,30 @@ interface AnalysisChartsProps {
   }[];
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+const COLORS = ['#9333ea', '#c084fc', '#a855f7', '#d8b4fe', '#6b21a8'];
 
 export function AnalysisCharts({ monthlyData, categoryExpenses, clientIncome }: AnalysisChartsProps) {
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-[#1e1756] border-purple-800/30 text-white">
         <CardHeader>
-          <CardTitle>Evolución Financiera</CardTitle>
+          <CardTitle className="text-white">Evolución Financiera</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={(value) => `$${value / 1000000}M`} />
-                <Tooltip formatter={(value) => [formatCurrency(Number(value)), ""]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2e2b70" />
+                <XAxis dataKey="name" stroke="#a5a3c8" />
+                <YAxis tickFormatter={(value) => `$${value / 1000000}M`} stroke="#a5a3c8" />
+                <Tooltip 
+                  formatter={(value) => [formatCurrency(Number(value)), ""]} 
+                  contentStyle={{
+                    backgroundColor: "#0f0b2a",
+                    borderColor: "#4c1d95",
+                    color: "#fff"
+                  }}
+                />
                 <Legend />
                 <Line
                   type="monotone"
@@ -70,7 +76,7 @@ export function AnalysisCharts({ monthlyData, categoryExpenses, clientIncome }: 
                   type="monotone"
                   dataKey="balance"
                   name="Balance"
-                  stroke="#4b4ce6"
+                  stroke="#a78bfa"
                   strokeWidth={2}
                 />
               </LineChart>
@@ -80,9 +86,9 @@ export function AnalysisCharts({ monthlyData, categoryExpenses, clientIncome }: 
       </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-[#1e1756] border-purple-800/30 text-white">
           <CardHeader>
-            <CardTitle>Gastos por Categoría</CardTitle>
+            <CardTitle className="text-white">Gastos por Categoría</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -103,26 +109,40 @@ export function AnalysisCharts({ monthlyData, categoryExpenses, clientIncome }: 
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{
+                      backgroundColor: "#0f0b2a",
+                      borderColor: "#4c1d95",
+                      color: "#fff"
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-[#1e1756] border-purple-800/30 text-white">
           <CardHeader>
-            <CardTitle>Ingresos por Cliente</CardTitle>
+            <CardTitle className="text-white">Ingresos por Cliente</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={clientIncome} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(value) => `$${value / 1000000}M`} />
-                  <YAxis type="category" dataKey="name" width={100} />
-                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                  <Bar dataKey="value" fill="#4ade80" radius={[0, 4, 4, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2b70" />
+                  <XAxis type="number" tickFormatter={(value) => `$${value / 1000000}M`} stroke="#a5a3c8" />
+                  <YAxis type="category" dataKey="name" width={100} stroke="#a5a3c8" />
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(Number(value))}
+                    contentStyle={{
+                      backgroundColor: "#0f0b2a",
+                      borderColor: "#4c1d95",
+                      color: "#fff"
+                    }}
+                  />
+                  <Bar dataKey="value" fill="#a78bfa" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

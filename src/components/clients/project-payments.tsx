@@ -79,7 +79,7 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
       accessorKey: "type",
       header: "Tipo",
       cell: ({ row }) => (
-        <Badge variant="outline">
+        <Badge variant="outline" className="bg-purple-900/30 text-purple-300 border-purple-800/30">
           {row.original.type}
         </Badge>
       ),
@@ -93,7 +93,7 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
       accessorKey: "amount",
       header: "Monto",
       cell: ({ row }) => (
-        <div className="font-medium">
+        <div className="font-medium text-white">
           {formatCurrency(row.original.amount, row.original.currency)}
         </div>
       ),
@@ -108,6 +108,11 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
             variant={
               status === "Pagado" ? "success" :
               status === "Vencido" ? "destructive" : "outline"
+            }
+            className={
+              status === "Pagado" ? "bg-green-900/30 text-green-300 border-green-800/30" :
+              status === "Vencido" ? "bg-red-900/30 text-red-300 border-red-800/30" :
+              "bg-purple-900/30 text-purple-300 border-purple-800/30"
             }
           >
             {status}
@@ -130,13 +135,13 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
         if (isPaid) {
           return (
             <div className="flex items-center">
-              <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
-              <span className="text-xs">Pagado</span>
+              <CheckCircle2 className="h-4 w-4 text-green-400 mr-2" />
+              <span className="text-xs text-green-300">Pagado</span>
               {payment.documentUrl && (
                 <Button 
                   variant="link" 
                   size="sm"
-                  className="h-auto p-0 ml-2"
+                  className="h-auto p-0 ml-2 text-purple-400 hover:text-purple-300"
                   onClick={() => window.open(payment.documentUrl, '_blank')}
                 >
                   <Upload className="h-3 w-3 mr-1" />
@@ -151,6 +156,7 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
           <Button
             variant="outline"
             size="sm"
+            className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
             onClick={() => handleMarkAsPaid(payment)}
           >
             Marcar como pagado
@@ -162,17 +168,17 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
   
   return (
     <>
-      <Tabs defaultValue="current">
-        <TabsList>
-          <TabsTrigger value="current">Pagos Actuales</TabsTrigger>
-          <TabsTrigger value="upcoming">Pagos Futuros</TabsTrigger>
+      <Tabs defaultValue="current" className="text-white">
+        <TabsList className="bg-[#0f0b2a] border border-purple-800/30">
+          <TabsTrigger value="current" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white">Pagos Actuales</TabsTrigger>
+          <TabsTrigger value="upcoming" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white">Pagos Futuros</TabsTrigger>
         </TabsList>
         
         <TabsContent value="current">
-          <Card>
+          <Card className="bg-[#1e1756] border-purple-800/30 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Pagos Pendientes / Vencidos</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg text-white">Pagos Pendientes / Vencidos</CardTitle>
+              <CardDescription className="text-slate-300">
                 Pagos actuales que deben ser cobrados
               </CardDescription>
             </CardHeader>
@@ -186,8 +192,8 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
               {currentPayments.length === 0 && !isLoading && (
                 <div className="text-center py-8">
                   <CheckCircle2 className="mx-auto h-12 w-12 text-green-500/50" />
-                  <h3 className="mt-2 text-lg font-medium">Sin pagos pendientes</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="mt-2 text-lg font-medium text-white">Sin pagos pendientes</h3>
+                  <p className="text-sm text-slate-300">
                     No hay pagos pendientes o vencidos para este proyecto.
                   </p>
                 </div>
@@ -197,10 +203,10 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
         </TabsContent>
         
         <TabsContent value="upcoming">
-          <Card>
+          <Card className="bg-[#1e1756] border-purple-800/30 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Pagos Programados</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg text-white">Pagos Programados</CardTitle>
+              <CardDescription className="text-slate-300">
                 Pagos futuros planificados
               </CardDescription>
             </CardHeader>
@@ -213,9 +219,9 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
               
               {futurePayments.length === 0 && !isLoading && (
                 <div className="text-center py-8">
-                  <Calendar className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <h3 className="mt-2 text-lg font-medium">Sin pagos futuros</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <Calendar className="mx-auto h-12 w-12 text-purple-500/50" />
+                  <h3 className="mt-2 text-lg font-medium text-white">Sin pagos futuros</h3>
+                  <p className="text-sm text-slate-300">
                     No hay pagos programados para este proyecto.
                   </p>
                 </div>
@@ -226,10 +232,13 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
       </Tabs>
       
       <Dialog open={markAsPaidDialogOpen} onOpenChange={setMarkAsPaidDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-[#1e1756] border-purple-800/30 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle>Marcar pago como completado</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-purple-400" />
+              Marcar pago como completado
+            </DialogTitle>
+            <DialogDescription className="text-slate-300">
               Registrar el pago por {selectedPayment ? formatCurrency(selectedPayment.amount, selectedPayment.currency) : ''} 
               correspondiente a {selectedPayment?.type}.
             </DialogDescription>
@@ -242,7 +251,7 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
                 name="documentUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Comprobante de pago (opcional)</FormLabel>
+                    <FormLabel className="text-white">Comprobante de pago (opcional)</FormLabel>
                     <FormControl>
                       <FileUpload
                         onFileSelect={(file) => {
@@ -263,12 +272,18 @@ export function ProjectPayments({ projectId }: ProjectPaymentsProps) {
               <DialogFooter>
                 <Button 
                   type="button" 
-                  variant="secondary" 
+                  variant="outline" 
                   onClick={() => setMarkAsPaidDialogOpen(false)}
+                  className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Confirmar Pago</Button>
+                <Button 
+                  type="submit"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Confirmar Pago
+                </Button>
               </DialogFooter>
             </form>
           </Form>

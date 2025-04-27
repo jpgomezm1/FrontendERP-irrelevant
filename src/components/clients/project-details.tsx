@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Card,
@@ -69,20 +68,22 @@ export function ProjectDetails({
     return (
       <div className="space-y-4">
         <div>
-          <h3 className="font-medium mb-2">Tipo de Plan</h3>
-          <Badge variant="outline" className="text-sm">{plan.type}</Badge>
+          <h3 className="font-medium mb-2 text-white">Tipo de Plan</h3>
+          <Badge variant="outline" className="text-sm bg-purple-900/30 text-purple-300 border-purple-800/30">
+            {plan.type}
+          </Badge>
         </div>
         
         {plan.implementationFee && (
           <div>
-            <h3 className="font-medium mb-2">Fee de Implementación</h3>
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">Valor Total:</span> {" "}
+            <h3 className="font-medium mb-2 text-white">Fee de Implementación</h3>
+            <div className="bg-[#0f0b2a]/50 p-4 rounded-lg space-y-2 border border-purple-800/30">
+              <p className="text-sm text-slate-300">
+                <span className="font-medium text-white">Valor Total:</span> {" "}
                 {formatCurrency(plan.implementationFee.total, plan.implementationFee.currency)}
               </p>
-              <p className="text-sm">
-                <span className="font-medium">Forma de Pago:</span> {" "}
+              <p className="text-sm text-slate-300">
+                <span className="font-medium text-white">Forma de Pago:</span> {" "}
                 {plan.implementationFee.installments === 1
                   ? "Pago único"
                   : `${plan.implementationFee.installments} cuotas`}
@@ -93,31 +94,31 @@ export function ProjectDetails({
         
         {plan.recurringFee && (
           <div>
-            <h3 className="font-medium mb-2">Fee Recurrente</h3>
-            <div className="bg-muted p-4 rounded-lg space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">Valor:</span> {" "}
+            <h3 className="font-medium mb-2 text-white">Fee Recurrente</h3>
+            <div className="bg-[#0f0b2a]/50 p-4 rounded-lg space-y-2 border border-purple-800/30">
+              <p className="text-sm text-slate-300">
+                <span className="font-medium text-white">Valor:</span> {" "}
                 {formatCurrency(plan.recurringFee.amount, plan.recurringFee.currency)}
               </p>
-              <p className="text-sm">
-                <span className="font-medium">Frecuencia:</span> {" "}
+              <p className="text-sm text-slate-300">
+                <span className="font-medium text-white">Frecuencia:</span> {" "}
                 {plan.recurringFee.frequency}
               </p>
-              <p className="text-sm">
-                <span className="font-medium">Día de Cobro:</span> {" "}
+              <p className="text-sm text-slate-300">
+                <span className="font-medium text-white">Día de Cobro:</span> {" "}
                 {plan.recurringFee.dayOfCharge}
               </p>
               
               {plan.recurringFee.gracePeriods && plan.recurringFee.gracePeriods > 0 && (
-                <p className="text-sm">
-                  <span className="font-medium">Periodo de Gracia:</span> {" "}
+                <p className="text-sm text-slate-300">
+                  <span className="font-medium text-white">Periodo de Gracia:</span> {" "}
                   {plan.recurringFee.gracePeriods} {plan.recurringFee.gracePeriods === 1 ? "periodo" : "periodos"}
                 </p>
               )}
               
               {plan.recurringFee.discountPeriods && plan.recurringFee.discountPeriods > 0 && (
-                <p className="text-sm">
-                  <span className="font-medium">Descuento:</span> {" "}
+                <p className="text-sm text-slate-300">
+                  <span className="font-medium text-white">Descuento:</span> {" "}
                   {plan.recurringFee.discountPercentage}% por {plan.recurringFee.discountPeriods} {plan.recurringFee.discountPeriods === 1 ? "periodo" : "periodos"}
                 </p>
               )}
@@ -130,9 +131,9 @@ export function ProjectDetails({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="bg-[#1e1756] border-purple-800/30 text-white">
         <CardContent className="pt-6 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
         </CardContent>
       </Card>
     );
@@ -140,10 +141,10 @@ export function ProjectDetails({
 
   if (hasError || !project || !client) {
     return (
-      <Card>
+      <Card className="bg-[#1e1756] border-purple-800/30 text-white">
         <CardContent className="pt-6">
           <p>Error al cargar los datos del proyecto</p>
-          <Button onClick={onBack} className="mt-4">Volver</Button>
+          <Button onClick={onBack} className="mt-4 bg-purple-600 hover:bg-purple-700 text-white">Volver</Button>
         </CardContent>
       </Card>
     );
@@ -152,7 +153,7 @@ export function ProjectDetails({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} className="text-white hover:bg-purple-900/30">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Volver a la lista
         </Button>
@@ -162,18 +163,18 @@ export function ProjectDetails({
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
           >
-            <Button variant="outline">
+            <Button variant="outline" className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]">
               <Edit className="mr-2 h-4 w-4" />
               Editar Proyecto
             </Button>
           </EditProjectDialog>
-          <Button variant="default" onClick={onViewFinancials}>
+          <Button variant="default" onClick={onViewFinancials} className="bg-purple-600 hover:bg-purple-700 text-white">
             <CreditCard className="mr-2 h-4 w-4" />
             Ver Finanzas
           </Button>
           <Button 
             variant="outline" 
-            className="border-destructive text-destructive hover:bg-destructive/10"
+            className="border-red-800/50 text-red-400 hover:bg-red-900/10"
             onClick={() => setDeleteDialogOpen(true)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -189,15 +190,15 @@ export function ProjectDetails({
         </div>
       </div>
 
-      <Card>
+      <Card className="bg-[#1e1756] border-purple-800/30 text-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-muted-foreground mb-1">
+              <div className="text-sm text-purple-300 mb-1">
                 {onClientSelect ? (
                   <Button 
                     variant="link" 
-                    className="h-auto p-0"
+                    className="h-auto p-0 text-purple-300 hover:text-purple-100"
                     onClick={() => onClientSelect(client.id)}
                   >
                     Cliente: {client.name}
@@ -206,8 +207,8 @@ export function ProjectDetails({
                   <>Cliente: {client.name}</>
                 )}
               </div>
-              <CardTitle className="text-2xl">{project.name}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-2xl text-white">{project.name}</CardTitle>
+              <CardDescription className="text-slate-300">
                 Iniciado el {formatDate(project.startDate)}
               </CardDescription>
             </div>
@@ -228,23 +229,23 @@ export function ProjectDetails({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-medium mb-2">Descripción</h3>
-              <p className="text-sm">{project.description}</p>
+              <h3 className="font-medium mb-2 text-white">Descripción</h3>
+              <p className="text-sm text-slate-300">{project.description}</p>
               
               <div className="mt-4">
-                <h3 className="font-medium mb-2">Fechas</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Inicio:</span> {formatDate(project.startDate)}</p>
+                <h3 className="font-medium mb-2 text-white">Fechas</h3>
+                <div className="space-y-2 text-sm text-slate-300">
+                  <p><span className="font-medium text-white">Inicio:</span> {formatDate(project.startDate)}</p>
                   {project.endDate && (
-                    <p><span className="font-medium">Fin:</span> {formatDate(project.endDate)}</p>
+                    <p><span className="font-medium text-white">Fin:</span> {formatDate(project.endDate)}</p>
                   )}
                 </div>
               </div>
               
               {project.notes && (
                 <div className="mt-4">
-                  <h3 className="font-medium mb-2">Notas</h3>
-                  <p className="text-sm">{project.notes}</p>
+                  <h3 className="font-medium mb-2 text-white">Notas</h3>
+                  <p className="text-sm text-slate-300">{project.notes}</p>
                 </div>
               )}
             </div>
@@ -256,18 +257,18 @@ export function ProjectDetails({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="payments">
-        <TabsList>
-          <TabsTrigger value="payments">Pagos</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
+      <Tabs defaultValue="payments" className="text-white">
+        <TabsList className="bg-[#0f0b2a] border border-purple-800/30">
+          <TabsTrigger value="payments" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white">Pagos</TabsTrigger>
+          <TabsTrigger value="documents" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white">Documentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payments" className="mt-4">
-          <Card>
+          <Card className="bg-[#1e1756] border-purple-800/30 text-white">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <CardTitle>Pagos</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Pagos</CardTitle>
+                <CardDescription className="text-slate-300">
                   Seguimiento de pagos del proyecto
                 </CardDescription>
               </div>
@@ -278,7 +279,7 @@ export function ProjectDetails({
                   open={paymentDialogOpen}
                   onOpenChange={setPaymentDialogOpen}
                 >
-                  <Button size="sm">
+                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Plus className="mr-2 h-4 w-4" />
                     Registrar Pago
                   </Button>
@@ -292,11 +293,11 @@ export function ProjectDetails({
         </TabsContent>
 
         <TabsContent value="documents" className="mt-4">
-          <Card>
+          <Card className="bg-[#1e1756] border-purple-800/30 text-white">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <CardTitle>Documentos</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Documentos</CardTitle>
+                <CardDescription className="text-slate-300">
                   Documentos del proyecto
                 </CardDescription>
               </div>
@@ -305,7 +306,7 @@ export function ProjectDetails({
                 open={documentDialogOpen}
                 onOpenChange={setDocumentDialogOpen}
               >
-                <Button size="sm">
+                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
                   <Plus className="mr-2 h-4 w-4" />
                   Añadir Documento
                 </Button>

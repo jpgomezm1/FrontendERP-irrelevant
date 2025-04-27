@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -24,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, CalendarDays, FolderKanban, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -41,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Project } from "@/types/clients";
 
 const projectFormSchema = z.object({
@@ -111,10 +110,13 @@ export function EditProjectDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-[#1e1756] border-purple-800/30 text-white">
         <DialogHeader>
-          <DialogTitle>Editar Proyecto</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <FolderKanban className="h-5 w-5 text-purple-400" />
+            Editar Proyecto
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
             Modifica la información del proyecto
           </DialogDescription>
         </DialogHeader>
@@ -126,11 +128,14 @@ export function EditProjectDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="form-required">Nombre del Proyecto</FormLabel>
+                  <FormLabel className="text-white form-required">Nombre del Proyecto</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input 
+                      {...field} 
+                      className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -140,21 +145,21 @@ export function EditProjectDialog({
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="form-required">Estado</FormLabel>
+                  <FormLabel className="text-white form-required">Estado</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                       <SelectItem value="Activo">Activo</SelectItem>
                       <SelectItem value="Pausado">Pausado</SelectItem>
                       <SelectItem value="Finalizado">Finalizado</SelectItem>
                       <SelectItem value="Cancelado">Cancelado</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -164,15 +169,18 @@ export function EditProjectDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="form-required">Descripción</FormLabel>
+                  <FormLabel className="text-white form-required">Descripción</FormLabel>
                   <FormControl>
-                    <Textarea
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                    />
+                    <div className="relative">
+                      <ClipboardList className="absolute left-3 top-3 h-4 w-4 text-purple-400" />
+                      <Textarea
+                        className="resize-none bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500 pl-10"
+                        rows={3}
+                        {...field}
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -183,15 +191,15 @@ export function EditProjectDialog({
                 name="startDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel className="form-required">Fecha de Inicio</FormLabel>
+                    <FormLabel className="text-white form-required">Fecha de Inicio</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              "w-full pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                              !field.value && "text-slate-400"
                             )}
                           >
                             {field.value ? (
@@ -199,21 +207,21 @@ export function EditProjectDialog({
                             ) : (
                               <span>Seleccionar fecha</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
-                          className={cn("p-3 pointer-events-auto")}
+                          className="bg-[#1e1756]"
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -223,15 +231,15 @@ export function EditProjectDialog({
                 name="endDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Finalización (opcional)</FormLabel>
+                    <FormLabel className="text-white">Fecha de Finalización (opcional)</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              "w-full pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                              !field.value && "text-slate-400"
                             )}
                           >
                             {field.value ? (
@@ -239,22 +247,25 @@ export function EditProjectDialog({
                             ) : (
                               <span>Seleccionar fecha</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <CalendarDays className="ml-auto h-4 w-4 text-purple-400" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value || undefined}
                           onSelect={field.onChange}
                           initialFocus
                           disabled={(date) => date < form.watch("startDate")}
-                          className={cn("p-3 pointer-events-auto")}
+                          className="bg-[#1e1756]"
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
+                    <FormDescription className="text-slate-400">
+                      Define cuándo finalizará este proyecto
+                    </FormDescription>
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -265,14 +276,14 @@ export function EditProjectDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notas</FormLabel>
+                  <FormLabel className="text-white">Notas</FormLabel>
                   <FormControl>
                     <Textarea
-                      className="resize-none"
+                      className="resize-none bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -282,10 +293,16 @@ export function EditProjectDialog({
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
               >
                 Cancelar
               </Button>
-              <Button type="submit">Guardar Cambios</Button>
+              <Button 
+                type="submit"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Guardar Cambios
+              </Button>
             </DialogFooter>
           </form>
         </Form>

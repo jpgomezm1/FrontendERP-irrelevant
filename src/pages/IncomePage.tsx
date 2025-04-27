@@ -1,11 +1,9 @@
-
 import React, { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { IncomeTabs } from "@/components/income/income-tabs";
 import { AddIncomeDialog } from "@/components/income/add-income-dialog";
-import { Plus } from "lucide-react";
+import { Plus, DollarSign, TrendingUp } from "lucide-react";
 import { useIncomeList } from "@/hooks/use-income-list";
 import { Toaster } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,17 +24,19 @@ const IncomePage = () => {
   };
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#0d0a25]/60 min-h-screen p-6">
       <Toaster position="top-right" />
       <PageHeader
         title="Ingresos"
         description="Gestiona y analiza tus fuentes de ingresos"
+        icon={<DollarSign className="h-6 w-6 text-purple-400" />}
+        className="text-white"
       >
         <AddIncomeDialog 
           open={incomeModalOpen} 
           onOpenChange={handleOpenChange}
           trigger={
-            <Button>
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Ingreso
             </Button>

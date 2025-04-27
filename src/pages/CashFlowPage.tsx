@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileDown } from "lucide-react";
+import { Calendar, FileDown, BarChart2, ArrowUpDown, PieChart, Users } from "lucide-react";
 import { FinancialMetrics } from "@/components/cash-flow/financial-metrics";
 import { MovementsTab } from "@/components/cash-flow/movements-tab";
 import { DashboardTab } from "@/components/cash-flow/dashboard-tab";
@@ -41,7 +40,7 @@ const CashFlowPage = () => {
   };
 
   return (
-    <div>
+    <div className="text-white">
       <PageHeader
         title="Flujo de Caja"
         description="Control, seguimiento y análisis financiero en COP para decisiones estratégicas"
@@ -59,24 +58,43 @@ const CashFlowPage = () => {
         />
       </div>
 
-      <Tabs defaultValue="dashboard" className="mt-6">
-        <div className="flex justify-between items-center mb-2">
-          <TabsList>
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
-            <TabsTrigger value="analisis">Análisis</TabsTrigger>
-            <TabsTrigger value="proyecciones">Proyecciones</TabsTrigger>
-            <TabsTrigger value="clientes">Análisis de Clientes</TabsTrigger>
+      <Tabs defaultValue="dashboard" className="mt-6 text-white">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <TabsList className="bg-[#0f0b2a] border border-purple-800/30">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white flex gap-2 items-center">
+              <BarChart2 className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="movimientos" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white flex gap-2 items-center">
+              <ArrowUpDown className="h-4 w-4" />
+              Movimientos
+            </TabsTrigger>
+            <TabsTrigger value="analisis" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white flex gap-2 items-center">
+              <PieChart className="h-4 w-4" />
+              Análisis
+            </TabsTrigger>
+            <TabsTrigger value="proyecciones" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white flex gap-2 items-center">
+              <Calendar className="h-4 w-4" />
+              Proyecciones
+            </TabsTrigger>
+            <TabsTrigger value="clientes" className="data-[state=active]:bg-purple-800/50 data-[state=active]:text-white flex gap-2 items-center">
+              <Users className="h-4 w-4" />
+              Análisis de Clientes
+            </TabsTrigger>
           </TabsList>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full md:w-auto">
             <DatePickerWithRange
               value={dateRange}
               onChange={handleDateRangeChange}
             />
             
-            <Button onClick={handleExportAnalysis} variant="outline">
-              <FileDown className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={handleExportAnalysis} 
+              variant="outline"
+              className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
+            >
+              <FileDown className="h-4 w-4 mr-2 text-purple-400" />
               Exportar Análisis
             </Button>
           </div>

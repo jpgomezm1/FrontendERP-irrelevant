@@ -1,4 +1,3 @@
-
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CashFlowItem } from "@/services/financeService";
 import { Badge } from "@/components/ui/badge";
@@ -13,36 +12,45 @@ export const cashFlowColumns = [
   {
     accessorKey: "description",
     header: "Descripción",
+    cell: ({ row }) => (
+      <span className="text-white">{row.original.description}</span>
+    ),
   },
   {
     accessorKey: "type",
     header: "Tipo",
     cell: ({ row }) => (
       <div className="flex items-center">
-        <span
-          className={`flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+        <Badge 
+          className={`flex items-center gap-1 ${
             row.original.type === "Ingreso"
-              ? "bg-green-100 text-green-800"
-              : "bg-red-100 text-red-800"
+              ? "bg-green-900/30 text-green-300 border-green-800/30"
+              : "bg-red-900/30 text-red-300 border-red-800/30"
           }`}
         >
           {row.original.type === "Ingreso" ? (
-            <ArrowDown className="h-3 w-3 mr-1" />
+            <ArrowDown className="h-3 w-3" />
           ) : (
-            <ArrowUp className="h-3 w-3 mr-1" />
+            <ArrowUp className="h-3 w-3" />
           )}
           {row.original.type}
-        </span>
+        </Badge>
       </div>
     ),
   },
   {
     accessorKey: "category",
     header: "Categoría",
+    cell: ({ row }) => (
+      <span className="text-purple-300">{row.original.category}</span>
+    ),
   },
   {
     accessorKey: "paymentMethod",
     header: "Método de Pago",
+    cell: ({ row }) => (
+      <span className="text-slate-300">{row.original.paymentMethod}</span>
+    ),
   },
   {
     accessorKey: "amount",
@@ -55,14 +63,14 @@ export const cashFlowColumns = [
         <div>
           <span
             className={
-              row.original.type === "Ingreso" ? "text-green-600" : "text-red-600"
+              row.original.type === "Ingreso" ? "text-green-400" : "text-red-400"
             }
           >
             {row.original.type === "Ingreso" ? "+" : "-"}
             {formatCurrency(row.original.amount, "COP")}
           </span>
           {wasConverted && row.original.originalAmount && (
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-slate-400 mt-1">
               (Convertido de {formatCurrency(row.original.originalAmount, "USD")})
             </div>
           )}
@@ -74,12 +82,16 @@ export const cashFlowColumns = [
     accessorKey: "source",
     header: "Fuente",
     cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">{row.original.source || "N/A"}</span>
+      <span className="text-sm text-slate-400">{row.original.source || "N/A"}</span>
     ),
   },
   {
     accessorKey: "balance",
     header: "Saldo",
-    cell: ({ row }) => formatCurrency(row.original.balance || 0, "COP"),
+    cell: ({ row }) => (
+      <span className="text-purple-200 font-medium">
+        {formatCurrency(row.original.balance || 0, "COP")}
+      </span>
+    ),
   },
 ];

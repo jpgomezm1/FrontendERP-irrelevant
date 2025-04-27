@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -31,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, CreditCard, Tag, BarChart, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 import { FileUpload } from "@/components/ui/file-upload";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { format } from "date-fns";
@@ -86,6 +85,7 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
       toast({
         title: "Ingreso registrado",
         description: "El ingreso ha sido registrado correctamente",
+        icon: <CheckCircle2 className="h-4 w-4 text-green-400" />
       });
       // Invalidate the incomes query to trigger a refetch
       queryClient.invalidateQueries({ queryKey: ['incomes'] });
@@ -98,6 +98,7 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
         title: "Error",
         description: "Hubo un problema al registrar el ingreso",
         variant: "destructive",
+        icon: <AlertCircle className="h-4 w-4 text-red-400" />
       });
     }
   });
@@ -149,10 +150,13 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
       <DialogTrigger asChild>
         {trigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] bg-[#1e1756] border-purple-800/30 text-white">
         <DialogHeader>
-          <DialogTitle>Registrar Nuevo Ingreso</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white flex items-center">
+            <BarChart className="h-5 w-5 mr-2 text-purple-400" />
+            Registrar Nuevo Ingreso
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
             Completa el formulario para registrar un nuevo ingreso
           </DialogDescription>
         </DialogHeader>
@@ -165,14 +169,15 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="form-required">Tipo de Ingreso</FormLabel>
+                    <FormLabel className="form-required text-white">Tipo de Ingreso</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                          <Tag className="h-4 w-4 mr-2 text-purple-400" />
                           <SelectValue placeholder="Seleccionar tipo" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                         {incomeTypes.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
@@ -180,7 +185,7 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -190,11 +195,15 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="form-required">Descripción</FormLabel>
+                    <FormLabel className="form-required text-white">Descripción</FormLabel>
                     <FormControl>
-                      <Input placeholder="Descripción del ingreso" {...field} />
+                      <Input 
+                        placeholder="Descripción del ingreso" 
+                        {...field} 
+                        className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -206,15 +215,15 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel className="form-required">Fecha</FormLabel>
+                    <FormLabel className="form-required text-white">Fecha</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              "w-full pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                              !field.value && "text-slate-400"
                             )}
                           >
                             {field.value ? (
@@ -222,21 +231,21 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                             ) : (
                               <span>Seleccionar fecha</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
-                          className={cn("p-3 pointer-events-auto")}
+                          className={cn("p-3 pointer-events-auto bg-[#1e1756]")}
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -247,16 +256,17 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="form-required">Monto</FormLabel>
+                      <FormLabel className="form-required text-white">Monto</FormLabel>
                       <FormControl>
                         <CurrencyInput
                           onValueChange={field.onChange}
                           value={field.value}
                           showCurrencySelector={false}
                           currency={form.watch("currency")}
+                          className="bg-[#0f0b2a] border-purple-800/30 text-white"
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -266,19 +276,19 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                   name="currency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="form-required">Moneda</FormLabel>
+                      <FormLabel className="form-required text-white">Moneda</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                             <SelectValue placeholder="Moneda" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                           <SelectItem value="COP">COP</SelectItem>
                           <SelectItem value="USD">USD</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -290,14 +300,14 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
               name="client"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Cliente</FormLabel>
+                  <FormLabel className="text-white">Cliente</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                         <SelectValue placeholder="Seleccionar cliente (opcional)" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                       {clients.map((client) => (
                         <SelectItem key={client} value={client}>
                           {client}
@@ -305,8 +315,8 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>Opcional para ingresos por clientes</FormDescription>
-                  <FormMessage />
+                  <FormDescription className="text-slate-400">Opcional para ingresos por clientes</FormDescription>
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -316,14 +326,15 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
               name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="form-required">Método de Pago</FormLabel>
+                  <FormLabel className="form-required text-white">Método de Pago</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                        <CreditCard className="h-4 w-4 mr-2 text-purple-400" />
                         <SelectValue placeholder="Seleccionar método" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                       {paymentMethods.map((method) => (
                         <SelectItem key={method} value={method}>
                           {method}
@@ -331,45 +342,56 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
 
-            <FormField
+            {/* <FormField
               control={form.control}
               name="receipt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Comprobante</FormLabel>
+                  <FormLabel className="text-white">Comprobante</FormLabel>
                   <FormControl>
-                    <FileUpload
-                      onFileSelect={(file) => field.onChange(file)}
-                      acceptedFileTypes=".pdf,.jpg,.jpeg,.png"
-                      maxFileSizeMB={5}
-                    />
+                    <div className="border-2 border-dashed border-purple-800/30 rounded-md p-6 flex flex-col items-center justify-center text-center bg-[#0f0b2a]/50">
+                      <FileText className="h-10 w-10 text-slate-400 mb-2" />
+                      <p className="text-sm text-slate-300">
+                        Arrastra y suelta un archivo o haz clic para seleccionar
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Formatos aceptados: PDF, JPG, PNG. Máx 5MB
+                      </p>
+                      <FileUpload
+                        onFileSelect={(file) => field.onChange(file)}
+                        acceptedFileTypes=".pdf,.jpg,.jpeg,.png"
+                        maxFileSizeMB={5}
+                        className="mt-4 bg-[#1e1756]/20 border-purple-800/20 text-white hover:bg-[#1e1756]/40"
+                      />
+                    </div>
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-slate-400">
                     Formatos aceptados: PDF, JPG, PNG. Máx 5MB
                   </FormDescription>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
-            />
+            /> */}
 
             <FormField
               control={form.control}
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notas</FormLabel>
+                  <FormLabel className="text-white">Notas</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Notas adicionales (opcional)"
                       {...field}
+                      className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 min-h-[100px]"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -379,10 +401,17 @@ export function AddIncomeDialog({ open, onOpenChange, trigger }) {
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
               >
                 Cancelar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button 
+                type="submit"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+                disabled={addIncomeMutation.isPending}
+              >
+                {addIncomeMutation.isPending ? 'Guardando...' : 'Guardar'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

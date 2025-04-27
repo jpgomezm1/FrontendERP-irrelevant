@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { Download, Calendar } from "lucide-react";
+import { Download, Calendar, Filter, ArrowUpDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cashFlowColumns } from "./table-columns";
 import { CashFlowItem } from "@/services/financeService";
@@ -29,7 +28,18 @@ export function MovementsTab({ data }: MovementsTabProps) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const currentBalance = data.length > 0 ? data[0].balance || 0 : 0;
+  // Calculamos el saldo en caja como la suma de todos los ingresos menos la suma de todos los gastos
+  const currentBalance = useMemo(() => {
+    const totalIncome = data
+      .filter(item => item.type === "Ingreso")
+      .reduce((sum, item) => sum + item.amount, 0);
+    
+    const totalExpense = data
+      .filter(item => item.type === "Gasto")
+      .reduce((sum, item) => sum + item.amount, 0);
+    
+    return totalIncome - totalExpense;
+  }, [data]);
 
   const categories = Array.from(new Set(data.map(item => item.category))).sort();
 
@@ -73,17 +83,22 @@ export function MovementsTab({ data }: MovementsTabProps) {
   };
 
   return (
-    <Card>
+    <Card className="bg-[#1e1756] border-purple-800/30 text-white">
       <CardHeader>
-        <CardTitle>Movimientos de Caja</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-white flex items-center gap-2">
+          <ArrowUpDown className="h-5 w-5 text-purple-400" />
+          Movimientos de Caja
+        </CardTitle>
+        <CardDescription className="text-slate-300">
           Registro detallado de ingresos y gastos (COP)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="bg-muted p-6 rounded-lg mb-6">
-          <div className="text-sm text-muted-foreground mb-1">Saldo Actual de Caja</div>
-          <div className="text-3xl font-bold">{formatCurrency(currentBalance, "COP")}</div>
+        <div className="bg-[#0f0b2a] p-6 rounded-lg mb-6 border border-purple-800/30">
+          <div className="text-sm text-purple-300 mb-1">Saldo Actual de Caja</div>
+          <div className={`text-3xl font-bold ${currentBalance >= 0 ? "text-green-400" : "text-red-400"}`}>
+            {formatCurrency(currentBalance, "COP")}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -92,13 +107,13 @@ export function MovementsTab({ data }: MovementsTabProps) {
               value={dateFilter}
               onValueChange={setDateFilter}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full bg-[#0f0b2a] border-purple-800/30 text-white">
                 <span className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
+                  <Calendar className="h-4 w-4 mr-2 text-purple-400" />
                   <SelectValue placeholder="Filtrar por fecha" />
                 </span>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                 <SelectItem value="all">Todas las fechas</SelectItem>
                 <SelectItem value="today">Hoy</SelectItem>
                 <SelectItem value="thisMonth">Este mes</SelectItem>
@@ -111,10 +126,13 @@ export function MovementsTab({ data }: MovementsTabProps) {
               value={typeFilter}
               onValueChange={setTypeFilter}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por tipo" />
+              <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                <span className="flex items-center">
+                  <ArrowUpDown className="h-4 w-4 mr-2 text-purple-400" />
+                  <SelectValue placeholder="Filtrar por tipo" />
+                </span>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                 <SelectItem value="all">Todos los movimientos</SelectItem>
                 <SelectItem value="Ingreso">Solo ingresos</SelectItem>
                 <SelectItem value="Gasto">Solo gastos</SelectItem>
@@ -126,10 +144,13 @@ export function MovementsTab({ data }: MovementsTabProps) {
               value={categoryFilter}
               onValueChange={setCategoryFilter}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por categoría" />
+              <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                <span className="flex items-center">
+                  <Filter className="h-4 w-4 mr-2 text-purple-400" />
+                  <SelectValue placeholder="Filtrar por categoría" />
+                </span>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                 <SelectItem value="all">Todas las categorías</SelectItem>
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>
@@ -149,8 +170,12 @@ export function MovementsTab({ data }: MovementsTabProps) {
         />
       </CardContent>
       <CardFooter>
-        <Button variant="outline" onClick={handleExportData}>
-          <Download className="h-4 w-4 mr-2" />
+        <Button 
+          variant="outline" 
+          onClick={handleExportData}
+          className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
+        >
+          <Download className="h-4 w-4 mr-2 text-purple-400" />
           Exportar a CSV
         </Button>
       </CardFooter>

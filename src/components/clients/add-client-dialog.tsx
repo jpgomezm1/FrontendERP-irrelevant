@@ -1,4 +1,3 @@
-
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -24,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, User, Mail, Phone, MapPin, Building, Activity, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -107,7 +106,8 @@ export function AddClientDialog({
       
       toast({
         title: "Cliente agregado",
-        description: "El cliente ha sido registrado exitosamente"
+        description: "El cliente ha sido registrado exitosamente",
+        icon: <CheckCircle2 className="h-4 w-4 text-green-400" />
       });
       
       if (onClientAdded) {
@@ -121,7 +121,8 @@ export function AddClientDialog({
       toast({
         title: "Error",
         description: "Ocurrió un error al agregar el cliente",
-        variant: "destructive"
+        variant: "destructive",
+        icon: <AlertCircle className="h-4 w-4 text-red-400" />
       });
     } finally {
       setIsSubmitting(false);
@@ -131,10 +132,13 @@ export function AddClientDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] bg-[#1e1756] border-purple-800/30 text-white">
         <DialogHeader>
-          <DialogTitle>Registrar Nuevo Cliente</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white flex items-center">
+            <User className="h-5 w-5 mr-2 text-purple-400" />
+            Registrar Nuevo Cliente
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
             Ingresa la información del cliente
           </DialogDescription>
         </DialogHeader>
@@ -147,11 +151,18 @@ export function AddClientDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre del Cliente</FormLabel>
+                    <FormLabel className="text-white">Nombre del Cliente</FormLabel>
                     <FormControl>
-                      <Input placeholder="Empresa S.A.S." {...field} />
+                      <div className="relative">
+                        <Building className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                        <Input 
+                          placeholder="Empresa S.A.S." 
+                          {...field} 
+                          className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -161,11 +172,18 @@ export function AddClientDialog({
                 name="contactName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre del Contacto</FormLabel>
+                    <FormLabel className="text-white">Nombre del Contacto</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nombre y Apellido" {...field} />
+                      <div className="relative">
+                        <User className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                        <Input 
+                          placeholder="Nombre y Apellido" 
+                          {...field} 
+                          className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -177,11 +195,18 @@ export function AddClientDialog({
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel className="text-white">Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="correo@empresa.com" {...field} />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                        <Input 
+                          placeholder="correo@empresa.com" 
+                          {...field} 
+                          className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -191,11 +216,18 @@ export function AddClientDialog({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Teléfono</FormLabel>
+                    <FormLabel className="text-white">Teléfono</FormLabel>
                     <FormControl>
-                      <Input placeholder="+57 300 123 4567" {...field} />
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                        <Input 
+                          placeholder="+57 300 123 4567" 
+                          {...field} 
+                          className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -207,11 +239,18 @@ export function AddClientDialog({
                 name="taxId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>NIT / ID Tributario</FormLabel>
+                    <FormLabel className="text-white">NIT / ID Tributario</FormLabel>
                     <FormControl>
-                      <Input placeholder="900.123.456-7" {...field} />
+                      <div className="relative">
+                        <Building className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                        <Input 
+                          placeholder="900.123.456-7" 
+                          {...field} 
+                          className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                        />
+                      </div>
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -221,23 +260,24 @@ export function AddClientDialog({
                 name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estado</FormLabel>
+                    <FormLabel className="text-white">Estado</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                          <Activity className="h-4 w-4 mr-2 text-purple-400" />
                           <SelectValue placeholder="Seleccionar estado" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                         <SelectItem value="Activo">Activo</SelectItem>
                         <SelectItem value="Pausado">Pausado</SelectItem>
                         <SelectItem value="Terminado">Terminado</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -248,11 +288,18 @@ export function AddClientDialog({
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Dirección</FormLabel>
+                  <FormLabel className="text-white">Dirección</FormLabel>
                   <FormControl>
-                    <Input placeholder="Calle 123 # 45-67, Ciudad" {...field} />
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                      <Input 
+                        placeholder="Calle 123 # 45-67, Ciudad" 
+                        {...field} 
+                        className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -262,37 +309,38 @@ export function AddClientDialog({
               name="startDate"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Fecha de Inicio</FormLabel>
+                  <FormLabel className="text-white">Fecha de Inicio</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
+                            "w-full pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                            !field.value && "text-slate-400"
                           )}
                         >
+                          <Clock className="h-4 w-4 mr-2 text-purple-400" />
                           {field.value ? (
                             format(field.value, "PPP", { locale: es })
                           ) : (
                             <span>Seleccionar fecha</span>
                           )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                       <Calendar
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
                         initialFocus
-                        className={cn("p-3 pointer-events-auto")}
+                        className="bg-[#1e1756]"
                       />
                     </PopoverContent>
                   </Popover>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -302,15 +350,15 @@ export function AddClientDialog({
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notas</FormLabel>
+                  <FormLabel className="text-white">Notas</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Notas adicionales sobre el cliente"
-                      className="resize-none"
+                      className="resize-none bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 min-h-[100px]"
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -321,10 +369,15 @@ export function AddClientDialog({
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
+                className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
                 {isSubmitting ? "Guardando..." : "Guardar"}
               </Button>
             </DialogFooter>

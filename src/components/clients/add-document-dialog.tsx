@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileText, FileUp, Tag, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const documentFormSchema = z.object({
   name: z.string().min(1, { message: "El nombre del documento es requerido" }),
@@ -66,6 +66,7 @@ export function AddDocumentDialog({
   onOpenChange,
 }: AddDocumentDialogProps) {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<DocumentFormValues>({
     resolver: zodResolver(documentFormSchema),
@@ -76,16 +77,23 @@ export function AddDocumentDialog({
   });
 
   function onSubmit(data: DocumentFormValues) {
+    setIsSubmitting(true);
     console.log("Añadiendo documento:", data);
-    // Aquí iría la lógica para subir y asociar el documento
     
-    toast({
-      title: "Documento subido",
-      description: "El documento ha sido subido correctamente.",
-    });
-    
-    form.reset();
-    onOpenChange(false);
+    // Simular carga
+    setTimeout(() => {
+      // Aquí iría la lógica para subir y asociar el documento
+      
+      toast({
+        title: "Documento subido",
+        description: "El documento ha sido subido correctamente.",
+        icon: <CheckCircle2 className="h-4 w-4 text-green-400" />
+      });
+      
+      form.reset();
+      setIsSubmitting(false);
+      onOpenChange(false);
+    }, 1500);
   }
 
   const documentTypes: DocumentType[] = [
@@ -102,10 +110,13 @@ export function AddDocumentDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="bg-[#1e1756] border-purple-800/30 text-white">
         <DialogHeader>
-          <DialogTitle>Añadir Documento</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white flex items-center">
+            <FileText className="h-5 w-5 mr-2 text-purple-400" />
+            Añadir Documento
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
             Sube un nuevo documento para el {entityType}
           </DialogDescription>
         </DialogHeader>
@@ -117,11 +128,18 @@ export function AddDocumentDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre del Documento</FormLabel>
+                  <FormLabel className="text-white">Nombre del Documento</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej. Contrato de Servicios 2023" {...field} />
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-2.5 h-4 w-4 text-purple-400" />
+                      <Input 
+                        placeholder="Ej. Contrato de Servicios 2023" 
+                        {...field} 
+                        className="pl-10 bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400"
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -131,17 +149,18 @@ export function AddDocumentDialog({
               name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tipo de Documento</FormLabel>
+                  <FormLabel className="text-white">Tipo de Documento</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                        <Tag className="h-4 w-4 mr-2 text-purple-400" />
                         <SelectValue placeholder="Seleccionar tipo" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                       {documentTypes.map((type) => (
                         <SelectItem key={type} value={type}>
                           {type}
@@ -149,7 +168,7 @@ export function AddDocumentDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -159,15 +178,25 @@ export function AddDocumentDialog({
               name="file"
               render={({ field: { onChange, value, ...rest } }) => (
                 <FormItem>
-                  <FormLabel>Archivo</FormLabel>
+                  <FormLabel className="text-white">Archivo</FormLabel>
                   <FormControl>
-                    <FileUpload
-                      onFileSelect={(file) => onChange(file)}
-                      acceptedFileTypes=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-                      {...rest}
-                    />
+                    <div className="border-2 border-dashed border-purple-800/30 rounded-md p-6 flex flex-col items-center justify-center text-center bg-[#0f0b2a]/50">
+                      <FileUp className="h-10 w-10 text-slate-400 mb-2" />
+                      <p className="text-sm text-slate-300">
+                        Arrastra y suelta un archivo o haz clic para seleccionar
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Formatos aceptados: PDF, DOC, XLS, JPG, PNG. Máx 5MB
+                      </p>
+                      <FileUpload
+                        onFileSelect={(file) => onChange(file)}
+                        acceptedFileTypes=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                        className="mt-4 bg-[#1e1756]/20 border-purple-800/20 text-white hover:bg-[#1e1756]/40"
+                        {...rest}
+                      />
+                    </div>
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -177,10 +206,28 @@ export function AddDocumentDialog({
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
+                disabled={isSubmitting}
+                className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
               >
                 Cancelar
               </Button>
-              <Button type="submit">Subir Documento</Button>
+              <Button 
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center">
+                    <span className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                    Subiendo...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Subir Documento
+                  </span>
+                )}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

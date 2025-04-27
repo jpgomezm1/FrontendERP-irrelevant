@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Calendar } from "lucide-react";
+import { CalendarIcon, FolderPlus, DollarSign, Clock, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -219,10 +218,13 @@ export function AddProjectDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <div onClick={() => onOpenChange(true)}>{children}</div>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-[#1e1756] border-purple-800/30 text-white">
         <DialogHeader>
-          <DialogTitle>Registrar Nuevo Proyecto</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <FolderPlus className="h-5 w-5 text-purple-400" />
+            Registrar Nuevo Proyecto
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
             Completa los detalles para crear un nuevo proyecto.
           </DialogDescription>
         </DialogHeader>
@@ -236,11 +238,15 @@ export function AddProjectDialog({
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre del Proyecto</FormLabel>
+                      <FormLabel className="text-white">Nombre del Proyecto</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nombre del proyecto" {...field} />
+                        <Input 
+                          placeholder="Nombre del proyecto" 
+                          {...field} 
+                          className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -250,24 +256,24 @@ export function AddProjectDialog({
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estado</FormLabel>
+                      <FormLabel className="text-white">Estado</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                             <SelectValue placeholder="Seleccionar estado" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                           <SelectItem value="Activo">Activo</SelectItem>
                           <SelectItem value="Pausado">Pausado</SelectItem>
                           <SelectItem value="Finalizado">Finalizado</SelectItem>
                           <SelectItem value="Cancelado">Cancelado</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -278,11 +284,15 @@ export function AddProjectDialog({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Descripción</FormLabel>
+                    <FormLabel className="text-white">Descripción</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Detalles del proyecto" {...field} />
+                      <Textarea 
+                        placeholder="Detalles del proyecto" 
+                        {...field} 
+                        className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500 min-h-[100px]"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -293,18 +303,18 @@ export function AddProjectDialog({
                   name="clientId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cliente</FormLabel>
+                      <FormLabel className="text-white">Cliente</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(parseInt(value))}
                         defaultValue={field.value.toString()}
                         value={field.value.toString()}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                             <SelectValue placeholder="Seleccionar cliente" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                           {clients.map((client) => (
                             <SelectItem key={client.id} value={client.id.toString()}>
                               {client.name}
@@ -312,7 +322,7 @@ export function AddProjectDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -322,15 +332,15 @@ export function AddProjectDialog({
                   name="startDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Fecha de Inicio</FormLabel>
+                      <FormLabel className="text-white">Fecha de Inicio</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
-                              variant={"outline"}
+                              variant="outline"
                               className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                "pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                                !field.value && "text-slate-400"
                               )}
                             >
                               {field.value ? (
@@ -338,20 +348,21 @@ export function AddProjectDialog({
                               ) : (
                                 <span>Seleccionar fecha</span>
                               )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                           <CalendarComponent
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
+                            className="bg-[#1e1756]"
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -362,15 +373,15 @@ export function AddProjectDialog({
                 name="endDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Finalización (Opcional)</FormLabel>
+                    <FormLabel className="text-white">Fecha de Finalización (Opcional)</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
-                            variant={"outline"}
+                            variant="outline"
                             className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              "pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                              !field.value && "text-slate-400"
                             )}
                           >
                             {field.value ? (
@@ -378,23 +389,24 @@ export function AddProjectDialog({
                             ) : (
                               <span>Sin fecha establecida</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
+                        <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                            className="bg-[#1e1756]"
+                          />
+                        </PopoverContent>
                     </Popover>
-                    <FormDescription>
+                    <FormDescription className="text-slate-400">
                       Dejar en blanco si la duración es indefinida
                     </FormDescription>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -404,61 +416,71 @@ export function AddProjectDialog({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notas (Opcional)</FormLabel>
+                    <FormLabel className="text-white">Notas (Opcional)</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Notas adicionales sobre el proyecto" {...field} />
+                      <Textarea 
+                        placeholder="Notas adicionales sobre el proyecto" 
+                        {...field} 
+                        className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
             </div>
             
             {/* Payment Plan Configuration */}
-            <div>
-              <h3 className="text-lg font-medium mb-3">Plan de Pagos</h3>
+            <div className="bg-[#0f0b2a]/50 p-4 rounded-lg border border-purple-800/30">
+              <h3 className="text-lg font-medium mb-3 text-white flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-purple-400" />
+                Plan de Pagos
+              </h3>
               <div className="space-y-4">
                 <FormField
                   control={form.control}
                   name="planType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo de Plan</FormLabel>
+                      <FormLabel className="text-white">Tipo de Plan</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                             <SelectValue placeholder="Seleccionar tipo de plan" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                           <SelectItem value="Fee único">Fee único (un solo pago)</SelectItem>
                           <SelectItem value="Fee por cuotas">Fee por cuotas</SelectItem>
                           <SelectItem value="Suscripción periódica">Suscripción periódica</SelectItem>
                           <SelectItem value="Mixto">Mixto (Implementación + Recurrente)</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>
+                      <FormDescription className="text-slate-400">
                         Determina cómo se estructurarán los pagos del proyecto
                       </FormDescription>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
                 
                 {/* Implementation Fee Section */}
                 {isImplementationFeeVisible && (
-                  <div className="border-l-4 border-primary pl-4 pt-2 pb-3 space-y-4">
-                    <h4 className="font-medium">Fee de Implementación</h4>
+                  <div className="border-l-4 border-purple-600 pl-4 pt-2 pb-3 space-y-4 bg-purple-900/10 rounded-r-lg">
+                    <h4 className="font-medium text-white flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-purple-400" />
+                      Fee de Implementación
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="implementationFeeTotal"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Monto Total</FormLabel>
+                            <FormLabel className="text-white">Monto Total</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -466,9 +488,10 @@ export function AddProjectDialog({
                                 {...field} 
                                 value={field.value || ''}
                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -478,23 +501,23 @@ export function AddProjectDialog({
                         name="implementationFeeCurrency"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Moneda</FormLabel>
+                            <FormLabel className="text-white">Moneda</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                                   <SelectValue placeholder="Seleccionar moneda" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                                 <SelectItem value="COP">COP</SelectItem>
                                 <SelectItem value="USD">USD</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -505,7 +528,7 @@ export function AddProjectDialog({
                       name="implementationFeeInstallments"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Número de Cuotas</FormLabel>
+                          <FormLabel className="text-white">Número de Cuotas</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 
@@ -513,12 +536,13 @@ export function AddProjectDialog({
                               min="1"
                               {...field}
                               onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                             />
                           </FormControl>
-                          <FormDescription>
+                          <FormDescription className="text-slate-400">
                             1 para pago único, 2 o más para pago en cuotas
                           </FormDescription>
-                          <FormMessage />
+                          <FormMessage className="text-red-300" />
                         </FormItem>
                       )}
                     />
@@ -527,15 +551,18 @@ export function AddProjectDialog({
                 
                 {/* Recurring Fee Section */}
                 {isRecurringFeeVisible && (
-                  <div className="border-l-4 border-secondary pl-4 pt-2 pb-3 space-y-4">
-                    <h4 className="font-medium">Fee Recurrente</h4>
+                  <div className="border-l-4 border-indigo-600 pl-4 pt-2 pb-3 space-y-4 bg-indigo-900/10 rounded-r-lg">
+                    <h4 className="font-medium text-white flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-indigo-400" />
+                      Fee Recurrente
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="recurringFeeAmount"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Monto</FormLabel>
+                            <FormLabel className="text-white">Monto</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -543,9 +570,10 @@ export function AddProjectDialog({
                                 {...field} 
                                 value={field.value || ''}
                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -555,23 +583,23 @@ export function AddProjectDialog({
                         name="recurringFeeCurrency"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Moneda</FormLabel>
+                            <FormLabel className="text-white">Moneda</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                                   <SelectValue placeholder="Seleccionar moneda" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                                 <SelectItem value="COP">COP</SelectItem>
                                 <SelectItem value="USD">USD</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -583,18 +611,18 @@ export function AddProjectDialog({
                         name="recurringFeeFrequency"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Frecuencia</FormLabel>
+                            <FormLabel className="text-white">Frecuencia</FormLabel>
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                                   <SelectValue placeholder="Seleccionar frecuencia" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                                 <SelectItem value="Semanal">Semanal</SelectItem>
                                 <SelectItem value="Quincenal">Quincenal</SelectItem>
                                 <SelectItem value="Mensual">Mensual</SelectItem>
@@ -604,7 +632,7 @@ export function AddProjectDialog({
                                 <SelectItem value="Anual">Anual</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -614,7 +642,7 @@ export function AddProjectDialog({
                         name="recurringFeeDayOfCharge"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Día de Cobro</FormLabel>
+                            <FormLabel className="text-white">Día de Cobro</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -623,12 +651,13 @@ export function AddProjectDialog({
                                 max="31"
                                 {...field}
                                 onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                               />
                             </FormControl>
-                            <FormDescription>
+                            <FormDescription className="text-slate-400">
                               Día del mes (1-31)
                             </FormDescription>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -640,7 +669,7 @@ export function AddProjectDialog({
                         name="recurringFeeGracePeriods"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Periodos de Gracia</FormLabel>
+                            <FormLabel className="text-white">Periodos de Gracia</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -648,12 +677,13 @@ export function AddProjectDialog({
                                 min="0"
                                 {...field}
                                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                               />
                             </FormControl>
-                            <FormDescription>
+                            <FormDescription className="text-slate-400">
                               Periodos sin cobro
                             </FormDescription>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -663,7 +693,7 @@ export function AddProjectDialog({
                         name="recurringFeeDiscountPeriods"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Periodos con Descuento</FormLabel>
+                            <FormLabel className="text-white">Periodos con Descuento</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -671,9 +701,10 @@ export function AddProjectDialog({
                                 min="0"
                                 {...field}
                                 onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -683,7 +714,7 @@ export function AddProjectDialog({
                         name="recurringFeeDiscountPercentage"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>% de Descuento</FormLabel>
+                            <FormLabel className="text-white">% de Descuento</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number" 
@@ -692,9 +723,10 @@ export function AddProjectDialog({
                                 max="100"
                                 {...field}
                                 onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
                               />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-red-300" />
                           </FormItem>
                         )}
                       />
@@ -709,10 +741,15 @@ export function AddProjectDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={submitting}>
+              <Button 
+                type="submit" 
+                disabled={submitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
                 {submitting ? "Guardando..." : "Guardar Proyecto"}
               </Button>
             </DialogFooter>

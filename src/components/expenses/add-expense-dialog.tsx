@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, AlertCircle, CheckCircle2, CreditCard, Receipt, Clock, Tag } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { addVariableExpense, addRecurringExpense } from "@/services/expenseService";
@@ -42,6 +42,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [submitting, setSubmitting] = useState(false);
 
   const defaultValues: ExpenseFormValues = {
     description: "",
@@ -65,6 +66,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
 
   const onSubmit = async (data: ExpenseFormValues) => {
     try {
+      setSubmitting(true);
       if (data.isRecurring) {
         await addRecurringExpense({
           description: data.description,
@@ -95,6 +97,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
       toast({
         title: "Gasto agregado",
         description: `El gasto ha sido ${data.isRecurring ? 'programado' : 'agregado'} exitosamente`,
+        icon: <CheckCircle2 className="h-4 w-4 text-green-400" />
       });
       
       queryClient.invalidateQueries({ queryKey: ['variable-expenses'] });
@@ -109,22 +112,28 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
         title: "Error",
         description: "No se pudo agregar el gasto. Por favor intente nuevamente.",
         variant: "destructive",
+        icon: <AlertCircle className="h-4 w-4 text-red-400" />
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="bg-purple-600 hover:bg-purple-700 text-white">
           <Plus className="mr-2 h-4 w-4" />
           Agregar {isRecurring ? "Gasto Recurrente" : "Gasto"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-[#1e1756] border-purple-800/30 text-white">
         <DialogHeader>
-          <DialogTitle>Agregar {isRecurring ? "Gasto Recurrente" : "Gasto"}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white flex items-center gap-2">
+            {isRecurring ? <Clock className="h-5 w-5 text-purple-400" /> : <Receipt className="h-5 w-5 text-purple-400" />}
+            Agregar {isRecurring ? "Gasto Recurrente" : "Gasto"}
+          </DialogTitle>
+          <DialogDescription className="text-slate-300">
             Complete los detalles del {isRecurring ? "gasto recurrente" : "gasto"} a continuación.
           </DialogDescription>
         </DialogHeader>
@@ -136,11 +145,15 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descripción</FormLabel>
+                  <FormLabel className="text-white">Descripción</FormLabel>
                   <FormControl>
-                    <Input placeholder="Descripción del gasto" {...field} />
+                    <Input 
+                      placeholder="Descripción del gasto" 
+                      {...field} 
+                      className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500"
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -151,15 +164,16 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monto</FormLabel>
+                    <FormLabel className="text-white">Monto</FormLabel>
                     <FormControl>
                       <CurrencyInput 
                         value={field.value}
                         currency={form.watch("currency")}
                         onValueChange={(value) => field.onChange(value)}
+                        className="bg-[#0f0b2a] border-purple-800/30 text-white"
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -169,22 +183,22 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                 name="currency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Moneda</FormLabel>
+                    <FormLabel className="text-white">Moneda</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
                           <SelectValue placeholder="Seleccionar moneda" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                         <SelectItem value="COP">COP</SelectItem>
                         <SelectItem value="USD">USD</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -196,15 +210,15 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>{isRecurring ? "Fecha de inicio" : "Fecha"}</FormLabel>
+                    <FormLabel className="text-white">{isRecurring ? "Fecha de inicio" : "Fecha"}</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              "pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                              !field.value && "text-slate-400"
                             )}
                           >
                             {field.value ? (
@@ -212,20 +226,21 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                             ) : (
                               <span>Seleccionar fecha</span>
                             )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
+                          className="bg-[#1e1756]"
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -235,17 +250,18 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                 name="paymentMethod"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Método de Pago</FormLabel>
+                    <FormLabel className="text-white">Método de Pago</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                          <CreditCard className="mr-2 h-4 w-4 text-purple-400" />
                           <SelectValue placeholder="Seleccionar método" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                         {PAYMENT_METHODS.map((method) => (
                           <SelectItem key={method} value={method}>
                             {method}
@@ -253,7 +269,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
+                    <FormMessage className="text-red-300" />
                   </FormItem>
                 )}
               />
@@ -264,17 +280,18 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Categoría</FormLabel>
+                  <FormLabel className="text-white">Categoría</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                        <Tag className="mr-2 h-4 w-4 text-purple-400" />
                         <SelectValue placeholder="Seleccionar categoría" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                       {EXPENSE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
@@ -282,7 +299,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -292,14 +309,15 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notas (Opcional)</FormLabel>
+                  <FormLabel className="text-white">Notas (Opcional)</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Notas adicionales sobre el gasto"
                       {...field}
+                      className="bg-[#0f0b2a] border-purple-800/30 text-white placeholder:text-slate-400 focus:border-purple-500 min-h-[100px]"
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-red-300" />
                 </FormItem>
               )}
             />
@@ -311,17 +329,18 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                   name="frequency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Frecuencia</FormLabel>
+                      <FormLabel className="text-white">Frecuencia</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="bg-[#0f0b2a] border-purple-800/30 text-white">
+                            <Clock className="mr-2 h-4 w-4 text-purple-400" />
                             <SelectValue placeholder="Seleccionar frecuencia" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="bg-[#1e1756] border-purple-800/30 text-white">
                           {EXPENSE_FREQUENCIES.map((freq) => (
                             <SelectItem key={freq.value} value={freq.value}>
                               {freq.label}
@@ -329,7 +348,7 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -339,15 +358,15 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                   name="endDate"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Fecha de Finalización (Opcional)</FormLabel>
+                      <FormLabel className="text-white">Fecha de Finalización (Opcional)</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                "pl-3 text-left font-normal bg-[#0f0b2a] border-purple-800/30 text-white",
+                                !field.value && "text-slate-400"
                               )}
                             >
                               {field.value ? (
@@ -355,11 +374,11 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                               ) : (
                                 <span>Sin fecha de finalización</span>
                               )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              <CalendarIcon className="ml-auto h-4 w-4 text-purple-400" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 bg-[#1e1756] border-purple-800/30" align="start">
                           <Calendar
                             mode="single"
                             selected={field.value}
@@ -368,13 +387,14 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                             }}
                             disabled={(date) => date <= form.getValues("date")}
                             initialFocus
+                            className="bg-[#1e1756]"
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormDescription>
+                      <FormDescription className="text-slate-400">
                         Opcional: define cuándo terminará este gasto recurrente
                       </FormDescription>
-                      <FormMessage />
+                      <FormMessage className="text-red-300" />
                     </FormItem>
                   )}
                 />
@@ -383,10 +403,10 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
                   control={form.control}
                   name="isAutoDebit"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border border-purple-800/30 p-4 bg-[#0f0b2a]/50">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Débito Automático</FormLabel>
-                        <FormDescription>
+                        <FormLabel className="text-base text-white">Débito Automático</FormLabel>
+                        <FormDescription className="text-slate-400">
                           Marca si este gasto se debita automáticamente de tu cuenta
                         </FormDescription>
                       </div>
@@ -403,10 +423,21 @@ export function AddExpenseDialog({ isRecurring = false }: { isRecurring?: boolea
             )}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setOpen(false)}
+                className="bg-transparent border-purple-800/30 text-white hover:bg-[#0f0b2a]"
+              >
                 Cancelar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button 
+                type="submit" 
+                disabled={submitting}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {submitting ? 'Guardando...' : 'Guardar'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
