@@ -5,6 +5,22 @@ import { Database } from '@/integrations/supabase/types';
 type DbClient = Database['public']['Tables']['clients']['Row'];
 type DbDocument = Database['public']['Tables']['documents']['Row'];
 
+// Función auxiliar para crear fechas preservando el día correcto
+function createDateWithCorrectDay(dateStr: string): Date {
+  if (!dateStr) return new Date();
+  
+  // Crear fecha con el offset de la zona horaria para preservar el día
+  // Usamos hora 12:00:00 para evitar problemas con zonas horarias
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+// Función para formatear fechas antes de enviarlas a la base de datos
+function formatDateForDB(date: Date | undefined): string | null {
+  if (!date) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export async function getClients(): Promise<Client[]> {
   const { data, error } = await supabase
     .from('clients')
@@ -28,7 +44,7 @@ export async function getClients(): Promise<Client[]> {
         phone: client.phone || '',
         address: client.address || undefined,
         taxId: client.taxid || undefined,
-        startDate: client.startdate ? new Date(client.startdate) : new Date(),
+        startDate: client.startdate ? createDateWithCorrectDay(client.startdate) : new Date(),
         status: (client.status || 'Activo') as ClientStatus,
         notes: client.notes || undefined,
         documents: [],
@@ -60,7 +76,7 @@ export async function getClientById(id: number): Promise<Client | null> {
     name: doc.name,
     type: doc.type as DocumentType,
     url: doc.url,
-    uploadDate: new Date(doc.uploaddate)
+    uploadDate: createDateWithCorrectDay(doc.uploaddate)
   }));
 
   // Map database fields to Client type
@@ -72,7 +88,7 @@ export async function getClientById(id: number): Promise<Client | null> {
     phone: data.phone,
     address: data.address || undefined,
     taxId: data.taxid || undefined,
-    startDate: new Date(data.startdate),
+    startDate: createDateWithCorrectDay(data.startdate),
     status: data.status as ClientStatus,
     notes: data.notes || undefined,
     documents
@@ -87,7 +103,7 @@ export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promi
     phone: client.phone,
     address: client.address,
     taxid: client.taxId,
-    startdate: client.startDate.toISOString().split('T')[0],
+    startdate: formatDateForDB(client.startDate),
     status: client.status,
     notes: client.notes
   };
@@ -112,7 +128,7 @@ export async function addClient(client: Omit<Client, 'id' | 'documents'>): Promi
     phone: data.phone,
     address: data.address || undefined,
     taxId: data.taxid || undefined,
-    startDate: new Date(data.startdate),
+    startDate: createDateWithCorrectDay(data.startdate),
     status: data.status as ClientStatus,
     notes: data.notes || undefined,
     documents: [],
@@ -132,7 +148,7 @@ export async function updateClient(id: number, updatedData: Partial<Client>): Pr
   };
   
   if (updatedData.startDate) {
-    payload.startdate = updatedData.startDate.toISOString().split('T')[0];
+    payload.startdate = formatDateForDB(updatedData.startDate);
   }
   
   const { error } = await supabase
@@ -151,7 +167,7 @@ export async function addDocument(clientId: number, document: Omit<Document, 'id
     name: document.name,
     type: document.type,
     url: document.url,
-    uploaddate: document.uploadDate.toISOString().split('T')[0],
+    uploaddate: formatDateForDB(document.uploadDate),
     clientid: clientId
   };
 
@@ -172,7 +188,7 @@ export async function addDocument(clientId: number, document: Omit<Document, 'id
     name: data.name,
     type: data.type as DocumentType,
     url: data.url,
-    uploadDate: new Date(data.uploaddate)
+    uploadDate: createDateWithCorrectDay(data.uploaddate)
   };
 }
 

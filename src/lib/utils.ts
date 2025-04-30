@@ -45,6 +45,48 @@ export function getCurrencySymbol(currency: Currency = "COP"): string {
   return CURRENCIES[currency].symbol;
 }
 
+/**
+ * Crea una fecha con el día correcto, evitando problemas de zona horaria
+ * @param dateStr Cadena de fecha en formato 'YYYY-MM-DD'
+ * @returns Una fecha con el día correcto
+ */
+export function createCorrectDate(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) {
+    // Si ya es una fecha, creamos una nueva con hora al mediodía para evitar problemas de timezone
+    return new Date(
+      dateStr.getFullYear(),
+      dateStr.getMonth(),
+      dateStr.getDate(),
+      12, 0, 0
+    );
+  }
+  
+  // Si es string, dividimos y creamos la fecha manualmente
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const [year, month, day] = parts.map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
+  }
+  
+  // Si el formato no es el esperado, intentamos parsear normalmente pero con hora al mediodía
+  const date = new Date(dateStr);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12, 0, 0
+  );
+}
+
+/**
+ * Convierte una fecha a formato string 'YYYY-MM-DD' manteniendo el día correcto
+ * @param date Fecha a formatear
+ * @returns String en formato 'YYYY-MM-DD'
+ */
+export function formatDateToString(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('es-CO', {
     year: 'numeric',
@@ -109,12 +151,25 @@ export function getStatusBadge(status: string): string {
 }
 
 export function isPastDue(date: Date): boolean {
-  return date < new Date();
+  // Crear una fecha de hoy con tiempo en 00:00:00 para comparación justa
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Crear una copia de la fecha de vencimiento con tiempo en 00:00:00
+  const compareDate = new Date(date);
+  compareDate.setHours(0, 0, 0, 0);
+  
+  return compareDate < today;
 }
 
 export function calculateNextPaymentDate(startDate: Date, frequency: string): Date {
+  // Usar el mediodía para evitar problemas de zona horaria
   const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  
+  // Crear una copia de la fecha de inicio con hora al mediodía
   let nextDate = new Date(startDate);
+  nextDate.setHours(12, 0, 0, 0);
 
   while (nextDate <= today) {
     switch (frequency.toLowerCase()) {
@@ -148,8 +203,12 @@ export function calculateNextPaymentDate(startDate: Date, frequency: string): Da
 }
 
 export function generatePaymentDates(startDate: Date, frequency: string, count: number = 12): Date[] {
-  const dates: Date[] = [new Date(startDate)];
-  let currentDate = new Date(startDate);
+  // Crear una copia de la fecha de inicio con hora al mediodía
+  const fixedStartDate = new Date(startDate);
+  fixedStartDate.setHours(12, 0, 0, 0);
+  
+  const dates: Date[] = [new Date(fixedStartDate)];
+  let currentDate = new Date(fixedStartDate);
   
   for (let i = 1; i < count; i++) {
     switch (frequency.toLowerCase()) {
@@ -199,6 +258,8 @@ export enum AccountStatus {
 
 export function calculateAccountStatus(payments: Payment[]): AccountStatus {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
   let maxOverdueDays = 0;
 
   // Only consider unpaid payments
@@ -206,6 +267,8 @@ export function calculateAccountStatus(payments: Payment[]): AccountStatus {
   
   for (const payment of unpaidPayments) {
     const dueDate = new Date(payment.date);
+    dueDate.setHours(0, 0, 0, 0);
+    
     if (dueDate < today) { // Payment is overdue
       const overdueDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       maxOverdueDays = Math.max(maxOverdueDays, overdueDays);

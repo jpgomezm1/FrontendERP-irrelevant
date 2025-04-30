@@ -1,9 +1,24 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Payment, PaymentStatus } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
 
 type DbPayment = Database['public']['Tables']['payments']['Row'];
+
+// Función auxiliar para crear fechas preservando el día correcto
+function createDateWithCorrectDay(dateStr: string): Date {
+  if (!dateStr) return new Date();
+  
+  // Crear fecha con el offset de la zona horaria para preservar el día
+  // Usamos hora 12:00:00 para evitar problemas con zonas horarias
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+// Función para formatear fechas antes de enviarlas a la base de datos
+function formatDateForDB(date: Date | undefined): string | null {
+  if (!date) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 export async function getAllPayments(): Promise<Payment[]> {
   const { data, error } = await supabase
@@ -25,8 +40,8 @@ export async function getAllPayments(): Promise<Payment[]> {
     clientId: payment.clientid,
     amount: payment.amount,
     currency: payment.currency as Payment['currency'],
-    date: new Date(payment.date),
-    paidDate: payment.paiddate ? new Date(payment.paiddate) : undefined,
+    date: createDateWithCorrectDay(payment.date),
+    paidDate: payment.paiddate ? createDateWithCorrectDay(payment.paiddate) : undefined,
     status: payment.status as PaymentStatus,
     invoiceNumber: payment.invoicenumber || undefined,
     invoiceUrl: payment.invoiceurl || undefined,
@@ -61,8 +76,8 @@ export async function getPaymentsByProjectId(projectId: number): Promise<Payment
     clientId: payment.clientid,
     amount: payment.amount,
     currency: payment.currency as Payment['currency'],
-    date: new Date(payment.date),
-    paidDate: payment.paiddate ? new Date(payment.paiddate) : undefined,
+    date: createDateWithCorrectDay(payment.date),
+    paidDate: payment.paiddate ? createDateWithCorrectDay(payment.paiddate) : undefined,
     status: payment.status as PaymentStatus,
     invoiceNumber: payment.invoicenumber || undefined,
     invoiceUrl: payment.invoiceurl || undefined,
@@ -96,8 +111,8 @@ export async function getPaymentsByClientId(clientId: number): Promise<Payment[]
     clientId: payment.clientid,
     amount: payment.amount,
     currency: payment.currency as Payment['currency'],
-    date: new Date(payment.date),
-    paidDate: payment.paiddate ? new Date(payment.paiddate) : undefined,
+    date: createDateWithCorrectDay(payment.date),
+    paidDate: payment.paiddate ? createDateWithCorrectDay(payment.paiddate) : undefined,
     status: payment.status as PaymentStatus,
     invoiceNumber: payment.invoicenumber || undefined,
     invoiceUrl: payment.invoiceurl || undefined,
@@ -115,8 +130,8 @@ export async function addPayment(payment: Omit<Payment, 'id'>): Promise<Payment>
     clientid: payment.clientId,
     amount: payment.amount,
     currency: payment.currency,
-    date: payment.date?.toISOString().split('T')[0],
-    paiddate: payment.paidDate?.toISOString().split('T')[0] || null,
+    date: formatDateForDB(payment.date),
+    paiddate: formatDateForDB(payment.paidDate),
     status: payment.status,
     invoicenumber: payment.invoiceNumber || null,
     invoiceurl: payment.invoiceUrl || null,
@@ -143,8 +158,8 @@ export async function addPayment(payment: Omit<Payment, 'id'>): Promise<Payment>
     clientId: data.clientid,
     amount: data.amount,
     currency: data.currency as Payment['currency'],
-    date: new Date(data.date),
-    paidDate: data.paiddate ? new Date(data.paiddate) : undefined,
+    date: createDateWithCorrectDay(data.date),
+    paidDate: data.paiddate ? createDateWithCorrectDay(data.paiddate) : undefined,
     status: data.status as PaymentStatus,
     invoiceNumber: data.invoicenumber || undefined,
     invoiceUrl: data.invoiceurl || undefined,
@@ -195,7 +210,7 @@ export async function updatePaymentStatus(
           description: `Payment for Project ${payment.projects?.name} - ${payment.type === 'Implementación' ? 
             `Implementation Fee${payment.installmentnumber ? ` (Installment ${payment.installmentnumber})` : ''}` : 
             'Recurring Fee'}`,
-          date: paidDate?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+          date: formatDateForDB(paidDate || new Date()),
           amount: payment.amount,
           type: incomeType,
           client: payment.projects?.clients?.name,
@@ -214,7 +229,7 @@ export async function updatePaymentStatus(
     // Update payment status
     const updateData: any = { 
       status,
-      paiddate: paidDate?.toISOString().split('T')[0] || null
+      paiddate: formatDateForDB(paidDate)
     };
     
     if (documentUrl) {
@@ -273,7 +288,8 @@ export async function generatePaymentInstallments(
       throw new Error('No se pudo obtener la fecha de inicio del proyecto');
     }
     
-    const startDate = new Date(projectData.startdate);
+    // Corregido - Usar createDateWithCorrectDay para la fecha inicial
+    const startDate = createDateWithCorrectDay(projectData.startdate);
     const paymentsToCreate = [];
     
     // Generate implementation fee installments if applicable
@@ -282,6 +298,7 @@ export async function generatePaymentInstallments(
       const installmentAmount = total / installments;
       
       let installmentDate = new Date(startDate);
+      installmentDate.setHours(12, 0, 0, 0); // Mediodía para evitar problemas de timezone
       
       for (let i = 1; i <= installments; i++) {
         paymentsToCreate.push({
@@ -289,7 +306,7 @@ export async function generatePaymentInstallments(
           clientid: clientId,
           amount: installmentAmount,
           currency: currency,
-          date: new Date(installmentDate).toISOString().split('T')[0],
+          date: formatDateForDB(installmentDate),
           status: 'Pendiente',
           type: 'Implementación',
           installmentnumber: i
@@ -319,6 +336,7 @@ export async function generatePaymentInstallments(
       } = recurringParams;
       
       let recurringDate = new Date(startDate);
+      recurringDate.setHours(12, 0, 0, 0); // Mediodía para evitar problemas de timezone
       
       // Apply grace period
       if (gracePeriods > 0) {
@@ -366,7 +384,7 @@ export async function generatePaymentInstallments(
           clientid: clientId,
           amount: paymentAmount,
           currency: currency,
-          date: new Date(recurringDate).toISOString().split('T')[0],
+          date: formatDateForDB(recurringDate),
           status: 'Pendiente',
           type: 'Recurrente',
           installmentnumber: i,

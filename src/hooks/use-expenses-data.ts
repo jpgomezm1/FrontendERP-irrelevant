@@ -53,9 +53,25 @@ export const useExpensesData = (
       return null;
     }
 
-    const filteredCausedExpenses = causedExpenses.filter(expense => 
-      expense.date >= startDate && expense.date <= endDate
-    );
+    const filteredCausedExpenses = causedExpenses.filter(expense => {
+      // Convertir a fechas sin hora para comparación justa
+      const expenseDate = new Date(
+        expense.date.getFullYear(),
+        expense.date.getMonth(),
+        expense.date.getDate()
+      );
+      const startDateNoTime = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate()
+      );
+      const endDateNoTime = new Date(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      );
+      return expenseDate >= startDateNoTime && expenseDate <= endDateNoTime;
+    });
 
     // Convert all expenses to the view currency for calculations
     const convertedExpenses = filteredCausedExpenses.map(expense => ({

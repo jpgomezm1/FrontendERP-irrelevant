@@ -2,6 +2,18 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 
+function createDateWithCorrectDay(dateStr: string): Date {
+  // Crear fecha con el offset de la zona horaria para preservar el día
+  // Usamos hora 12:00:00 para evitar problemas con zonas horarias
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+// Función para formatear fechas antes de enviarlas a la base de datos
+function formatDateForDB(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export interface VariableExpense {
   id: number;
   description: string;
@@ -60,7 +72,7 @@ export async function getVariableExpenses(): Promise<VariableExpense[]> {
   return data.map(expense => ({
     id: expense.id,
     description: expense.description,
-    date: new Date(expense.date),
+    date: createDateWithCorrectDay(expense.date),
     amount: expense.amount,
     category: expense.category,
     paymentMethod: expense.paymentmethod,
@@ -93,7 +105,7 @@ export async function getRecurringExpenses(): Promise<RecurringExpense[]> {
     notes: expense.notes || undefined,
     currency: expense.currency as Currency,
     isActive: expense.is_active,
-    endDate: expense.end_date ? new Date(expense.end_date) : undefined,
+    endDate: expense.end_date ? createDateWithCorrectDay(expense.end_date) : undefined,
     isAutoDebit: expense.is_auto_debit
   })) || [];
 }
@@ -113,14 +125,14 @@ export async function getCausedExpenses(): Promise<CausedExpense[]> {
     id: expense.id,
     sourceType: expense.source_type as 'variable' | 'recurrente',
     sourceId: expense.source_id,
-    date: new Date(expense.date),
+    date: createDateWithCorrectDay(expense.date),
     description: expense.description,
     amount: expense.amount,
     category: expense.category,
     paymentMethod: expense.paymentmethod,
     currency: expense.currency as Currency,
     status: expense.status as 'pendiente' | 'pagado' | 'vencido',
-    paidDate: expense.paid_date ? new Date(expense.paid_date) : undefined,
+    paidDate: expense.paid_date ? createDateWithCorrectDay(expense.paid_date) : undefined,
     receipt: expense.receipt || undefined,
     notes: expense.notes || undefined,
   })) || [];
@@ -131,7 +143,7 @@ export async function addVariableExpense(expense: Omit<VariableExpense, 'id'>): 
     .from('gastos_variables')
     .insert([{
       description: expense.description,
-      date: expense.date.toISOString().split('T')[0],
+      date: formatDateForDB(expense.date),
       amount: expense.amount,
       category: expense.category,
       paymentmethod: expense.paymentMethod,
@@ -165,7 +177,7 @@ export async function updateVariableExpense(expense: VariableExpense): Promise<V
     .from('gastos_variables')
     .update({
       description: expense.description,
-      date: expense.date.toISOString().split('T')[0],
+      date: formatDateForDB(expense.date),
       amount: expense.amount,
       category: expense.category,
       paymentmethod: expense.paymentMethod,
@@ -201,7 +213,7 @@ export async function addRecurringExpense(expense: Omit<RecurringExpense, 'id' |
     .from('gastos_recurrentes')
     .insert([{
       description: expense.description,
-      start_date: expense.startDate.toISOString().split('T')[0],
+      start_date: formatDateForDB(expense.startDate),
       end_date: expense.endDate ? expense.endDate.toISOString().split('T')[0] : null,
       amount: expense.amount,
       category: expense.category,
@@ -252,7 +264,7 @@ export async function updateRecurringExpense(expense: RecurringExpense): Promise
     .from('gastos_recurrentes')
     .update({
       description: expense.description,
-      start_date: expense.startDate.toISOString().split('T')[0],
+      start_date: formatDateForDB(expense.startDate),
       end_date: expense.endDate ? expense.endDate.toISOString().split('T')[0] : null,
       amount: expense.amount,
       category: expense.category,
@@ -310,7 +322,7 @@ export async function updateRecurringExpense(expense: RecurringExpense): Promise
 export async function updateCausedExpenseStatus(id: number, status: 'pendiente' | 'pagado' | 'vencido', paidDate?: Date): Promise<void> {
   const updateData: any = { status };
   if (paidDate) {
-    updateData.paid_date = paidDate.toISOString().split('T')[0];
+    updateData.paid_date = formatDateForDB(paidDate);
   }
 
   const { error } = await supabase

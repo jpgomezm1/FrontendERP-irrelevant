@@ -1,9 +1,24 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Project, Document, ProjectStatus, DocumentType, PaymentPlan } from '@/types/clients';
 import { Database } from '@/integrations/supabase/types';
 
 type DbProject = Database['public']['Tables']['projects']['Row'];
+
+// Función auxiliar para crear fechas preservando el día correcto
+function createDateWithCorrectDay(dateStr: string): Date {
+  if (!dateStr) return new Date();
+  
+  // Crear fecha con el offset de la zona horaria para preservar el día
+  // Usamos hora 12:00:00 para evitar problemas con zonas horarias
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+// Función para formatear fechas antes de enviarlas a la base de datos
+function formatDateForDB(date: Date | undefined): string | null {
+  if (!date) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 export async function getProjects(): Promise<Project[]> {
   const { data, error } = await supabase
@@ -41,8 +56,8 @@ export async function getProjects(): Promise<Project[]> {
       clientId: project.clientid,
       name: project.name,
       description: project.description,
-      startDate: new Date(project.startdate),
-      endDate: project.enddate ? new Date(project.enddate) : undefined,
+      startDate: createDateWithCorrectDay(project.startdate),
+      endDate: project.enddate ? createDateWithCorrectDay(project.enddate) : undefined,
       status: project.status as ProjectStatus,
       notes: project.notes || undefined,
       clientName: project.clients?.name || "Cliente Desconocido",
@@ -78,7 +93,7 @@ export async function getProjectById(id: number): Promise<Project | null> {
     name: doc.name,
     type: doc.type as DocumentType,
     url: doc.url,
-    uploadDate: new Date(doc.uploaddate)
+    uploadDate: createDateWithCorrectDay(doc.uploaddate)
   }));
 
   // Calculate project value based on payment plan
@@ -102,8 +117,8 @@ export async function getProjectById(id: number): Promise<Project | null> {
     clientId: data.clientid,
     name: data.name,
     description: data.description,
-    startDate: new Date(data.startdate),
-    endDate: data.enddate ? new Date(data.enddate) : undefined,
+    startDate: createDateWithCorrectDay(data.startdate),
+    endDate: data.enddate ? createDateWithCorrectDay(data.enddate) : undefined,
     status: data.status as ProjectStatus,
     notes: data.notes || undefined,
     clientName: data.clients?.name || "Cliente Desconocido",
@@ -150,8 +165,8 @@ export async function getProjectsByClientId(clientId: number): Promise<Project[]
       clientId: project.clientid,
       name: project.name,
       description: project.description,
-      startDate: new Date(project.startdate),
-      endDate: project.enddate ? new Date(project.enddate) : undefined,
+      startDate: createDateWithCorrectDay(project.startdate),
+      endDate: project.enddate ? createDateWithCorrectDay(project.enddate) : undefined,
       status: project.status as ProjectStatus,
       notes: project.notes || undefined,
       documents: [],
@@ -221,8 +236,8 @@ export async function addProject(
         clientid: project.clientId,
         name: project.name,
         description: project.description,
-        startdate: project.startDate.toISOString().split('T')[0],
-        enddate: project.endDate ? project.endDate.toISOString().split('T')[0] : null,
+        startdate: formatDateForDB(project.startDate),
+        enddate: project.endDate ? formatDateForDB(project.endDate) : null,
         status: project.status,
         notes: project.notes
       }])
@@ -288,8 +303,8 @@ export async function addProject(
       clientId: projectData.clientid,
       name: projectData.name,
       description: projectData.description,
-      startDate: new Date(projectData.startdate),
-      endDate: projectData.enddate ? new Date(projectData.enddate) : undefined,
+      startDate: createDateWithCorrectDay(projectData.startdate),
+      endDate: projectData.enddate ? createDateWithCorrectDay(projectData.enddate) : undefined,
       status: projectData.status as ProjectStatus,
       notes: projectData.notes || undefined,
       documents: [],
@@ -318,11 +333,11 @@ export async function updateProject(id: number, updatedData: Partial<Project>): 
     };
     
     if (updatedData.startDate) {
-      payload.startdate = updatedData.startDate.toISOString().split('T')[0];
+      payload.startdate = formatDateForDB(updatedData.startDate);
     }
     
     if (updatedData.endDate) {
-      payload.enddate = updatedData.endDate.toISOString().split('T')[0];
+      payload.enddate = formatDateForDB(updatedData.endDate);
     }
     
     const { error } = await supabase
@@ -376,7 +391,7 @@ export async function addProjectDocument(
       name: document.name,
       type: document.type,
       url: document.url,
-      uploaddate: document.uploadDate.toISOString().split('T')[0],
+      uploaddate: formatDateForDB(document.uploadDate),
       projectid: projectId
     };
 
@@ -396,7 +411,7 @@ export async function addProjectDocument(
       name: data.name,
       type: data.type as DocumentType,
       url: data.url,
-      uploadDate: new Date(data.uploaddate)
+      uploadDate: createDateWithCorrectDay(data.uploaddate)
     };
   } catch (error: any) {
     console.error('Error in addProjectDocument:', error);

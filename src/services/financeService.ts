@@ -38,6 +38,14 @@ export interface CashFlowItem {
   originalAmount?: number;
 }
 
+// Función auxiliar para crear fechas preservando el día correcto
+function createDateWithCorrectDay(dateStr: string): Date {
+  // Crear fecha con el offset de la zona horaria para preservar el día
+  // Usamos hora 12:00:00 para evitar problemas con zonas horarias
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
 export async function getIncomes(): Promise<Income[]> {
   console.log('Fetching incomes from database');
   const { data, error } = await supabase
@@ -54,7 +62,8 @@ export async function getIncomes(): Promise<Income[]> {
   return data.map(income => ({
     id: income.id,
     description: income.description,
-    date: new Date(income.date),
+    // Corregido - Usamos createDateWithCorrectDay para preservar el día correcto
+    date: createDateWithCorrectDay(income.date),
     amount: income.amount,
     type: income.type,
     client: income.client || undefined,
@@ -68,11 +77,15 @@ export async function getIncomes(): Promise<Income[]> {
 export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   console.log('Adding income to database:', income);
   
+  // Corregido - Formato de fecha para Supabase que preserva el día correcto
+  // Usamos getFullYear, getMonth+1 y getDate en lugar de toISOString().split('T')[0]
+  const formattedDate = `${income.date.getFullYear()}-${String(income.date.getMonth() + 1).padStart(2, '0')}-${String(income.date.getDate()).padStart(2, '0')}`;
+  
   const { data, error } = await supabase
     .from('incomes')
     .insert([{
       description: income.description,
-      date: income.date.toISOString().split('T')[0],
+      date: formattedDate, // Fecha formateada correctamente
       amount: income.amount,
       type: income.type,
       client: income.client,
@@ -93,7 +106,8 @@ export async function addIncome(income: Omit<Income, 'id'>): Promise<Income> {
   return {
     id: data.id,
     description: data.description,
-    date: new Date(data.date),
+    // Corregido - Usamos createDateWithCorrectDay para preservar el día correcto
+    date: createDateWithCorrectDay(data.date),
     amount: data.amount,
     type: data.type,
     client: data.client || undefined,
@@ -149,7 +163,8 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
   // Convert manual incomes to cash flow items
   const incomeItems: CashFlowItem[] = (incomesData || []).map(income => ({
     id: income.id,
-    date: new Date(income.date),
+    // Corregido - Usamos createDateWithCorrectDay para preservar el día correcto
+    date: createDateWithCorrectDay(income.date),
     description: income.description,
     type: 'Ingreso',
     category: income.type,
@@ -171,7 +186,8 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     
     return {
       id: payment.id + 100000, // Add offset to avoid ID collisions
-      date: new Date(payment.paiddate || payment.date), // Use paid date if available
+      // Corregido - Usamos createDateWithCorrectDay para preservar el día correcto
+      date: createDateWithCorrectDay(payment.paiddate || payment.date), 
       description,
       type: 'Ingreso',
       category: payment.type === 'Implementación' ? 'Ingreso Implementación' : 'Ingreso Recurrente',
@@ -189,7 +205,8 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
   // Convert paid expenses to cash flow items
   const expenseItems: CashFlowItem[] = (paidExpensesData || []).map(expense => ({
     id: expense.id + 200000, // Add offset to avoid ID collisions
-    date: new Date(expense.paid_date || expense.date),
+    // Corregido - Usamos createDateWithCorrectDay para preservar el día correcto
+    date: createDateWithCorrectDay(expense.paid_date || expense.date),
     description: expense.description,
     type: 'Gasto',
     category: expense.category,
@@ -210,7 +227,9 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
   // Helper function to check for duplicates by key properties
   const generateDuplicationKey = (item: CashFlowItem): string => {
     // Create a unique identifier based on key properties
-    return `${item.date.toISOString().split('T')[0]}-${item.amount}-${item.description}`;
+    // Corregido - Formateamos la fecha correctamente para el key de deduplicación
+    const formattedDate = `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, '0')}-${String(item.date.getDate()).padStart(2, '0')}`;
+    return `${formattedDate}-${item.amount}-${item.description}`;
   };
 
   // First add all expense items (these shouldn't be duplicated)
@@ -299,7 +318,8 @@ export async function getMonthlyData() {
 
   // Group by month and calculate totals
   const monthlyTotals = data.reduce((acc: any, expense) => {
-    const date = new Date(expense.date);
+    // Corregido - Usamos createDateWithCorrectDay para preservar el día correcto
+    const date = createDateWithCorrectDay(expense.date);
     const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
     
     if (!acc[monthKey]) {
