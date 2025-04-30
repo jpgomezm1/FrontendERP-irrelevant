@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Currency } from '@/lib/utils';
 import { Database } from '@/integrations/supabase/types';
@@ -157,7 +156,7 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     paymentMethod: income.paymentmethod,
     amount: income.amount,
     client: income.client || undefined,
-    source: 'Manual Income',
+    source: 'income', // Simplified source identifier
     sourceId: income.id,
     currency: income.currency as Currency,
     originalCurrency: income.currency as Currency,
@@ -165,23 +164,27 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
   }));
 
   // Convert paid project payments to cash flow items
-  const paymentItems: CashFlowItem[] = (paidPaymentsData || []).map(payment => ({
-    id: payment.id + 100000, // Add offset to avoid ID collisions
-    date: new Date(payment.paiddate || payment.date), // Use paid date if available
-    description: `Payment for ${payment.projects?.name || 'Project'} - ${payment.type === 'Implementación' ? 
+  const paymentItems: CashFlowItem[] = (paidPaymentsData || []).map(payment => {
+    const description = `Payment for ${payment.projects?.name || 'Project'} - ${payment.type === 'Implementación' ? 
       `Implementation Fee${payment.installmentnumber ? ` (Installment ${payment.installmentnumber})` : ''}` : 
-      'Recurring Fee'}`,
-    type: 'Ingreso',
-    category: payment.type === 'Implementación' ? 'Ingreso Implementación' : 'Ingreso Recurrente',
-    paymentMethod: 'Transferencia', // Default payment method
-    amount: payment.amount,
-    client: payment.clients?.name || undefined,
-    source: `Project Payment: ${payment.projects?.name || 'Unknown Project'}`,
-    sourceId: payment.id,
-    currency: payment.currency as Currency,
-    originalCurrency: payment.currency as Currency,
-    originalAmount: payment.amount
-  }));
+      'Recurring Fee'}`;
+    
+    return {
+      id: payment.id + 100000, // Add offset to avoid ID collisions
+      date: new Date(payment.paiddate || payment.date), // Use paid date if available
+      description,
+      type: 'Ingreso',
+      category: payment.type === 'Implementación' ? 'Ingreso Implementación' : 'Ingreso Recurrente',
+      paymentMethod: 'Transferencia', // Default payment method
+      amount: payment.amount,
+      client: payment.clients?.name || undefined,
+      source: 'project_payment', // Simplified source identifier
+      sourceId: payment.id,
+      currency: payment.currency as Currency,
+      originalCurrency: payment.currency as Currency,
+      originalAmount: payment.amount
+    };
+  });
 
   // Convert paid expenses to cash flow items
   const expenseItems: CashFlowItem[] = (paidExpensesData || []).map(expense => ({
@@ -193,15 +196,56 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
     paymentMethod: expense.paymentmethod,
     amount: expense.amount,
     isRecurring: expense.source_type === 'recurrente',
-    source: `Expense: ${expense.source_type === 'recurrente' ? 'Recurring' : 'Variable'}`,
+    source: 'expense', // Simplified source identifier
     sourceId: expense.id,
     currency: expense.currency as Currency,
     originalCurrency: expense.currency as Currency,
     originalAmount: expense.amount
   }));
 
-  // Combine all items
-  let combined = [...incomeItems, ...paymentItems, ...expenseItems];
+  // Create a deduplication map to identify potential duplicates
+  // Use a Map with composite key for efficient lookup
+  const deduplicationMap = new Map<string, CashFlowItem>();
+  
+  // Helper function to check for duplicates by key properties
+  const generateDuplicationKey = (item: CashFlowItem): string => {
+    // Create a unique identifier based on key properties
+    return `${item.date.toISOString().split('T')[0]}-${item.amount}-${item.description}`;
+  };
+
+  // First add all expense items (these shouldn't be duplicated)
+  expenseItems.forEach(item => {
+    deduplicationMap.set(generateDuplicationKey(item), item);
+  });
+
+  // Next add project payments (these should take precedence over manual income entries)
+  paymentItems.forEach(item => {
+    deduplicationMap.set(generateDuplicationKey(item), item);
+  });
+
+  // Finally add manual income items, but only if they don't duplicate a project payment
+  incomeItems.forEach(item => {
+    const key = generateDuplicationKey(item);
+    // Only add if there's no existing entry with this key
+    if (!deduplicationMap.has(key)) {
+      deduplicationMap.set(key, item);
+    } else {
+      // Verify if this might be an actual duplicate or just a coincidence
+      // If descriptions are completely different but other properties match, keep both
+      const existingItem = deduplicationMap.get(key)!;
+      if (existingItem.source === 'project_payment' && 
+          !item.description.includes(existingItem.description) && 
+          !existingItem.description.includes(item.description)) {
+        // This is likely a different transaction that happens to have same date/amount
+        // Generate a modified key to keep both
+        deduplicationMap.set(`${key}-manual`, item);
+      }
+      // Otherwise, we assume it's a duplicate and prefer the project payment
+    }
+  });
+
+  // Convert back to array
+  let combined: CashFlowItem[] = Array.from(deduplicationMap.values());
   
   // Apply filters if provided
   if (filters) {
@@ -227,12 +271,19 @@ export async function getCashFlow(filters?: MovementsFilter): Promise<CashFlowIt
   // Sort by date (most recent first)
   combined.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-  // Calculate running balance
+  // Calculate running balance (in descending date order)
   let balance = 0;
-  return combined.map(item => {
-    balance += item.type === 'Ingreso' ? item.amount : -item.amount;
+  const result = combined.map(item => {
+    if (item.type === 'Ingreso') {
+      balance += item.amount;
+    } else {
+      balance -= item.amount;
+    }
     return { ...item, balance };
   });
+
+  console.log(`Returning ${result.length} items after deduplication (original total: ${incomeItems.length + paymentItems.length + expenseItems.length})`);
+  return result;
 }
 
 export async function getMonthlyData() {
